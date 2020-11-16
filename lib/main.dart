@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(RemindfulApp());
 }
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+class RemindfulApp extends StatelessWidget {
+  static const String _title = 'ReMindful';
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: _title,
+      home: RemindfulHomePage(title: _title),
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -26,13 +28,12 @@ class MyApp extends StatelessWidget {
         // closer together (more dense) than on mobile platforms.
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+class RemindfulHomePage extends StatefulWidget {
+  RemindfulHomePage({Key key, this.title}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -46,20 +47,34 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _RemindfulHomePageState createState() => _RemindfulHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _RemindfulHomePageState extends State<RemindfulHomePage> {
+  String _message = 'Not Running';
+  bool _enabled = false;
+  bool _mute = false;
 
-  void _incrementCounter() {
+  void _setEnabled(bool enabled) {
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
       // so that the display can reflect the updated values. If we changed
       // _counter without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
-      _counter++;
+      _enabled = enabled;
+    });
+  }
+
+  void _setMute(bool mute) {
+    setState(() {
+      _mute = mute;
+    });
+  }
+
+  void _setMessage(String msg) {
+    setState(() {
+      _message = msg;
     });
   }
 
@@ -95,23 +110,87 @@ class _MyHomePageState extends State<MyHomePage> {
           // center the children vertically; the main axis here is the vertical
           // axis because Columns are vertical (the cross axis would be
           // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
             Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
+              '$_message',
               style: Theme.of(context).textTheme.headline4,
+            ),
+            // Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: <Widget>[
+                    Text('Enabled'),
+                    Switch(
+                      value: _enabled,
+                      onChanged: _setEnabled,
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    Text('Mute'),
+                    Switch(
+                      value: _mute,
+                      onChanged: _setMute,
+                    ),
+                  ],
+                )
+              ],
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: const <Widget>[
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+              child: Text(
+                'Settings',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              //leading: Icon(Icons.message),
+              leading: Icon(Icons.schedule),
+              title: Text('Schedule'),
+              onTap: null,
+            ),
+            ListTile(
+              // leading: Icon(Icons.alarm),
+              leading: Icon(Icons.list),
+              title: Text('Reminders'),
+              onTap: null,
+            ),
+            ListTile(
+              leading: Icon(Icons.notifications),
+              title: Text('Bell'),
+              onTap: null,
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Advanced'),
+              onTap: null,
+            ),
+          ],
+        ),
+      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: _setEnabled(true),
+      //   tooltip: 'Increment',
+      //   child: Icon(Icons.add),
+      // ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
