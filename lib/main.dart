@@ -1,7 +1,22 @@
-import 'package:flutter/material.dart';
+import 'dart:isolate';
 
-void main() {
+import 'package:flutter/material.dart';
+import 'package:android_alarm_manager/android_alarm_manager.dart';
+
+void printHello() {
+  final DateTime now = DateTime.now();
+  final int isolateId = Isolate.current.hashCode;
+  print("[$now] Hello, world! isolate=${isolateId} function='$printHello'");
+}
+
+void main() async {
+  final int helloAlarmID = 0;
+  await AndroidAlarmManager.initialize();
+
   runApp(RemindfulApp());
+
+  await AndroidAlarmManager.periodic(
+      const Duration(minutes: 1), helloAlarmID, printHello);
 }
 
 class RemindfulApp extends StatelessWidget {
@@ -50,10 +65,30 @@ class RemindfulHomePage extends StatefulWidget {
   _RemindfulHomePageState createState() => _RemindfulHomePageState();
 }
 
+enum ScheduleType { PERIODIC, RANDOM }
+
+abstract class Scheduler {
+  final ScheduleType scheduleType;
+  Scheduler(this.scheduleType) {}
+  bool running = false;
+
+  void enable() {}
+  void disable() {}
+}
+
+class PeriodicScheduler extends Scheduler {
+  PeriodicScheduler() : super(ScheduleType.PERIODIC);
+}
+
+class RandomScheduler extends Scheduler {
+  RandomScheduler() : super(ScheduleType.RANDOM);
+}
+
 class _RemindfulHomePageState extends State<RemindfulHomePage> {
   String _message = 'Not Running';
   bool _enabled = false;
   bool _mute = false;
+  Scheduler scheduler = RandomScheduler();
 
   void _setEnabled(bool enabled) {
     setState(() {
@@ -63,6 +98,11 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
       // _counter without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
       _enabled = enabled;
+      if (_enabled) {
+        scheduler.enable();
+      } else {
+        scheduler.disable();
+      }
     });
   }
 
