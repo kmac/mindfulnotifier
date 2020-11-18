@@ -1,22 +1,12 @@
 import 'dart:isolate';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:android_alarm_manager/android_alarm_manager.dart';
-
-void printHello() {
-  final DateTime now = DateTime.now();
-  final int isolateId = Isolate.current.hashCode;
-  print("[$now] Hello, world! isolate=${isolateId} function='$printHello'");
-}
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 void main() async {
-  final int helloAlarmID = 0;
-  await AndroidAlarmManager.initialize();
-
   runApp(RemindfulApp());
-
-  await AndroidAlarmManager.periodic(
-      const Duration(minutes: 1), helloAlarmID, printHello);
 }
 
 class RemindfulApp extends StatelessWidget {
@@ -65,30 +55,11 @@ class RemindfulHomePage extends StatefulWidget {
   _RemindfulHomePageState createState() => _RemindfulHomePageState();
 }
 
-enum ScheduleType { PERIODIC, RANDOM }
-
-abstract class Scheduler {
-  final ScheduleType scheduleType;
-  Scheduler(this.scheduleType) {}
-  bool running = false;
-
-  void enable() {}
-  void disable() {}
-}
-
-class PeriodicScheduler extends Scheduler {
-  PeriodicScheduler() : super(ScheduleType.PERIODIC);
-}
-
-class RandomScheduler extends Scheduler {
-  RandomScheduler() : super(ScheduleType.RANDOM);
-}
-
 class _RemindfulHomePageState extends State<RemindfulHomePage> {
   String _message = 'Not Running';
   bool _enabled = false;
   bool _mute = false;
-  Scheduler scheduler = RandomScheduler();
+  Scheduler scheduler = PeriodicScheduler(0, 1);
 
   void _setEnabled(bool enabled) {
     setState(() {
@@ -232,5 +203,93 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
       //   child: Icon(Icons.add),
       // ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+}
+
+enum ScheduleType { PERIODIC, RANDOM }
+
+abstract class Scheduler {
+  final ScheduleType scheduleType;
+  final int alarmID = 0;
+  bool running = false;
+
+  // a basic singleton:
+  static Scheduler onlyInstance;
+
+  Scheduler(this.scheduleType) {
+    onlyInstance = this;
+  }
+
+  void init() async {
+    await AndroidAlarmManager.initialize();
+  }
+
+  void cancel() async {
+    await AndroidAlarmManager.cancel(alarmID);
+  }
+
+  void enable() {
+    running = true;
+  }
+
+  void disable() {
+    cancel();
+    running = false;
+  }
+
+  void triggerNotification() {
+    // TODO: tie in the code to:
+    // 1) lookup a random reminder
+    // 2) trigger a notification based on
+    //    https://pub.dev/packages/flutter_local_notifications
+  }
+
+  void schedule();
+
+  static void alarmCallback() {
+    final DateTime now = DateTime.now();
+    final int isolateId = Isolate.current.hashCode;
+    print("[$now] Hello, world! isolate=$isolateId function='$alarmCallback'");
+    onlyInstance.triggerNotification();
+    if (onlyInstance.scheduleType == ScheduleType.RANDOM) {
+      onlyInstance.schedule();
+    }
+  }
+}
+
+class PeriodicScheduler extends Scheduler {
+  final int durationHours;
+  final int durationMinutes;
+  PeriodicScheduler(this.durationHours, this.durationMinutes)
+      : super(ScheduleType.PERIODIC);
+
+  void cancel() async {
+    super.cancel();
+  }
+
+  void schedule() async {
+    await AndroidAlarmManager.periodic(
+        Duration(hours: durationHours, minutes: durationMinutes),
+        alarmID,
+        alarmCallback);
+  }
+}
+
+class RandomScheduler extends Scheduler {
+  //DateTimeRange range;
+  final int minMinutes;
+  final int maxMinutes;
+  RandomScheduler(this.minMinutes, this.maxMinutes)
+      : super(ScheduleType.RANDOM);
+
+  void cancel() async {
+    super.cancel();
+  }
+
+  void schedule() async {
+    Random random = new Random();
+    int nextMinutes = minMinutes + random.nextInt(maxMinutes - minMinutes);
+    DateTime nextDate = DateTime.now().add(Duration(microseconds: nextMinutes));
+    await AndroidAlarmManager.oneShotAt(nextDate, alarmID, alarmCallback);
   }
 }

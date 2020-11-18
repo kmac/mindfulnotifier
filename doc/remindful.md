@@ -39,6 +39,7 @@ Controls:
 - Reminders
     - a list of text items
     - how to store?
+        - https://flutter.dev/docs/cookbook/persistence/key-value
     - this could be it's own widget
 - Bell
     - A list of bells
