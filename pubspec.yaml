@@ -1,4 +1,4 @@
-name: remindful
+name: remindfulbell
 description: A mindfulness-based reminder system
 
 # The following line prevents the package from being accidentally published to
@@ -29,7 +29,11 @@ dependencies:
   cupertino_icons: ^1.0.0
 
   android_alarm_manager: '>=0.4.5+17 <2.0.0'
-  flutter_local_notifications: ^3.0.1+4
+  flutter_local_notifications: ^3.0.1+5
+  device_info: ^0.4.2+4
+  rxdart: ^0.24.0
+  flutter_native_timezone: ^1.0.4
+
 
 dev_dependencies:
   flutter_test:

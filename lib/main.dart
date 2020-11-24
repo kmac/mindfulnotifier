@@ -1,16 +1,115 @@
 import 'dart:isolate';
 import 'dart:math';
+import 'dart:ui';
 
-import 'package:flutter/material.dart';
 import 'package:android_alarm_manager/android_alarm_manager.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:rxdart/subjects.dart';
+// import 'package:flutter/services.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+// import 'package:device_info/device_info.dart';
+
+const String appName = 'Remindful Bell';
+
+// The name associated with the UI isolate's [SendPort].
+const String isolateName = 'alarmIsolate';
+
+// A port used to communicate from a background isolate to the UI isolate.
+final ReceivePort port = ReceivePort();
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// Streams are created so that app can respond to notification-related events
+// since the plugin is initialised in the `main` function
+final BehaviorSubject<ReceivedNotification> didReceiveLocalNotificationSubject =
+    BehaviorSubject<ReceivedNotification>();
+
+final BehaviorSubject<String> selectNotificationSubject =
+    BehaviorSubject<String>();
+
+// const MethodChannel platform = MethodChannel('kmsd.ca/remindfulbell');
+
+class ReceivedNotification {
+  ReceivedNotification({
+    @required this.id,
+    @required this.title,
+    @required this.body,
+    @required this.payload,
+  });
+
+  final int id;
+  final String title;
+  final String body;
+  final String payload;
+}
 
 void main() async {
+  // needed if you intend to initialize in the `main` function
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await _configureLocalTimeZone();
+
+  // Register the UI isolate's SendPort to allow for communication from the
+  // background isolate.
+  IsolateNameServer.registerPortWithName(
+    port.sendPort,
+    isolateName,
+  );
+
+  final NotificationAppLaunchDetails notificationAppLaunchDetails =
+      await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('app_icon');
+
+  /// Note: permissions aren't requested here just to demonstrate that can be
+  /// done later
+  final IOSInitializationSettings initializationSettingsIOS =
+      IOSInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+          onDidReceiveLocalNotification:
+              (int id, String title, String body, String payload) async {
+            didReceiveLocalNotificationSubject.add(ReceivedNotification(
+                id: id, title: title, body: body, payload: payload));
+          });
+
+  const MacOSInitializationSettings initializationSettingsMacOS =
+      MacOSInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false);
+
+  final InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+      macOS: initializationSettingsMacOS);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings,
+      onSelectNotification: (String payload) async {
+    if (payload != null) {
+      debugPrint('notification payload: $payload');
+    }
+    selectNotificationSubject.add(payload);
+  });
+
   runApp(RemindfulApp());
 }
 
+Future<void> _configureLocalTimeZone() async {
+  tz.initializeTimeZones();
+  final String currentTimeZone = await FlutterNativeTimezone.getLocalTimezone();
+  tz.setLocalLocation(tz.getLocation(currentTimeZone));
+}
+
 class RemindfulApp extends StatelessWidget {
-  static const String _title = 'ReMindful';
+  static const String _title = 'ReMindful Bell';
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +158,11 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
   String _message = 'Not Running';
   bool _enabled = false;
   bool _mute = false;
-  Scheduler scheduler = PeriodicScheduler(0, 1);
+  Scheduler scheduler;
+
+  _RemindfulHomePageState() {
+    scheduler = new PeriodicScheduler(0, 1);
+  }
 
   void _setEnabled(bool enabled) {
     setState(() {
@@ -71,8 +174,10 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
       _enabled = enabled;
       if (_enabled) {
         scheduler.enable();
+        _setMessage('Running');
       } else {
         scheduler.disable();
+        _setMessage('Disabled');
       }
     });
   }
@@ -211,17 +316,28 @@ enum ScheduleType { PERIODIC, RANDOM }
 abstract class Scheduler {
   final ScheduleType scheduleType;
   final int alarmID = 0;
+  final Notifier _notifier = new Notifier();
   bool running = false;
+  static bool initialized = false;
 
-  // a basic singleton:
-  static Scheduler onlyInstance;
+  // The background
+  static SendPort uiSendPort;
 
   Scheduler(this.scheduleType) {
-    onlyInstance = this;
+    init();
   }
 
   void init() async {
-    await AndroidAlarmManager.initialize();
+    if (!initialized) {
+      // IsolateNameServer.registerPortName(receivePort.sendPort, isolateName);
+
+      await AndroidAlarmManager.initialize();
+
+      // Register for events from the background isolate. These messages will
+      // always coincide with an alarm firing.
+      port.listen((_) async => await _triggerNotification());
+    }
+    initialized = true;
   }
 
   void cancel() async {
@@ -229,6 +345,7 @@ abstract class Scheduler {
   }
 
   void enable() {
+    schedule();
     running = true;
   }
 
@@ -237,41 +354,63 @@ abstract class Scheduler {
     running = false;
   }
 
-  void triggerNotification() {
-    // TODO: tie in the code to:
+  void schedule();
+
+  Future<void> _triggerNotification() async {
     // 1) lookup a random reminder
     // 2) trigger a notification based on
     //    https://pub.dev/packages/flutter_local_notifications
+
+    final DateTime now = DateTime.now();
+    final int isolateId = Isolate.current.hashCode;
+    print("[$now] _triggerNotification isolate=$isolateId");
+
+    _notifier.showNotification('this is a test');
   }
 
-  void schedule();
-
+// alarmCallback will not run in the same isolate as the main application.
+// Unlike threads, isolates do not share memory and communication between
+// isolates must be done via message passing (see more documentation on isolates here).
   static void alarmCallback() {
     final DateTime now = DateTime.now();
     final int isolateId = Isolate.current.hashCode;
-    print("[$now] Hello, world! isolate=$isolateId function='$alarmCallback'");
-    onlyInstance.triggerNotification();
-    if (onlyInstance.scheduleType == ScheduleType.RANDOM) {
-      onlyInstance.schedule();
+    print("[$now] alarmCallback isolate=$isolateId");
+
+    // Send to the UI thread
+
+    // This will be null if we're running in the background.
+    uiSendPort ??= IsolateNameServer.lookupPortByName(isolateName);
+    uiSendPort?.send(null);
+  }
+}
+
+class SchedulerHolder {
+  static SchedulerHolder _instance;
+  Scheduler scheduler;
+  SchedulerHolder._internal();
+  factory SchedulerHolder() {
+    if (_instance == null) {
+      _instance = SchedulerHolder._internal();
     }
+    return _instance;
   }
 }
 
 class PeriodicScheduler extends Scheduler {
   final int durationHours;
   final int durationMinutes;
+
   PeriodicScheduler(this.durationHours, this.durationMinutes)
       : super(ScheduleType.PERIODIC);
 
-  void cancel() async {
-    super.cancel();
-  }
-
   void schedule() async {
     await AndroidAlarmManager.periodic(
-        Duration(hours: durationHours, minutes: durationMinutes),
+        Duration(
+            /*hours: durationHours, minutes: durationMinutes*/ seconds: 30),
         alarmID,
-        alarmCallback);
+        Scheduler.alarmCallback,
+        exact: true,
+        wakeup: true);
   }
 }
 
@@ -279,17 +418,43 @@ class RandomScheduler extends Scheduler {
   //DateTimeRange range;
   final int minMinutes;
   final int maxMinutes;
+
   RandomScheduler(this.minMinutes, this.maxMinutes)
       : super(ScheduleType.RANDOM);
 
-  void cancel() async {
-    super.cancel();
+  Future<void> _triggerNotification() async {
+    super._triggerNotification();
+    schedule();
   }
 
   void schedule() async {
     Random random = new Random();
     int nextMinutes = minMinutes + random.nextInt(maxMinutes - minMinutes);
     DateTime nextDate = DateTime.now().add(Duration(microseconds: nextMinutes));
-    await AndroidAlarmManager.oneShotAt(nextDate, alarmID, alarmCallback);
+    await AndroidAlarmManager.oneShotAt(
+        nextDate, alarmID, Scheduler.alarmCallback,
+        exact: true, wakeup: true);
+  }
+}
+
+class Notifier {
+  static const String channelId = 'your channel id';
+  static const String channelName = 'your channel name';
+  static const String channelDescription = 'your channel description';
+  static const String notifTitle = appName;
+
+  void showNotification(String notifText) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(channelId, channelName, channelDescription,
+            importance: Importance.max,
+            priority: Priority.high,
+            ticker: 'ticker');
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+        0, notifTitle, notifText, platformChannelSpecifics,
+        payload: 'item x');
   }
 }

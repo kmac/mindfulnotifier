@@ -1,4 +1,4 @@
-package com.example.remindful
+package com.kmacdev.remindfulbell
 
 import io.flutter.embedding.android.FlutterActivity
 
