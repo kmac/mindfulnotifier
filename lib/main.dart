@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 // import 'package:flutter/services.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -14,6 +15,7 @@ import 'package:timezone/timezone.dart' as tz;
 // import 'package:device_info/device_info.dart';
 
 const String appName = 'Remindful Bell';
+const bool testing = false;
 
 // The name associated with the UI isolate's [SendPort].
 const String isolateName = 'alarmIsolate';
@@ -159,9 +161,12 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
   bool _enabled = false;
   bool _mute = false;
   Scheduler scheduler;
+  TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
+  TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
   _RemindfulHomePageState() {
-    scheduler = new PeriodicScheduler(0, 1);
+    scheduler =
+        new PeriodicScheduler(0, 15, new QuietHours(quietStart, quietEnd));
   }
 
   void _setEnabled(bool enabled) {
@@ -311,6 +316,38 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
   }
 }
 
+class QuietHours {
+  final TimeOfDay startTime;
+  final TimeOfDay endTime;
+  QuietHours(this.startTime, this.endTime);
+
+  DateTime _getTimeOfDayToday(TimeOfDay tod) {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, tod.hour, tod.minute);
+  }
+
+  DateTime _getTimeOfDayTomorrow(TimeOfDay tod) {
+    final tomorrow = DateTime.now().add(Duration(days: 1));
+    return DateTime(
+        tomorrow.year, tomorrow.month, tomorrow.day, tod.hour, tod.minute);
+  }
+
+  DateTime getNextQuietEnd() {
+    DateTime quietStart = _getTimeOfDayToday(startTime);
+    DateTime quietEnd = _getTimeOfDayToday(endTime);
+    if (quietEnd.isBefore(quietStart)) {
+      quietEnd = _getTimeOfDayTomorrow(endTime);
+    }
+    return quietEnd;
+  }
+
+  bool inQuietHours(DateTime date) {
+    DateTime quietStart = _getTimeOfDayToday(startTime);
+    DateTime quietEnd = getNextQuietEnd();
+    return (date.isAfter(quietStart) && date.isBefore(quietEnd));
+  }
+}
+
 enum ScheduleType { PERIODIC, RANDOM }
 
 abstract class Scheduler {
@@ -319,17 +356,21 @@ abstract class Scheduler {
   final Notifier _notifier = new Notifier();
   bool running = false;
   static bool initialized = false;
+  QuietHours quietHours;
+  Reminders reminders;
 
   // The background
   static SendPort uiSendPort;
 
-  Scheduler(this.scheduleType) {
+  Scheduler(this.scheduleType, this.quietHours) {
     init();
   }
 
   void init() async {
     if (!initialized) {
       // IsolateNameServer.registerPortName(receivePort.sendPort, isolateName);
+      reminders = new Reminders();
+      reminders.init();
 
       await AndroidAlarmManager.initialize();
 
@@ -365,12 +406,16 @@ abstract class Scheduler {
     final int isolateId = Isolate.current.hashCode;
     print("[$now] _triggerNotification isolate=$isolateId");
 
-    _notifier.showNotification('this is a test');
+    if (quietHours.inQuietHours(now)) {
+      print("In quiet hours... ignoring notification");
+      return;
+    }
+    _notifier.showNotification(reminders.randomReminder());
   }
 
-// alarmCallback will not run in the same isolate as the main application.
-// Unlike threads, isolates do not share memory and communication between
-// isolates must be done via message passing (see more documentation on isolates here).
+  // alarmCallback will not run in the same isolate as the main application.
+  // Unlike threads, isolates do not share memory and communication between
+  // isolates must be done via message passing (see more documentation on isolates here).
   static void alarmCallback() {
     final DateTime now = DateTime.now();
     final int isolateId = Isolate.current.hashCode;
@@ -384,34 +429,57 @@ abstract class Scheduler {
   }
 }
 
-class SchedulerHolder {
-  static SchedulerHolder _instance;
-  Scheduler scheduler;
-  SchedulerHolder._internal();
-  factory SchedulerHolder() {
-    if (_instance == null) {
-      _instance = SchedulerHolder._internal();
-    }
-    return _instance;
-  }
-}
-
 class PeriodicScheduler extends Scheduler {
   final int durationHours;
-  final int durationMinutes;
+  final int durationMinutes; // minimum granularity: 15m
 
-  PeriodicScheduler(this.durationHours, this.durationMinutes)
-      : super(ScheduleType.PERIODIC);
+  PeriodicScheduler(
+      this.durationHours, this.durationMinutes, QuietHours quietHours)
+      : super(ScheduleType.PERIODIC, quietHours);
 
   void schedule() async {
-    await AndroidAlarmManager.periodic(
-        Duration(
-            /*hours: durationHours, minutes: durationMinutes*/ seconds: 30),
-        alarmID,
-        Scheduler.alarmCallback,
-        exact: true,
-        wakeup: true);
+    // Schedule first notification to align with the top of the hour,
+    // based on the hours/mins
+    int periodInMins = 60 * durationHours + durationMinutes;
+    DateTime now = DateTime.now();
+    int nowMinSinceEpoch = (now.millisecondsSinceEpoch / 60000).round();
+    int nextIntervalMin = (nowMinSinceEpoch + periodInMins) % periodInMins + 1;
+
+    //DateTime startTime = now.add(Duration(minutes: nextIntervalMin));
+    DateTime startTime = DateTime.fromMillisecondsSinceEpoch(
+        (nowMinSinceEpoch + nextIntervalMin) * 60000);
+
+    print("Scheduling for $startTime");
+    if (testing) {
+      await AndroidAlarmManager.periodic(
+          Duration(
+              /*hours: durationHours, minutes: durationMinutes*/ seconds: 30),
+          alarmID,
+          Scheduler.alarmCallback,
+          // startAt: startTime,
+          exact: true,
+          wakeup: true);
+    } else {
+      await AndroidAlarmManager.periodic(
+          Duration(hours: durationHours, minutes: durationMinutes),
+          alarmID,
+          Scheduler.alarmCallback,
+          startAt: startTime,
+          exact: true,
+          wakeup: true);
+    }
   }
+
+  // void schedule() async {
+  //   DateTime nextDate = DateTime.now().add(Duration(hours: durationHours, minutes: durationMinutes));
+  //   if (quietHours.inQuietHours(nextDate)) {
+  //     print("Scheduling past next quiet hours");
+  //     nextDate = quietHours.getNextQuietEnd().add(Duration(hours: durationHours, minutes: durationMinutes));
+  //   }
+  //   await AndroidAlarmManager.oneShotAt(
+  //       nextDate, alarmID, Scheduler.alarmCallback,
+  //       exact: true, wakeup: true);
+  // }
 }
 
 class RandomScheduler extends Scheduler {
@@ -419,8 +487,8 @@ class RandomScheduler extends Scheduler {
   final int minMinutes;
   final int maxMinutes;
 
-  RandomScheduler(this.minMinutes, this.maxMinutes)
-      : super(ScheduleType.RANDOM);
+  RandomScheduler(this.minMinutes, this.maxMinutes, QuietHours quietHours)
+      : super(ScheduleType.RANDOM, quietHours);
 
   Future<void> _triggerNotification() async {
     super._triggerNotification();
@@ -430,20 +498,33 @@ class RandomScheduler extends Scheduler {
   void schedule() async {
     Random random = new Random();
     int nextMinutes = minMinutes + random.nextInt(maxMinutes - minMinutes);
-    DateTime nextDate = DateTime.now().add(Duration(microseconds: nextMinutes));
+    DateTime nextDate = DateTime.now().add(Duration(minutes: nextMinutes));
+    // if (quietHours.inQuietHours(nextDate)) {
+    //   print("Scheduling past next quiet hours");
+    //   nextDate = quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
+    // }
     await AndroidAlarmManager.oneShotAt(
         nextDate, alarmID, Scheduler.alarmCallback,
         exact: true, wakeup: true);
   }
 }
 
+class Reminders {
+  void init() {}
+
+  String randomReminder() {
+    return 'this is a test';
+  }
+}
+
 class Notifier {
-  static const String channelId = 'your channel id';
-  static const String channelName = 'your channel name';
-  static const String channelDescription = 'your channel description';
+  static const String channelId = 'remindfulbell_channel_id';
+  static const String channelName = 'remindfulbell_channel_name';
+  static const String channelDescription = 'Notifications for remindful bell';
   static const String notifTitle = appName;
 
   void showNotification(String notifText) async {
+    print("showNotification: " + notifText);
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(channelId, channelName, channelDescription,
             importance: Importance.max,
