@@ -15,7 +15,7 @@ import 'package:timezone/timezone.dart' as tz;
 // import 'package:device_info/device_info.dart';
 
 const String appName = 'Remindful Bell';
-const bool testing = false;
+const bool testing = true;
 
 // The name associated with the UI isolate's [SendPort].
 const String isolateName = 'alarmIsolate';
@@ -190,6 +190,7 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
   void _setMute(bool mute) {
     setState(() {
       _mute = mute;
+      Notifier.mute = _mute;
     });
   }
 
@@ -317,8 +318,13 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
 }
 
 class QuietHours {
+  static const int quietHoursStartAlarmID = 21;
+  static const int quietHoursEndAlarmID = 22;
   final TimeOfDay startTime;
   final TimeOfDay endTime;
+  static bool inQuietHours = false;
+  static SendPort uiSendPort;
+
   QuietHours(this.startTime, this.endTime);
 
   DateTime _getTimeOfDayToday(TimeOfDay tod) {
@@ -332,6 +338,14 @@ class QuietHours {
         tomorrow.year, tomorrow.month, tomorrow.day, tod.hour, tod.minute);
   }
 
+  DateTime getNextQuietStart() {
+    DateTime quietStart = _getTimeOfDayToday(startTime);
+    if (quietStart.isBefore(DateTime.now())) {
+      quietStart = _getTimeOfDayTomorrow(startTime);
+    }
+    return quietStart;
+  }
+
   DateTime getNextQuietEnd() {
     DateTime quietStart = _getTimeOfDayToday(startTime);
     DateTime quietEnd = _getTimeOfDayToday(endTime);
@@ -341,10 +355,55 @@ class QuietHours {
     return quietEnd;
   }
 
-  bool inQuietHours(DateTime date) {
+  bool isInQuietHours(DateTime date) {
     DateTime quietStart = _getTimeOfDayToday(startTime);
     DateTime quietEnd = getNextQuietEnd();
     return (date.isAfter(quietStart) && date.isBefore(quietEnd));
+  }
+
+  void initializeTimers() async {
+    if (isInQuietHours(DateTime.now())) {
+      quietStart();
+    }
+    print("Initializing quiet hours timers");
+    await AndroidAlarmManager.periodic(Duration(days: 1),
+        quietHoursStartAlarmID, QuietHours.alarmCallbackStart,
+        startAt: getNextQuietStart(), exact: true, wakeup: true);
+    await AndroidAlarmManager.periodic(
+        Duration(days: 1), quietHoursEndAlarmID, QuietHours.alarmCallbackEnd,
+        startAt: getNextQuietEnd(), exact: true, wakeup: true);
+  }
+
+  void cancelTimers() async {
+    print("Cancelling quiet hours timers");
+    await AndroidAlarmManager.cancel(quietHoursStartAlarmID);
+    await AndroidAlarmManager.cancel(quietHoursEndAlarmID);
+  }
+
+  void quietStart() {
+    final DateTime now = DateTime.now();
+    print("[$now] Quiet hours start");
+    inQuietHours = true;
+  }
+
+  static void alarmCallbackStart() {
+    // Send to the UI thread
+    // This will be null if we're running in the background.
+    uiSendPort ??= IsolateNameServer.lookupPortByName(isolateName);
+    uiSendPort?.send('quietStartCallback');
+  }
+
+  void quietEnd() {
+    final DateTime now = DateTime.now();
+    print("[$now] Quiet hours end");
+    inQuietHours = false;
+  }
+
+  static void alarmCallbackEnd() {
+    // Send to the UI thread
+    // This will be null if we're running in the background.
+    uiSendPort ??= IsolateNameServer.lookupPortByName(isolateName);
+    uiSendPort?.send('quietEndCallback');
   }
 }
 
@@ -352,7 +411,7 @@ enum ScheduleType { PERIODIC, RANDOM }
 
 abstract class Scheduler {
   final ScheduleType scheduleType;
-  final int alarmID = 0;
+  final int scheduleAlarmID = 10;
   final Notifier _notifier = new Notifier();
   bool running = false;
   static bool initialized = false;
@@ -376,26 +435,44 @@ abstract class Scheduler {
 
       // Register for events from the background isolate. These messages will
       // always coincide with an alarm firing.
-      port.listen((_) async => await _triggerNotification());
+      //port.listen((_) async => await _triggerNotification());
+      port.listen((_) async {
+        switch (_) {
+          case 'scheduleCallback':
+            await _triggerNotification();
+            break;
+          case 'quietStartCallback':
+            quietHours.quietStart();
+            break;
+          case 'quietEndCallback':
+            quietHours.quietEnd();
+            break;
+        }
+      });
     }
     initialized = true;
   }
 
-  void cancel() async {
-    await AndroidAlarmManager.cancel(alarmID);
+  void cancelSchedule() async {
+    print("Cancelling notification schedule");
+    await AndroidAlarmManager.cancel(scheduleAlarmID);
   }
 
   void enable() {
+    quietHours.initializeTimers();
     schedule();
     running = true;
   }
 
   void disable() {
-    cancel();
+    cancelSchedule();
+    quietHours.cancelTimers();
     running = false;
   }
 
-  void schedule();
+  void schedule() {
+    print("Scheduling notification, type=$scheduleType");
+  }
 
   Future<void> _triggerNotification() async {
     // 1) lookup a random reminder
@@ -406,7 +483,8 @@ abstract class Scheduler {
     final int isolateId = Isolate.current.hashCode;
     print("[$now] _triggerNotification isolate=$isolateId");
 
-    if (quietHours.inQuietHours(now)) {
+    // if (quietHours.isInQuietHours(now)) {
+    if (QuietHours.inQuietHours) {
       print("In quiet hours... ignoring notification");
       return;
     }
@@ -425,7 +503,7 @@ abstract class Scheduler {
 
     // This will be null if we're running in the background.
     uiSendPort ??= IsolateNameServer.lookupPortByName(isolateName);
-    uiSendPort?.send(null);
+    uiSendPort?.send('scheduleCallback');
   }
 }
 
@@ -438,6 +516,15 @@ class PeriodicScheduler extends Scheduler {
       : super(ScheduleType.PERIODIC, quietHours);
 
   void schedule() async {
+    super.schedule();
+    if (testing) {
+      print("Scheduling for periodic testing");
+      await AndroidAlarmManager.periodic(
+          Duration(seconds: 30), scheduleAlarmID, Scheduler.alarmCallback,
+          exact: true, wakeup: true);
+      return;
+    }
+
     // Schedule first notification to align with the top of the hour,
     // based on the hours/mins
     int periodInMins = 60 * durationHours + durationMinutes;
@@ -445,41 +532,21 @@ class PeriodicScheduler extends Scheduler {
     int nowMinSinceEpoch = (now.millisecondsSinceEpoch / 60000).round();
     int nextIntervalMin = (nowMinSinceEpoch + periodInMins) % periodInMins + 1;
 
+    // THIS IS WRONG
+
     //DateTime startTime = now.add(Duration(minutes: nextIntervalMin));
     DateTime startTime = DateTime.fromMillisecondsSinceEpoch(
         (nowMinSinceEpoch + nextIntervalMin) * 60000);
 
     print("Scheduling for $startTime");
-    if (testing) {
-      await AndroidAlarmManager.periodic(
-          Duration(
-              /*hours: durationHours, minutes: durationMinutes*/ seconds: 30),
-          alarmID,
-          Scheduler.alarmCallback,
-          // startAt: startTime,
-          exact: true,
-          wakeup: true);
-    } else {
-      await AndroidAlarmManager.periodic(
-          Duration(hours: durationHours, minutes: durationMinutes),
-          alarmID,
-          Scheduler.alarmCallback,
-          startAt: startTime,
-          exact: true,
-          wakeup: true);
-    }
+    await AndroidAlarmManager.periodic(
+        Duration(hours: durationHours, minutes: durationMinutes),
+        scheduleAlarmID,
+        Scheduler.alarmCallback,
+        startAt: startTime,
+        exact: true,
+        wakeup: true);
   }
-
-  // void schedule() async {
-  //   DateTime nextDate = DateTime.now().add(Duration(hours: durationHours, minutes: durationMinutes));
-  //   if (quietHours.inQuietHours(nextDate)) {
-  //     print("Scheduling past next quiet hours");
-  //     nextDate = quietHours.getNextQuietEnd().add(Duration(hours: durationHours, minutes: durationMinutes));
-  //   }
-  //   await AndroidAlarmManager.oneShotAt(
-  //       nextDate, alarmID, Scheduler.alarmCallback,
-  //       exact: true, wakeup: true);
-  // }
 }
 
 class RandomScheduler extends Scheduler {
@@ -496,6 +563,7 @@ class RandomScheduler extends Scheduler {
   }
 
   void schedule() async {
+    super.schedule();
     Random random = new Random();
     int nextMinutes = minMinutes + random.nextInt(maxMinutes - minMinutes);
     DateTime nextDate = DateTime.now().add(Duration(minutes: nextMinutes));
@@ -503,8 +571,9 @@ class RandomScheduler extends Scheduler {
     //   print("Scheduling past next quiet hours");
     //   nextDate = quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
     // }
+    print("Scheduling next random notifcation at $nextDate");
     await AndroidAlarmManager.oneShotAt(
-        nextDate, alarmID, Scheduler.alarmCallback,
+        nextDate, scheduleAlarmID, Scheduler.alarmCallback,
         exact: true, wakeup: true);
   }
 }
@@ -522,9 +591,11 @@ class Notifier {
   static const String channelName = 'remindfulbell_channel_name';
   static const String channelDescription = 'Notifications for remindful bell';
   static const String notifTitle = appName;
+  static bool mute;
 
   void showNotification(String notifText) async {
-    print("showNotification: " + notifText);
+    DateTime now = DateTime.now();
+    print("[$now] showNotification: " + notifText);
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(channelId, channelName, channelDescription,
             importance: Importance.max,
