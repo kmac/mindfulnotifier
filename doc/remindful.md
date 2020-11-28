@@ -236,3 +236,17 @@ Random selected via Slider
 |   Export                                   |
 +--------------------------------------------+
 ```
+
+
+## Code Organization
+
+This is my first flutter app, so I'm learning code organization.
+I plan to refactor as I go.
+
+Some good articles:
+
+- https://medium.com/flutter-community/flutter-code-organization-revised-b09ad5cef7f6
+    - uses bloc
+
+- https://blog.gskinner.com/archives/2020/02/flutter-widgetview-a-simple-separation-of-layout-and-logic.html
+    - WidgetView pattern
