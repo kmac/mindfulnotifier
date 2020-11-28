@@ -7,15 +7,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
-// import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-// import 'package:device_info/device_info.dart';
 
 const String appName = 'Remindful Bell';
-const bool testing = true;
+const bool testing = false;
 
 // The name associated with the UI isolate's [SendPort].
 const String isolateName = 'alarmIsolate';
@@ -150,6 +150,28 @@ class RemindfulHomePage extends StatefulWidget {
   // used by the build method of the State. Fields in a Widget subclass are
   // always marked "final".
 
+/*
+From https://flutter.dev/docs/development/ui/interactive#managing-state:
+Who manages the stateful widget’s state? The widget itself? 
+The parent widget? Both? Another object? The answer is… it depends. 
+There are several valid ways to make your widget interactive. 
+You, as the widget designer, make the decision based on how you expect 
+your widget to be used. Here are the most common ways to manage state:
+
+  - The widget manages its own state
+  - The parent manages the widget’s state
+  - A mix-and-match approach
+
+How do you decide which approach to use? The following principles 
+should help you decide:
+  - If the state in question is user data, for example the checked or 
+    unchecked mode of a checkbox, or the position of a slider, then 
+    the state is best managed by the parent widget.
+  - If the state in question is aesthetic, for example an animation,
+    then the state is best managed by the widget itself.
+If in doubt, start by managing state in the parent widget.
+*/
+
   final String title;
 
   @override
@@ -165,6 +187,8 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
   _RemindfulHomePageState() {
+    // TODO the scheduler will be created in the enable code below,
+    // based on the schedule configuration defined by the schedule widget
     scheduler =
         new PeriodicScheduler(0, 15, new QuietHours(quietStart, quietEnd));
   }
@@ -270,7 +294,7 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
-          children: const <Widget>[
+          children: <Widget>[
             DrawerHeader(
               decoration: BoxDecoration(
                 color: Colors.blue,
@@ -287,7 +311,12 @@ class _RemindfulHomePageState extends State<RemindfulHomePage> {
               //leading: Icon(Icons.message),
               leading: Icon(Icons.schedule),
               title: Text('Schedule'),
-              onTap: null,
+              onTap: () {
+                // Update the state of the app
+                // ...
+                // Then close the drawer
+                Navigator.pop(context);
+              },
             ),
             ListTile(
               // leading: Icon(Icons.alarm),
@@ -326,6 +355,8 @@ class QuietHours {
   static SendPort uiSendPort;
 
   QuietHours(this.startTime, this.endTime);
+  QuietHours.defaultQuietHours()
+      : this(TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
 
   DateTime _getTimeOfDayToday(TimeOfDay tod) {
     final now = DateTime.now();
@@ -422,11 +453,13 @@ abstract class Scheduler {
   static SendPort uiSendPort;
 
   Scheduler(this.scheduleType, this.quietHours) {
-    init();
+    _init();
   }
 
-  void init() async {
-    if (!initialized) {
+  void _init() async {
+    uiSendPort = null;
+    if (!Scheduler.initialized) {
+      print("Initializing scheduler");
       // IsolateNameServer.registerPortName(receivePort.sendPort, isolateName);
       reminders = new Reminders();
       reminders.init();
@@ -450,7 +483,7 @@ abstract class Scheduler {
         }
       });
     }
-    initialized = true;
+    Scheduler.initialized = true;
   }
 
   void cancelSchedule() async {
@@ -515,6 +548,74 @@ class PeriodicScheduler extends Scheduler {
       this.durationHours, this.durationMinutes, QuietHours quietHours)
       : super(ScheduleType.PERIODIC, quietHours);
 
+  DateTime getInitialStart({DateTime now}) {
+    now ??= DateTime.now();
+    int periodInMins = 60 * durationHours + durationMinutes;
+    DateTime startTime = now.add(Duration(minutes: periodInMins));
+    switch (durationMinutes) {
+      case 0:
+      case 45:
+        // schedule next for top of the hour
+        DateTime startTimeRaw = now.add(Duration(hours: 1));
+        startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+            startTimeRaw.day, startTimeRaw.hour, 0, 0, 0, 0);
+        break;
+      case 30:
+        // schedule next for either top or bottom the hour (< 30m)
+        DateTime startTimeRaw = now.add(Duration(minutes: 30));
+        if (startTimeRaw.minute < 30) {
+          startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+              startTimeRaw.day, startTimeRaw.hour, 0, 0, 0, 0);
+        } else {
+          startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+              startTimeRaw.day, startTimeRaw.hour, 30, 0, 0, 0);
+        }
+        break;
+      case 15:
+        // schedule next for < 15m
+        DateTime startTimeRaw = now.add(Duration(minutes: 15));
+        int newMinute;
+        int newHour = startTimeRaw.hour;
+        // want to use the diff here, between now and 15m interval
+        if (startTimeRaw.minute >= 0 && startTimeRaw.minute < 15) {
+          newMinute = 0;
+        } else if (startTimeRaw.minute >= 15 && startTimeRaw.minute < 30) {
+          newMinute = 15;
+        } else if (startTimeRaw.minute >= 30 && startTimeRaw.minute < 45) {
+          newMinute = 30;
+        } else {
+          if (++newHour > 23) {
+            // day rollover
+            startTimeRaw = now.add(Duration(days: 1));
+            newHour = 0;
+          }
+          newMinute = 0;
+        }
+        startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+            startTimeRaw.day, newHour, newMinute, 0, 0, 0);
+        break;
+    }
+    return startTime;
+
+    // // Schedule first notification to align with the top of the hour,
+    // // based on the hours/mins. The minimum granularity is 15m.
+    // int periodInMins = 60 * durationHours + durationMinutes;
+
+    // DateTime startTime = now.add(Duration(minutes: periodInMins));
+
+    // int nowMillisecondsSinceEpoch = now.millisecondsSinceEpoch;
+    // int nowMinSinceEpoch = (nowMillisecondsSinceEpoch / 60000).round();
+
+    // int nextIntervalMin = (nowMinSinceEpoch + periodInMins) % periodInMins + 1;
+
+    // DateTime startTimeRaw = DateTime.fromMillisecondsSinceEpoch(
+    //     nowMillisecondsSinceEpoch + (nextIntervalMin * 60000));
+    // DateTime startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+    //     startTimeRaw.day, startTimeRaw.hour, startTimeRaw.minute, 0, 0, 0);
+    // print(
+    //     "Scheduling: now: $now, nextIntervalMin: $nextIntervalMin, startTime: $startTime");
+  }
+
   void schedule() async {
     super.schedule();
     if (testing) {
@@ -524,21 +625,8 @@ class PeriodicScheduler extends Scheduler {
           exact: true, wakeup: true);
       return;
     }
-
-    // Schedule first notification to align with the top of the hour,
-    // based on the hours/mins
-    int periodInMins = 60 * durationHours + durationMinutes;
-    DateTime now = DateTime.now();
-    int nowMinSinceEpoch = (now.millisecondsSinceEpoch / 60000).round();
-    int nextIntervalMin = (nowMinSinceEpoch + periodInMins) % periodInMins + 1;
-
-    // THIS IS WRONG
-
-    //DateTime startTime = now.add(Duration(minutes: nextIntervalMin));
-    DateTime startTime = DateTime.fromMillisecondsSinceEpoch(
-        (nowMinSinceEpoch + nextIntervalMin) * 60000);
-
-    print("Scheduling for $startTime");
+    DateTime startTime = getInitialStart();
+    print("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
     await AndroidAlarmManager.periodic(
         Duration(hours: durationHours, minutes: durationMinutes),
         scheduleAlarmID,
@@ -579,34 +667,113 @@ class RandomScheduler extends Scheduler {
 }
 
 class Reminders {
-  void init() {}
+  SharedPreferences _prefs;
+  static final String reminderKey = 'reminders';
+  static final String reminderInitializedKey = 'remindersInitialized';
+
+  // This is the initial list of reminders. It will only be used until the reminders are persisted...
+  List<String> reminders = [
+    "Are you aware?",
+    "Breathe deeply. There is only the present moment.",
+    "Be present in this moment.",
+    "Let go of greed, aversion, and delusion.",
+    "Trust the universe.",
+    "Respond, not react.",
+    "All of this is impermanent.",
+    "Connect, then correct.",
+    "Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.",
+    "Remember RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion",
+    "Note feeling tones (flavour): Pleasant / Unpleasant / Neutral",
+    "What is the attitude in the mind right now?",
+    "May you be safe and free from harm. May you be healthy and free from suffering. May you be happy. May you be peaceful and live with ease.",
+    "Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.",
+    "Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself.",
+    // "If this fear is with me the rest of my life, that is okay.",
+  ];
+  List<String> shuffledReminders;
+
+  Reminders() {
+    init();
+  }
+
+  void init() async {
+    _prefs = await SharedPreferences.getInstance();
+    if (_prefs.containsKey(reminderInitializedKey)) {
+      load();
+    } else {
+      print("Initial reminders persistence");
+      persist();
+    }
+    shuffledReminders = reminders.toList();
+  }
 
   String randomReminder() {
-    return 'this is a test';
+    shuffledReminders.shuffle();
+    return shuffledReminders.first;
+  }
+
+  void persist() {
+    print("Persisting reminders into storage");
+    _prefs.setStringList(reminderKey, reminders);
+    _prefs.setBool(reminderInitializedKey, true);
+  }
+
+  void load() {
+    print("Loading reminders from storage");
+    reminders = _prefs.getStringList(reminderKey);
   }
 }
 
 class Notifier {
-  static const String channelId = 'remindfulbell_channel_id';
+  static String channelId = 'remindfulbell_channel_id';
   static const String channelName = 'remindfulbell_channel_name';
   static const String channelDescription = 'Notifications for remindful bell';
   static const String notifTitle = appName;
-  static bool mute;
+  static bool mute = false;
+  static bool vibrate = true;
+  static String customBellPath;
+  final String defaultBellAsset = 'media/defaultbell.mp3';
+  String customSoundFile;
 
   void showNotification(String notifText) async {
     DateTime now = DateTime.now();
-    print("[$now] showNotification: " + notifText);
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+
+    AndroidNotificationSound notifSound;
+    if (customBellPath == null) {
+      channelId = 'defaultbell';
+      notifSound = RawResourceAndroidNotificationSound(channelId);
+    } else {
+      notifSound = UriAndroidNotificationSound(customBellPath);
+      channelId = customBellPath;
+    }
+    print(
+        "[$now] showNotification [channelId=$channelId]: title=$notifTitle text=$notifText mute=$mute");
+    // "[$now] showNotification [channelId=$channelId]: title=$notifTitle text=$notifText mute=$mute, sound=$notifSound");
+    AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(channelId, channelName, channelDescription,
             importance: Importance.max,
             priority: Priority.high,
+            enableVibration: vibrate,
+            // playSound: !mute,
+            playSound: false,
+            // sound: notifSound,
             ticker: 'ticker');
-
-    const NotificationDetails platformChannelSpecifics =
+    NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
     await flutterLocalNotificationsPlugin.show(
         0, notifTitle, notifText, platformChannelSpecifics,
         payload: 'item x');
+
+    if (!mute) {
+      final player = AudioPlayer();
+      if (customSoundFile == null) {
+        await player.setAsset(defaultBellAsset);
+      } else {
+        await player.setFilePath(customBellPath);
+      }
+      await player.play();
+      await player.dispose();
+    }
   }
 }

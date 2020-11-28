@@ -1,0 +1,52 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:remindfulbell/main.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('Periodic', () {
+    test('test schedule 15m', () {
+      PeriodicScheduler scheduler =
+          PeriodicScheduler(0, 15, QuietHours.defaultQuietHours());
+      DateTime dt = DateTime(2020, 1, 1, 0, 5);
+      DateTime start = scheduler.getInitialStart(now: dt);
+      print("start: $start");
+      expect(start.minute, 15);
+
+      dt = DateTime(2020, 1, 1, 0, 0);
+      start = scheduler.getInitialStart(now: dt);
+      expect(start.minute, 15);
+
+      dt = DateTime(2020, 1, 1, 0, 14, 59);
+      start = scheduler.getInitialStart(now: dt);
+      expect(start.minute, 15);
+
+      dt = DateTime(2020, 1, 1, 0, 15);
+      start = scheduler.getInitialStart(now: dt);
+      expect(start.minute, 30);
+    });
+    test('test schedule 30m', () {
+      PeriodicScheduler scheduler =
+          PeriodicScheduler(0, 30, QuietHours.defaultQuietHours());
+      // scheduler.durationMinutes = 30;
+      DateTime dt = DateTime(2020, 1, 1, 0, 5);
+      DateTime start = scheduler.getInitialStart(now: dt);
+      print("start: $start");
+      expect(start.minute, 30);
+
+      dt = DateTime(2020, 1, 1, 0, 0);
+      start = scheduler.getInitialStart(now: dt);
+      expect(start.minute, 30);
+
+      dt = DateTime(2020, 1, 1, 0, 14, 59);
+      start = scheduler.getInitialStart(now: dt);
+      expect(start.minute, 30);
+
+      dt = DateTime(2020, 1, 1, 0, 15);
+      start = scheduler.getInitialStart(now: dt);
+      expect(start.minute, 30);
+    });
+  });
+}
