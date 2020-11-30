@@ -24,24 +24,34 @@ class ConfigManager {}
 
 class SchedulesWidgetController extends State<SchedulesWidget> {
   var scheduleTypeKey = 'scheduleType';
-  var periodicDurationHoursKey = 'periodicDurationHours';
-  var periodicDurationMinutesKey = 'periodicDurationMinutes';
+  var periodicHoursKey = 'periodicDurationHours';
+  var periodicMinutesKey = 'periodicDurationMinutes';
   var randomMinHoursKey = 'randomMinHours';
   var randomMinMinutesKey = 'randomMinMinutes';
   var randomMaxHoursKey = 'randomMaxHours';
   var randomMaxMinutesKey = 'randomMaxMinutes';
 
+  var quietHoursStartHourKey = 'quietHoursStartHour';
+  var quietHoursStartMinuteKey = 'quietHoursStartMinute';
+  var quietHoursEndHourKey = 'quietHoursEndHour';
+  var quietHoursEndMinuteKey = 'quietHoursEndMinute';
+
   SharedPreferences _prefs;
   ScheduleType scheduleType = ScheduleType.periodic;
-  int periodicDurationHours = 1;
-  int periodicDurationMinutes = 0;
-  Duration periodicDuration = Duration(hours: 1);
+  int periodicHours = 1;
+  int periodicMinutes = 0;
+
   int randomMinHours = 0;
   int randomMinMinutes = 45;
   int randomMaxHours = 1;
   int randomMaxMinutes = 15;
   DateTime randomMinDateTime = DateTime.parse("1970-01-01 00:45:00Z");
   DateTime randomMaxDateTime = DateTime.parse("1970-01-01 01:30:00Z");
+
+  int quietHoursStartHour = 21;
+  int quietHoursStartMinute = 0;
+  int quietHoursEndHour = 9;
+  int quietHoursEndMinute = 0;
 
   // UI event handlers, init code, etc goes here
   SchedulesWidgetController() {
@@ -81,21 +91,17 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
     }
     setScheduleType(scheduleType);
 
-    // periodicDuration
-    int durationHours = 1;
-    int durationMinutes = 0;
-    if (_prefs.containsKey(periodicDurationHoursKey)) {
-      durationHours = _prefs.getInt(periodicDurationHoursKey);
+    // periodicHours / periodicMinutes
+    if (_prefs.containsKey(periodicHoursKey)) {
+      periodicHours = _prefs.getInt(periodicHoursKey);
     } else {
-      _prefs.setInt(periodicDurationHoursKey, durationHours);
+      _prefs.setInt(periodicHoursKey, periodicHours);
     }
-    if (_prefs.containsKey(periodicDurationMinutesKey)) {
-      durationMinutes = _prefs.getInt(periodicDurationMinutesKey);
+    if (_prefs.containsKey(periodicMinutesKey)) {
+      periodicMinutes = _prefs.getInt(periodicMinutesKey);
     } else {
-      _prefs.setInt(periodicDurationMinutesKey, durationMinutes);
+      _prefs.setInt(periodicMinutesKey, periodicMinutes);
     }
-    periodicDuration = Duration(hours: durationHours, minutes: durationMinutes);
-    setPeriodicDuration(periodicDuration);
 
     if (_prefs.containsKey(randomMinHoursKey)) {
       randomMinHours = _prefs.getInt(randomMinHoursKey);
@@ -113,6 +119,23 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
     setRandomMinDateTime(randomMinDateTime);
     randomMaxDateTime = _getDateTime(randomMaxHours, randomMaxMinutes);
     setRandomMaxDateTime(randomMaxDateTime);
+
+    if (_prefs.containsKey(quietHoursStartHourKey)) {
+      quietHoursStartHour = _prefs.getInt(quietHoursStartHourKey);
+    }
+    if (_prefs.containsKey(quietHoursStartMinuteKey)) {
+      quietHoursStartMinute = _prefs.getInt(quietHoursStartMinuteKey);
+    }
+    setQuietHoursStart(DateTimeField.convert(
+        TimeOfDay(hour: quietHoursStartHour, minute: quietHoursStartMinute)));
+    if (_prefs.containsKey(quietHoursEndHourKey)) {
+      quietHoursEndHour = _prefs.getInt(quietHoursEndHourKey);
+    }
+    if (_prefs.containsKey(quietHoursEndMinuteKey)) {
+      quietHoursEndMinute = _prefs.getInt(quietHoursEndMinuteKey);
+    }
+    setQuietHoursEnd(DateTimeField.convert(
+        TimeOfDay(hour: quietHoursEndHour, minute: quietHoursEndMinute)));
   }
 
   @override
@@ -129,36 +152,20 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
     }
   }
 
-  void setPeriodicDurationHours(int hours) {
-    _prefs.setInt(periodicDurationHoursKey, hours);
+  void setPeriodicHours(int hours) {
+    _prefs.setInt(periodicHoursKey, hours);
     setState(() {
-      periodicDurationHours = hours;
+      periodicHours = hours;
     });
     if (hours > 0) {
-      setPeriodicDurationMinutes(0);
+      setPeriodicMinutes(0);
     }
   }
 
-  void setPeriodicDurationMinutes(int minutes) {
-    _prefs.setInt(periodicDurationHoursKey, minutes);
+  void setPeriodicMinutes(int minutes) {
+    _prefs.setInt(periodicMinutesKey, minutes);
     setState(() {
-      periodicDurationMinutes = minutes;
-    });
-  }
-
-  void setPeriodicDuration(Duration d) {
-    print(
-        "Setting duration: Duration: hours: ${d.inHours}, minutes: ${d.inMinutes}");
-    int hours = d.inMinutes ~/ 60;
-    if (hours > 23) {
-      hours = 23;
-    }
-    int minutes = d.inMinutes % 60;
-    _prefs.setInt(periodicDurationHoursKey, hours);
-    _prefs.setInt(periodicDurationMinutesKey, minutes);
-    print("Setting duration: hours: $hours, minutes: $minutes");
-    setState(() {
-      periodicDuration = Duration(hours: hours, minutes: minutes);
+      periodicMinutes = minutes;
     });
   }
 
@@ -177,13 +184,31 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
       randomMaxDateTime = time;
     });
   }
+
+  void setQuietHoursStart(DateTime time) {
+    print("setQuietHoursStart: $time");
+    _prefs.setInt(quietHoursStartHourKey, time.hour);
+    _prefs.setInt(quietHoursStartMinuteKey, time.minute);
+    setState(() {
+      quietHoursStartHour = time.hour;
+      quietHoursStartMinute = time.minute;
+    });
+  }
+
+  void setQuietHoursEnd(DateTime time) {
+    print("setQuietHoursEnd: $time");
+    _prefs.setInt(quietHoursEndHourKey, time.hour);
+    _prefs.setInt(quietHoursEndMinuteKey, time.minute);
+    setState(() {
+      quietHoursEndHour = time.hour;
+      quietHoursEndMinute = time.minute;
+    });
+  }
 }
 
 class _SchedulesWidgetView
     extends WidgetView<SchedulesWidget, SchedulesWidgetController> {
   _SchedulesWidgetView(SchedulesWidgetController state) : super(state);
-
-  final bool useDurationPicker = false;
 
   DropdownButton<int> _buildDropDown(
       int dropdownValue, List<int> allowedValues, Function onChangedFunc,
@@ -228,60 +253,39 @@ class _SchedulesWidgetView
       ])
     ];
     if (state.scheduleType == ScheduleType.periodic) {
-      if (useDurationPicker) {
-        widgets.add(new Center(
-          child: new Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text(
-                  'Choose the notification period. The granularity is 15 minutes.'),
-              DurationPicker(
-                duration: state.periodicDuration,
-                onChange: state.setPeriodicDuration,
-                snapToMins: 15.0,
-              ),
-            ],
-          ),
-        ));
-      } else {
-        widgets.add(
-          new Center(
-              child: new Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text(
-                  'Choose the notification period. Notifications are aligned on the top of hour, If the period is shorter than one hour, the granularity is 15 minutes.'),
-              new Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  new Column(
-                    children: [
-                      Text('Hours'),
-                      _buildDropDown(
-                          state.periodicDurationHours,
-                          [0, 1, 2, 3, 4, 8, 12],
-                          state.setPeriodicDurationHours),
-                    ],
-                  ),
-                  Text(':'),
-                  new Column(
-                    children: [
-                      Text('Minutes'),
-                      _buildDropDown(
-                          state.periodicDurationMinutes,
-                          state.periodicDurationHours > 0
-                              ? [0]
-                              : [0, 15, 30, 45],
-                          state.setPeriodicDurationMinutes,
-                          true),
-                    ],
-                  )
-                ],
-              ),
-            ],
-          )),
-        );
-      }
+      widgets.add(
+        new Center(
+            child: new Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+                'Choose the notification period. Notifications are aligned on the top of hour, If the period is shorter than one hour, the granularity is 15 minutes.'),
+            new Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                new Column(
+                  children: [
+                    Text('Hours'),
+                    _buildDropDown(state.periodicHours, [0, 1, 2, 3, 4, 8, 12],
+                        state.setPeriodicHours),
+                  ],
+                ),
+                Text(':'),
+                new Column(
+                  children: [
+                    Text('Minutes'),
+                    _buildDropDown(
+                        state.periodicMinutes,
+                        state.periodicHours > 0 ? [0] : [0, 15, 30, 45],
+                        state.setPeriodicMinutes,
+                        true),
+                  ],
+                )
+              ],
+            ),
+          ],
+        )),
+      );
     } else {
       widgets.add(new Center(
         child: new Row(
@@ -319,23 +323,6 @@ class _SchedulesWidgetView
           ],
         ),
       ));
-
-      // Use this for Quiet Hours?
-      // final format = DateFormat("hh:mm a");
-      // widgets.addAll([
-      //   Text('Basic time field (${format.pattern})'),
-      //   DateTimeField(
-      //     format: format,
-      //     onShowPicker: (context, currentValue) async {
-      //       final time = await showTimePicker(
-      //         context: context,
-      //         initialTime:
-      //             TimeOfDay.fromDateTime(currentValue ?? DateTime.now()),
-      //       );
-      //       return DateTimeField.convert(time);
-      //     },
-      //   ),
-      // ]);
     }
     return widgets;
   }
@@ -372,19 +359,22 @@ class _SchedulesWidgetView
                               child: DateTimeField(
                                 format: quietTimeDateFormat,
                                 resetIcon: null,
+                                onChanged: state.setQuietHoursStart,
                                 onShowPicker: (context, currentValue) async {
                                   final time = await showTimePicker(
                                     context: context,
-                                    // this will be state.___:
                                     initialTime: TimeOfDay.fromDateTime(
-                                        currentValue ??
-                                            DateTimeField.convert(TimeOfDay(
-                                                hour: 21, minute: 0))),
+                                        // currentValue ??
+                                        DateTimeField.convert(TimeOfDay(
+                                            hour: state.quietHoursStartHour,
+                                            minute:
+                                                state.quietHoursStartMinute))),
                                   );
                                   return DateTimeField.convert(time);
                                 },
-                                initialValue: DateTimeField.convert(
-                                    TimeOfDay(hour: 21, minute: 0)),
+                                initialValue: DateTimeField.convert(TimeOfDay(
+                                    hour: state.quietHoursStartHour,
+                                    minute: state.quietHoursStartMinute)),
                               )),
                           Text('to: '),
                           SizedBox(
@@ -392,16 +382,25 @@ class _SchedulesWidgetView
                               child: DateTimeField(
                                 format: quietTimeDateFormat,
                                 resetIcon: null,
+                                onChanged: state.setQuietHoursEnd,
                                 onShowPicker: (context, currentValue) async {
                                   final time = await showTimePicker(
                                     context: context,
+
+                                    // bug is either with this:
                                     initialTime: TimeOfDay.fromDateTime(
-                                        currentValue ?? DateTime.now()),
+                                        // currentValue ??
+                                        DateTimeField.convert(TimeOfDay(
+                                            hour: state.quietHoursEndHour,
+                                            minute:
+                                                state.quietHoursEndMinute))),
                                   );
                                   return DateTimeField.convert(time);
                                 },
-                                initialValue: DateTimeField.convert(
-                                    TimeOfDay(hour: 9, minute: 0)),
+                                // or this:
+                                initialValue: DateTimeField.convert(TimeOfDay(
+                                    hour: state.quietHoursEndHour,
+                                    minute: state.quietHoursEndMinute)),
                               )),
                         ],
                       ),
