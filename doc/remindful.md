@@ -98,18 +98,18 @@ Controls:
 
 #### Schedule - Periodic
 
-Periodic selected via Slider
+Periodic selected via Radio
 
 ```
 +--------------------------------------------+
-|  Schedule                                  |
+| <- Schedule                                |
 |                                            |
-|  Periodic <<<slider> Random                |
+|  (o) Periodic ( ) Random                   |
 |                                            |
 |  +--------------------------------------+  |
 |  |                                      |  |
 |  | Interval:  _01_:_00_  Hours:Minutes  |  |
-|  |                                      |  |
+|  |                 (15m granularity)    |  |
 |  +--------------------------------------+  |
 |                                            |
 | Quiet Hours:                               |
@@ -119,13 +119,13 @@ Periodic selected via Slider
 
 #### Schedule - Random
 
-Random selected via Slider
+Random selected via Radio
 
 ```
 +--------------------------------------------+
-|  Schedule                                  |
+| <- Schedule                                |
 |                                            |
-|  Periodic <slider>>> Random                |
+|  ( ) Periodic (o) Random                   |
 |                                            |
 |  +--------------------------------------+  |
 |  | Minimum:  _00_:_45_  Hours:Minutes   |  |
@@ -143,7 +143,7 @@ Random selected via Slider
 #### Schedule - Quiet Hours
 ```
 +--------------------------------------------+
-|  Schedule:                                 |
+| <- Schedule:                               |
 |                                            |
 |  Periodic <slider>>> Random                |
 |                                            |
@@ -178,7 +178,7 @@ Random selected via Slider
 
 ```
 +--------------------------------------------+
-|  Reminders                                 |
+| <- Reminders                               |
 |                                            |
 |  +--------------------------------------+  |
 |  | Text1                                |  |
@@ -208,7 +208,7 @@ Random selected via Slider
 
 ```
 +--------------------------------------------+
-|  Bell                                      |
+| <- Bell                                    |
 |  Select the bell                           |
 |  Long-press for option (delete)            |
 |                                            |

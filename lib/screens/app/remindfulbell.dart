@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:remindfulbell/screens/widgetview.dart';
+import 'package:remindfulbell/screens/schedules/schedulesview.dart';
 import 'package:remindfulbell/components/notifier.dart';
 import 'package:remindfulbell/components/schedule.dart';
 
@@ -20,13 +21,20 @@ class RemindfulApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: title,
-      home: RemindfulAppWidget(title: title),
+      //home: RemindfulAppWidget(title: title),
       theme: ThemeData(
         primarySwatch: Colors.blue,
         // This makes the visual density adapt to the platform that you run
         // the app on.
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
+      routes: {
+        '/': (context) => RemindfulAppWidget(title: title),
+        '/schedules': (context) => SchedulesWidget(),
+        // '/reminders': (context) => RemindersScreen(),
+        // '/bells': (context) => BellScreen(),
+        // '/advanced': (context) => AdvancedScreen(),
+      },
     );
   }
 }
@@ -127,7 +135,22 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
   void handleScheduleOnTap() {
     // TODO launch the schedule widget
     // https://flutter.dev/docs/cookbook/navigation/navigation-basics
+    Navigator.pushNamed(
+      context,
+      '/schedules',
+    );
+    // Navigator.pop(context);
+  }
 
+  void handleRemindersOnTap() {
+    Navigator.pop(context);
+  }
+
+  void handleBellOnTap() {
+    Navigator.pop(context);
+  }
+
+  void handleAdvancedOnTap() {
     Navigator.pop(context);
   }
 
@@ -229,27 +252,22 @@ class _RemindfulWidgetView
               leading: Icon(Icons.list),
               title: Text('Reminders'),
               subtitle: Text('Configure reminder contents'),
-              onTap: null,
+              onTap: state.handleRemindersOnTap,
             ),
             ListTile(
               leading: Icon(Icons.notifications),
               title: Text('Bell'),
               subtitle: Text('Configure bell'),
-              onTap: null,
+              onTap: state.handleBellOnTap,
             ),
             ListTile(
               leading: Icon(Icons.settings),
               title: Text('Advanced'),
-              onTap: null,
+              onTap: state.handleAdvancedOnTap,
             ),
           ],
         ),
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: _setEnabled(true),
-      //   tooltip: 'Increment',
-      //   child: Icon(Icons.add),
-      // ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
