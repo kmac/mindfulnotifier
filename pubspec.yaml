@@ -35,11 +35,11 @@ dependencies:
   flutter_native_timezone: ^1.0.4
   shared_preferences: ^0.5.12+4
   just_audio: ^0.5.6
-  flutter_duration_picker: "^1.0.0"
-  datetime_picker_formfield: ^1.0.0
+  # flutter_duration_picker: "^1.0.0"
+  # datetime_picker_formfield: ^1.0.0
   flutter_time_picker_spinner: ^1.0.6+1
-  time_range: ^0.5.0
-
+  # time_range: ^0.5.0
+  date_format: ^1.0.9
 
 dev_dependencies:
   flutter_test:

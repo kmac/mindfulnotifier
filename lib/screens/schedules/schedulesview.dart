@@ -2,12 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_duration_picker/flutter_duration_picker.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
-import 'package:time_range/time_range.dart';
-import 'package:datetime_picker_formfield/datetime_picker_formfield.dart';
-import 'package:intl/intl.dart';
+import 'package:date_format/date_format.dart';
 
 import 'package:remindfulbell/screens/widgetview.dart';
 
@@ -52,11 +50,11 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
   int quietHoursStartMinute = 0;
   int quietHoursEndHour = 9;
   int quietHoursEndMinute = 0;
+  TextEditingController quietHoursStartTimeController = TextEditingController();
+  TextEditingController quietHoursEndTimeController = TextEditingController();
 
   // UI event handlers, init code, etc goes here
-  SchedulesWidgetController() {
-    loadPrefs();
-  }
+  SchedulesWidgetController() {}
 
   String _twoDigits(int source) {
     if (source < 10) {
@@ -73,6 +71,13 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
   @override
   void initState() {
     super.initState();
+    loadPrefs();
+    quietHoursStartTimeController.text = formatDate(
+        DateTime(2020, 01, 1, quietHoursStartHour, quietHoursStartMinute),
+        [hh, ':', nn, " ", am]).toString();
+    quietHoursEndTimeController.text = formatDate(
+        DateTime(2020, 01, 1, quietHoursEndHour, quietHoursEndMinute),
+        [hh, ':', nn, " ", am]).toString();
   }
 
   void loadPrefs() async {
@@ -126,16 +131,16 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
     if (_prefs.containsKey(quietHoursStartMinuteKey)) {
       quietHoursStartMinute = _prefs.getInt(quietHoursStartMinuteKey);
     }
-    setQuietHoursStart(DateTimeField.convert(
-        TimeOfDay(hour: quietHoursStartHour, minute: quietHoursStartMinute)));
+    setQuietHoursStart(
+        TimeOfDay(hour: quietHoursStartHour, minute: quietHoursStartMinute));
     if (_prefs.containsKey(quietHoursEndHourKey)) {
       quietHoursEndHour = _prefs.getInt(quietHoursEndHourKey);
     }
     if (_prefs.containsKey(quietHoursEndMinuteKey)) {
       quietHoursEndMinute = _prefs.getInt(quietHoursEndMinuteKey);
     }
-    setQuietHoursEnd(DateTimeField.convert(
-        TimeOfDay(hour: quietHoursEndHour, minute: quietHoursEndMinute)));
+    setQuietHoursEnd(
+        TimeOfDay(hour: quietHoursEndHour, minute: quietHoursEndMinute));
   }
 
   @override
@@ -185,23 +190,29 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
     });
   }
 
-  void setQuietHoursStart(DateTime time) {
-    print("setQuietHoursStart: $time");
-    _prefs.setInt(quietHoursStartHourKey, time.hour);
-    _prefs.setInt(quietHoursStartMinuteKey, time.minute);
+  void setQuietHoursStart(TimeOfDay time) {
+    // print("setQuietHoursStart: $time");
     setState(() {
       quietHoursStartHour = time.hour;
       quietHoursStartMinute = time.minute;
+      _prefs.setInt(quietHoursStartHourKey, quietHoursStartHour);
+      _prefs.setInt(quietHoursStartMinuteKey, quietHoursStartMinute);
+      quietHoursStartTimeController.text = formatDate(
+          DateTime(2019, 08, 1, quietHoursStartHour, quietHoursStartMinute),
+          [hh, ':', nn, " ", am]).toString();
     });
   }
 
-  void setQuietHoursEnd(DateTime time) {
-    print("setQuietHoursEnd: $time");
-    _prefs.setInt(quietHoursEndHourKey, time.hour);
-    _prefs.setInt(quietHoursEndMinuteKey, time.minute);
+  void setQuietHoursEnd(TimeOfDay time) {
+    // print("setQuietHoursEnd: $time");
     setState(() {
       quietHoursEndHour = time.hour;
       quietHoursEndMinute = time.minute;
+      _prefs.setInt(quietHoursEndHourKey, quietHoursEndHour);
+      _prefs.setInt(quietHoursEndMinuteKey, quietHoursEndMinute);
+      quietHoursEndTimeController.text = formatDate(
+          DateTime(2019, 08, 1, quietHoursEndHour, quietHoursEndMinute),
+          [hh, ':', nn, " ", am]).toString();
     });
   }
 }
@@ -327,87 +338,112 @@ class _SchedulesWidgetView
     return widgets;
   }
 
-  final quietTimeDateFormat = DateFormat("hh:mm a");
+  Future<Null> _selectQuietHoursStartTime(BuildContext context) async {
+    var selectedTime = TimeOfDay(
+        hour: state.quietHoursStartHour, minute: state.quietHoursStartMinute);
+    final TimeOfDay picked = await showTimePicker(
+      context: context,
+      initialTime: selectedTime,
+    );
+    if (picked != null) {
+      state.setQuietHoursStart(picked);
+      selectedTime = picked;
+    }
+  }
+
+  Future<Null> _selectQuietHoursEndTime(BuildContext context) async {
+    var selectedTime = TimeOfDay(
+        hour: state.quietHoursEndHour, minute: state.quietHoursEndMinute);
+    final TimeOfDay picked = await showTimePicker(
+      context: context,
+      initialTime: selectedTime,
+    );
+    if (picked != null) {
+      state.setQuietHoursEnd(picked);
+      selectedTime = picked;
+    }
+  }
+
+  List<Widget> _buildQuietHoursView(BuildContext context) {
+    List<Widget> widgets = [
+      Text('Quiet Hours'),
+      new Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: <Widget>[
+          InkWell(
+              onTap: () {
+                _selectQuietHoursStartTime(context);
+              },
+              child: Container(
+                  width: 100,
+                  margin: EdgeInsets.only(top: 30),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: Colors.grey[200]),
+                  child: TextFormField(
+                    style: TextStyle(fontSize: 20),
+                    textAlign: TextAlign.center,
+                    enabled: false,
+                    keyboardType: TextInputType.text,
+                    controller: state.quietHoursStartTimeController,
+                    decoration: InputDecoration(
+                        disabledBorder:
+                            UnderlineInputBorder(borderSide: BorderSide.none),
+                        labelText: 'Start Time',
+                        contentPadding: EdgeInsets.all(5)),
+                  ))),
+          Text('to: '),
+          InkWell(
+              onTap: () {
+                _selectQuietHoursEndTime(context);
+              },
+              child: Container(
+                  width: 100,
+                  // height: _height / 9,
+                  margin: EdgeInsets.only(top: 30),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: Colors.grey[200]),
+                  child: TextFormField(
+                    style: TextStyle(fontSize: 20),
+                    textAlign: TextAlign.center,
+                    enabled: false,
+                    keyboardType: TextInputType.text,
+                    controller: state.quietHoursEndTimeController,
+                    decoration: InputDecoration(
+                        disabledBorder:
+                            UnderlineInputBorder(borderSide: BorderSide.none),
+                        labelText: 'End Time',
+                        contentPadding: EdgeInsets.all(5)),
+                  ))),
+        ],
+      ),
+    ];
+    return widgets;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text('Configure schedule'),
+      ),
       body: Center(
-        child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              Container(
-                alignment: Alignment.topCenter,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _buildScheduleView(),
-                ),
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+            Container(
+              alignment: Alignment.topCenter,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: _buildScheduleView(),
               ),
-              Container(
+            ),
+            Container(
                 alignment: Alignment.topCenter,
                 child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text('Quiet Hours'),
-                      new Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: <Widget>[
-                          Text('From: '),
-                          SizedBox(
-                              width: 80,
-                              child: DateTimeField(
-                                format: quietTimeDateFormat,
-                                resetIcon: null,
-                                onChanged: state.setQuietHoursStart,
-                                onShowPicker: (context, currentValue) async {
-                                  final time = await showTimePicker(
-                                    context: context,
-                                    initialTime: TimeOfDay.fromDateTime(
-                                        // currentValue ??
-                                        DateTimeField.convert(TimeOfDay(
-                                            hour: state.quietHoursStartHour,
-                                            minute:
-                                                state.quietHoursStartMinute))),
-                                  );
-                                  return DateTimeField.convert(time);
-                                },
-                                initialValue: DateTimeField.convert(TimeOfDay(
-                                    hour: state.quietHoursStartHour,
-                                    minute: state.quietHoursStartMinute)),
-                              )),
-                          Text('to: '),
-                          SizedBox(
-                              width: 80,
-                              child: DateTimeField(
-                                format: quietTimeDateFormat,
-                                resetIcon: null,
-                                onChanged: state.setQuietHoursEnd,
-                                onShowPicker: (context, currentValue) async {
-                                  final time = await showTimePicker(
-                                    context: context,
-
-                                    // bug is either with this:
-                                    initialTime: TimeOfDay.fromDateTime(
-                                        // currentValue ??
-                                        DateTimeField.convert(TimeOfDay(
-                                            hour: state.quietHoursEndHour,
-                                            minute:
-                                                state.quietHoursEndMinute))),
-                                  );
-                                  return DateTimeField.convert(time);
-                                },
-                                // or this:
-                                initialValue: DateTimeField.convert(TimeOfDay(
-                                    hour: state.quietHoursEndHour,
-                                    minute: state.quietHoursEndMinute)),
-                              )),
-                        ],
-                      ),
-                    ]),
-              ),
-            ]),
-      ),
+                    children: _buildQuietHoursView(context))),
+          ])),
     );
   }
 }
