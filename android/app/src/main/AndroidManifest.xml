@@ -65,5 +65,9 @@
     <!-- for android_alarm_manager -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!--
+      android.permission.VIBRATE
+      android.permission.MODIFY_AUDIO_SETTINGS
+    -->
 
 </manifest>

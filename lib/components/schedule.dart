@@ -2,14 +2,7 @@ import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_native_timezone/flutter_native_timezone.dart';
-import 'package:rxdart/rxdart.dart';
-import 'package:rxdart/subjects.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 
 import 'package:android_alarm_manager/android_alarm_manager.dart';
 
@@ -19,40 +12,15 @@ import 'package:remindfulbell/components/reminders.dart';
 
 const bool testing = false;
 
+void initializeAlarmManager() async {
+  await AndroidAlarmManager.initialize();
+}
+
 // The name associated with the UI isolate's [SendPort].
 const String isolateName = 'alarmIsolate';
 
 // A port used to communicate from a background isolate to the UI isolate.
 final ReceivePort port = ReceivePort();
-
-// Streams are created so that app can respond to notification-related events
-// since the plugin is initialised in the `main` function
-final BehaviorSubject<ReceivedNotification> didReceiveLocalNotificationSubject =
-    BehaviorSubject<ReceivedNotification>();
-
-final BehaviorSubject<String> selectNotificationSubject =
-    BehaviorSubject<String>();
-
-// const MethodChannel platform = MethodChannel('kmsd.ca/remindfulbell');
-
-class ReceivedNotification {
-  ReceivedNotification({
-    @required this.id,
-    @required this.title,
-    @required this.body,
-    @required this.payload,
-  });
-  final int id;
-  final String title;
-  final String body;
-  final String payload;
-}
-
-Future<void> _configureLocalTimeZone() async {
-  tz.initializeTimeZones();
-  final String currentTimeZone = await FlutterNativeTimezone.getLocalTimezone();
-  tz.setLocalLocation(tz.getLocation(currentTimeZone));
-}
 
 enum ScheduleType { PERIODIC, RANDOM }
 
@@ -76,8 +44,6 @@ abstract class Scheduler {
   }
 
   void _init() async {
-    await _configureLocalTimeZone();
-
     // Register the UI isolate's SendPort to allow for communication from the
     // background isolate.
     IsolateNameServer.registerPortWithName(
@@ -85,53 +51,12 @@ abstract class Scheduler {
       isolateName,
     );
 
-    final NotificationAppLaunchDetails notificationAppLaunchDetails =
-        await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
-
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('app_icon');
-
-    /// Note: permissions aren't requested here just to demonstrate that can be
-    /// done later
-    final IOSInitializationSettings initializationSettingsIOS =
-        IOSInitializationSettings(
-            requestAlertPermission: false,
-            requestBadgePermission: false,
-            requestSoundPermission: false,
-            onDidReceiveLocalNotification:
-                (int id, String title, String body, String payload) async {
-              didReceiveLocalNotificationSubject.add(ReceivedNotification(
-                  id: id, title: title, body: body, payload: payload));
-            });
-
-    const MacOSInitializationSettings initializationSettingsMacOS =
-        MacOSInitializationSettings(
-            requestAlertPermission: false,
-            requestBadgePermission: false,
-            requestSoundPermission: false);
-
-    final InitializationSettings initializationSettings =
-        InitializationSettings(
-            android: initializationSettingsAndroid,
-            iOS: initializationSettingsIOS,
-            macOS: initializationSettingsMacOS);
-
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-        onSelectNotification: (String payload) async {
-      if (payload != null) {
-        debugPrint('notification payload: $payload');
-      }
-      selectNotificationSubject.add(payload);
-    });
-
     uiSendPort = null;
     if (!Scheduler.initialized) {
       print("Initializing scheduler");
       // IsolateNameServer.registerPortName(receivePort.sendPort, isolateName);
       reminders = new Reminders();
       reminders.init();
-
-      await AndroidAlarmManager.initialize();
 
       // Register for events from the background isolate. These messages will
       // always coincide with an alarm firing.

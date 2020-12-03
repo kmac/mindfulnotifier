@@ -8,6 +8,7 @@ import 'package:remindfulbell/components/notifier.dart';
 import 'package:remindfulbell/components/schedule.dart';
 import 'package:remindfulbell/screens/schedules/schedulesview.dart';
 import 'package:remindfulbell/screens/widgetview.dart';
+import 'package:date_format/date_format.dart';
 
 // const String appName = 'Remindful Bell';
 const bool testing = false;
@@ -16,7 +17,10 @@ class RemindfulApp extends StatelessWidget {
   final String title;
   RemindfulApp(this.title);
 
-  void init() async {}
+  void init() async {
+    initializeNotifications();
+    initializeAlarmManager();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +89,7 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
 
   final String title;
   String message = 'Not Running';
+  String infoMessage = 'Not Running';
   bool _enabled = false;
   bool _mute = false;
   static Scheduler scheduler;
@@ -102,6 +107,7 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
   }
 
   Future<void> _handlePermissions() async {
+    // TODO change this to take the user to the settings in UI
     Map<Permission, PermissionStatus> statuses = await [
       Permission.ignoreBatteryOptimizations,
       Permission.notification,
@@ -110,7 +116,7 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
   }
 
   void setEnabled(bool enabled) async {
-    await _handlePermissions();
+    // await _handlePermissions();
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
@@ -121,20 +127,26 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
           scheduler.disable();
         }
         setMessage('Running');
+        setInfoMessage('Running');
         scheduler = _ds.buildScheduler(this, title);
         scheduler.enable();
       } else {
         scheduler?.disable();
         setMessage('Disabled');
+        setInfoMessage('Disabled');
         scheduler = null;
       }
     });
   }
 
   void setNextNotification(TimeOfDay timeOfDay) {
+    var timestr = formatDate(
+        DateTime(2020, 01, 1, timeOfDay.hour, timeOfDay.minute),
+        [hh, ':', nn, " ", am]).toString();
     if (message == 'Running' || message == 'Disabled') {
-      setMessage("Next notification at $timeOfDay");
+      setMessage("Next notification at $timestr");
     }
+    setInfoMessage("Next notification at $timestr");
   }
 
   void setMute(bool mute) {
@@ -147,6 +159,12 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
   void setMessage(String msg) {
     setState(() {
       message = msg;
+    });
+  }
+
+  void setInfoMessage(String msg) {
+    setState(() {
+      infoMessage = msg;
     });
   }
 
@@ -237,6 +255,9 @@ class _RemindfulWidgetView
                   ],
                 )
               ],
+            ),
+            Text(
+              '${state.infoMessage}',
             ),
           ],
         ),
