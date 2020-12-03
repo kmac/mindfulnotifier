@@ -136,10 +136,10 @@ abstract class Scheduler {
       // Register for events from the background isolate. These messages will
       // always coincide with an alarm firing.
       //port.listen((_) async => await _triggerNotification());
-      port.listen((_) async {
+      port.listen((_) {
         switch (_) {
           case 'scheduleCallback':
-            await _triggerNotification();
+            _triggerNotification();
             break;
           case 'quietStartCallback':
             quietHours.quietStart();
@@ -174,7 +174,7 @@ abstract class Scheduler {
     print("Scheduling notification, type=$scheduleType");
   }
 
-  Future<void> _triggerNotification() async {
+  void _triggerNotification() {
     // 1) lookup a random reminder
     // 2) trigger a notification based on
     //    https://pub.dev/packages/flutter_local_notifications
@@ -296,6 +296,9 @@ class PeriodicScheduler extends Scheduler {
     }
     DateTime startTime = getInitialStart();
     print("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
+    controller.setNextNotification(
+        new TimeOfDay(hour: startTime.hour, minute: startTime.minute));
+    _notifier.showNotification("scheduled");
     await AndroidAlarmManager.periodic(
         Duration(hours: durationHours, minutes: durationMinutes),
         scheduleAlarmID,
@@ -315,7 +318,7 @@ class RandomScheduler extends Scheduler {
       var quietHours, var appName)
       : super(controller, ScheduleType.RANDOM, quietHours, appName);
 
-  Future<void> _triggerNotification() async {
+  void _triggerNotification() {
     super._triggerNotification();
     schedule();
   }
@@ -330,6 +333,9 @@ class RandomScheduler extends Scheduler {
     //   nextDate = quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
     // }
     print("Scheduling next random notifcation at $nextDate");
+    _notifier.showNotification("scheduled");
+    controller.setNextNotification(
+        new TimeOfDay(hour: nextDate.hour, minute: nextDate.minute));
     await AndroidAlarmManager.oneShotAt(
         nextDate, scheduleAlarmID, Scheduler.alarmCallback,
         exact: true, wakeup: true);

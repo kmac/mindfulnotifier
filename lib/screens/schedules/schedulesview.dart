@@ -375,7 +375,7 @@ class _SchedulesWidgetView
                 _selectQuietHoursStartTime(context);
               },
               child: Container(
-                  width: 100,
+                  width: 140,
                   margin: EdgeInsets.only(top: 30),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(color: Colors.grey[200]),
@@ -397,7 +397,7 @@ class _SchedulesWidgetView
                 _selectQuietHoursEndTime(context);
               },
               child: Container(
-                  width: 100,
+                  width: 140,
                   // height: _height / 9,
                   margin: EdgeInsets.only(top: 30),
                   alignment: Alignment.center,

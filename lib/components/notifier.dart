@@ -10,7 +10,7 @@ class Notifier {
   static const String channelDescription = 'Notifications for remindful bell';
   final String notifTitle;
   static bool mute = false;
-  static bool vibrate = true;
+  static bool vibrate = false;
   static String customBellPath;
   final String defaultBellAsset = 'media/defaultbell.mp3';
   String customSoundFile;
@@ -18,7 +18,9 @@ class Notifier {
 
   Notifier(this.notifTitle);
 
-  void init() async {}
+  void init() async {
+    // Platform.environment
+  }
 
   void showNotification(String notifText) async {
     DateTime now = DateTime.now();

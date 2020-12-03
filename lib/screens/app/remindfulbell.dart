@@ -2,11 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
-import 'package:remindfulbell/screens/widgetview.dart';
-import 'package:remindfulbell/screens/schedules/schedulesview.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:remindfulbell/components/datastore.dart';
 import 'package:remindfulbell/components/notifier.dart';
 import 'package:remindfulbell/components/schedule.dart';
+import 'package:remindfulbell/screens/schedules/schedulesview.dart';
+import 'package:remindfulbell/screens/widgetview.dart';
 
 // const String appName = 'Remindful Bell';
 const bool testing = false;
@@ -86,37 +87,54 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
   String message = 'Not Running';
   bool _enabled = false;
   bool _mute = false;
-  Scheduler scheduler;
+  static Scheduler scheduler;
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
   RemindfulWidgetController(this.title) {
-    // TODO the scheduler will be created in the enable code below,
-    // based on the schedule configuration defined by the schedule widget
-    setScheduler(new PeriodicScheduler(
-        this, 0, 15, new QuietHours(quietStart, quietEnd), title));
+    _getDS();
   }
 
-  void setScheduler(Scheduler s) {
-    scheduler = s;
+  static DataStore _ds;
+
+  static void _getDS() async {
+    _ds ??= await DataStore.create();
   }
 
-  void setEnabled(bool enabled) {
+  Future<void> _handlePermissions() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.ignoreBatteryOptimizations,
+      Permission.notification,
+    ].request();
+    print(statuses[Permission.location]);
+  }
+
+  void setEnabled(bool enabled) async {
+    await _handlePermissions();
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
+      // so that the display can reflect the updated values.
       _enabled = enabled;
       if (_enabled) {
-        scheduler.enable();
+        if (scheduler != null) {
+          scheduler.disable();
+        }
         setMessage('Running');
+        scheduler = _ds.buildScheduler(this, title);
+        scheduler.enable();
       } else {
-        scheduler.disable();
+        scheduler?.disable();
         setMessage('Disabled');
+        scheduler = null;
       }
     });
+  }
+
+  void setNextNotification(TimeOfDay timeOfDay) {
+    if (message == 'Running' || message == 'Disabled') {
+      setMessage("Next notification at $timeOfDay");
+    }
   }
 
   void setMute(bool mute) {
@@ -133,7 +151,6 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
   }
 
   void handleScheduleOnTap() {
-    // TODO launch the schedule widget
     // https://flutter.dev/docs/cookbook/navigation/navigation-basics
     Navigator.pushNamed(
       context,
