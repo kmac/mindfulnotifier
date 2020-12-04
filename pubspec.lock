@@ -16,7 +16,7 @@ packages:
     source: hosted
     version: "2.5.0-nullsafety.1"
   audio_session:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: audio_session
       url: "https://pub.dartlang.org"

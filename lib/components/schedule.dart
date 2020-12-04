@@ -223,7 +223,7 @@ class PeriodicScheduler extends Scheduler {
     print("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
     controller.setNextNotification(
         new TimeOfDay(hour: startTime.hour, minute: startTime.minute));
-    _notifier.showNotification("scheduled");
+    _notifier.showNotification("Scheduled periodic reminders");
     await AndroidAlarmManager.periodic(
         Duration(hours: durationHours, minutes: durationMinutes),
         scheduleAlarmID,
@@ -258,7 +258,6 @@ class RandomScheduler extends Scheduler {
     //   nextDate = quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
     // }
     print("Scheduling next random notifcation at $nextDate");
-    _notifier.showNotification("scheduled");
     controller.setNextNotification(
         new TimeOfDay(hour: nextDate.hour, minute: nextDate.minute));
     await AndroidAlarmManager.oneShotAt(

@@ -7,6 +7,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:audio_session/audio_session.dart';
 
 // const MethodChannel platform = MethodChannel('kmsd.ca/remindfulbell');
 
@@ -76,6 +77,10 @@ void initializeNotifications() async {
     }
     selectNotificationSubject.add(payload);
   });
+
+  // audio
+  final session = await AudioSession.instance;
+  await session.configure(AudioSessionConfiguration.music());
 }
 
 class Notifier {
