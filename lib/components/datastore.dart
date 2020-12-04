@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:remindfulbell/components/schedule.dart';
+import 'package:mindfulnotifier/components/schedule.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DataStore {

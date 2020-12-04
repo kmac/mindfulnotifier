@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 
 import 'package:android_alarm_manager/android_alarm_manager.dart';
 
-import 'package:remindfulbell/screens/app/remindfulbell.dart';
-import 'package:remindfulbell/components/notifier.dart';
-import 'package:remindfulbell/components/reminders.dart';
+import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
+import 'package:mindfulnotifier/components/notifier.dart';
+import 'package:mindfulnotifier/components/reminders.dart';
 
 const bool testing = false;
 

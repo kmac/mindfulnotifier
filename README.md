@@ -1,4 +1,4 @@
-# remindfulbell
+# mindfulnotifier
 
 A new Flutter project.
 

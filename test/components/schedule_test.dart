@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:remindfulbell/components/schedule.dart';
+import 'package:mindfulnotifier/components/schedule.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

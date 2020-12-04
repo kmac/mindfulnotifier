@@ -9,7 +9,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:audio_session/audio_session.dart';
 
-// const MethodChannel platform = MethodChannel('kmsd.ca/remindfulbell');
+// const MethodChannel platform = MethodChannel('kmsd.ca/mindfulnotifier');
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -84,9 +84,9 @@ void initializeNotifications() async {
 }
 
 class Notifier {
-  static String channelId = 'remindfulbell_channel_id';
-  static const String channelName = 'remindfulbell_channel_name';
-  static const String channelDescription = 'Notifications for remindful bell';
+  static String channelId = 'mindfulnotifier_channel_id';
+  static const String channelName = 'mindfulnotifier_channel_name';
+  static const String channelDescription = 'Notifications for mindfulnotifier';
   final String notifTitle;
   static bool mute = false;
   static bool vibrate = false;

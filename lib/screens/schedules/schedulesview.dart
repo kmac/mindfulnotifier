@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:date_format/date_format.dart';
 
-import 'package:remindfulbell/screens/widgetview.dart';
+import 'package:mindfulnotifier/screens/widgetview.dart';
 
 class SchedulesWidget extends StatefulWidget {
   SchedulesWidget({Key key}) : super(key: key);

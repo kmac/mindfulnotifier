@@ -3,14 +3,13 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:remindfulbell/components/datastore.dart';
-import 'package:remindfulbell/components/notifier.dart';
-import 'package:remindfulbell/components/schedule.dart';
-import 'package:remindfulbell/screens/schedules/schedulesview.dart';
-import 'package:remindfulbell/screens/widgetview.dart';
+import 'package:mindfulnotifier/components/datastore.dart';
+import 'package:mindfulnotifier/components/notifier.dart';
+import 'package:mindfulnotifier/components/schedule.dart';
+import 'package:mindfulnotifier/screens/schedules/schedulesview.dart';
+import 'package:mindfulnotifier/screens/widgetview.dart';
 import 'package:date_format/date_format.dart';
 
-// const String appName = 'Remindful Bell';
 const bool testing = false;
 
 class RemindfulApp extends StatelessWidget {

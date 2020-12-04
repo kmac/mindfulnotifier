@@ -1,4 +1,4 @@
-package com.kmacdev.remindfulbell
+package com.kmacdev.mindfulnotifier
 
 import io.flutter.embedding.android.FlutterActivity
 
