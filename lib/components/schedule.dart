@@ -32,7 +32,7 @@ abstract class Scheduler {
   Notifier _notifier;
   bool running = false;
   static bool initialized = false;
-  Reminders reminders;
+  final Reminders reminders = Reminders();
 
   // The background
   static SendPort uiSendPort;
@@ -40,27 +40,28 @@ abstract class Scheduler {
   Scheduler(this.controller, this.scheduleType, this.quietHours, this.appName) {
     quietHours.controller = controller;
     _notifier = new Notifier(appName);
-    _init();
   }
 
-  void _init() async {
-    // Register the UI isolate's SendPort to allow for communication from the
-    // background isolate.
-    IsolateNameServer.registerPortWithName(
-      port.sendPort,
-      isolateName,
-    );
+  void init() {
+    print("Initializing scheduler");
+
+    // IsolateNameServer.registerPortName(receivePort.sendPort, isolateName);
+    reminders.init();
 
     uiSendPort = null;
+
     if (!Scheduler.initialized) {
-      print("Initializing scheduler");
-      // IsolateNameServer.registerPortName(receivePort.sendPort, isolateName);
-      reminders = new Reminders();
-      reminders.init();
+      // Register the UI isolate's SendPort to allow for communication from the
+      // background isolate.
+      bool regResult = IsolateNameServer.registerPortWithName(
+        port.sendPort,
+        isolateName,
+      );
+      print("registerPortWithName: $regResult");
+      // assert(regResult);
 
       // Register for events from the background isolate. These messages will
       // always coincide with an alarm firing.
-      //port.listen((_) async => await _triggerNotification());
       port.listen((_) {
         switch (_) {
           case 'scheduleCallback':
@@ -84,6 +85,7 @@ abstract class Scheduler {
   }
 
   void enable() {
+    init();
     quietHours.initializeTimers();
     schedule();
     running = true;
@@ -93,6 +95,8 @@ abstract class Scheduler {
     cancelSchedule();
     Notifier.cancelAll();
     quietHours.cancelTimers();
+    // port.close();
+    // IsolateNameServer.removePortNameMapping(isolateName);
     running = false;
   }
 
@@ -133,6 +137,15 @@ abstract class Scheduler {
     uiSendPort ??= IsolateNameServer.lookupPortByName(isolateName);
     uiSendPort?.send('scheduleCallback');
   }
+}
+
+// Best thing to do would be to make these delegated pattern
+// and get rid of the inheritance. Then the scheduler is a singleton, and
+// doesn't go away. But the underlying delegated task can change
+abstract class DelegatedScheduler {
+  void triggerNotification();
+  void schedule();
+  void reschedule();
 }
 
 class PeriodicScheduler extends Scheduler {
