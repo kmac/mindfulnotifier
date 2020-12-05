@@ -89,9 +89,10 @@ void initializeNotifications() async {
 }
 
 class Notifier {
+  static const int notifId = 0;
   static const bool useOngoing = false;
-  static const String channelName = 'mindfulnotifier_channel_name';
-  static const String channelDescription = 'Notifications for mindfulnotifier';
+  static const String channelName = 'mindfulnotifier_channel';
+  static const String channelDescription = 'Notifications for Mindful Notifier';
 
   static String channelId = 'mindfulnotifier_channel_id';
   static bool mute = false;
@@ -122,8 +123,15 @@ class Notifier {
         channelId = 'defaultbell';
         notifSound = RawResourceAndroidNotificationSound(channelId);
       } else {
+        // TODO this will have to be shortened to the file name no extension:
         channelId = customBellPath;
         notifSound = UriAndroidNotificationSound(customBellPath);
+      }
+      if (mute) {
+        channelId += '-mute';
+      }
+      if (vibrate) {
+        channelId += '-vibrate';
       }
     }
     print(
@@ -142,8 +150,12 @@ class Notifier {
     NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    await flutterLocalNotificationsPlugin
-        .show(0, null, notifText, platformChannelSpecifics, payload: 'item x');
+    if (useOngoing) {
+      await flutterLocalNotificationsPlugin.cancel(notifId);
+    }
+    await flutterLocalNotificationsPlugin.show(
+        notifId, notifTitle, notifText, platformChannelSpecifics,
+        payload: 'item x');
 
     if (useSeparateAudio && !mute) {
       final player = AudioPlayer();

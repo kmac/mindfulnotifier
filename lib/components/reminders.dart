@@ -26,10 +26,6 @@ class Reminders {
   ];
   List<String> shuffledReminders;
 
-  Reminders() {
-    init();
-  }
-
   void init() async {
     _prefs = await SharedPreferences.getInstance();
     if (_prefs.containsKey(reminderInitializedKey)) {

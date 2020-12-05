@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+// import 'package:permission_handler/permission_handler.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/schedule.dart';
@@ -123,20 +123,20 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
       // changed in this State, which causes it to rerun the build method below
       // so that the display can reflect the updated values.
       _enabled = enabled;
-      if (_enabled) {
-        scheduler?.disable();
-        //reminders
-        setMessage('Enabled. Awaiting first notification...');
-        setInfoMessage('Enabled');
-        scheduler = _ds.buildScheduler(this, title);
-        scheduler.enable();
-      } else {
-        scheduler?.disable();
-        setMessage('Disabled');
-        setInfoMessage('Disabled');
-        scheduler = null;
-      }
     });
+    if (_enabled) {
+      scheduler?.disable();
+      //reminders
+      setMessage('Enabled. Awaiting first notification...');
+      setInfoMessage('Enabled');
+      scheduler = _ds.buildScheduler(this, title);
+      scheduler.enable();
+    } else {
+      scheduler?.disable();
+      setMessage('Disabled');
+      setInfoMessage('Disabled');
+      scheduler = null;
+    }
   }
 
   void setNextNotification(DateTime dateTime) {
@@ -148,15 +148,15 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   void setMute(bool mute) {
     setState(() {
       _mute = mute;
-      Notifier.mute = _mute;
     });
+    Notifier.mute = _mute;
   }
 
   void setVibrate(bool vibrate) {
     setState(() {
       _vibrate = vibrate;
-      Notifier.vibrate = _vibrate;
     });
+    Notifier.vibrate = _vibrate;
   }
 
   void setMessage(String msg) {
@@ -221,7 +221,7 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
               child: Container(
                 margin:
                     // EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 24),
-                    EdgeInsets.only(top: 40, left: 40, right: 40, bottom: 40),
+                    EdgeInsets.only(top: 30, left: 30, right: 30, bottom: 30),
                 alignment: Alignment.center,
                 // decoration: BoxDecoration(color: Colors.grey[100]),
                 child: Text(

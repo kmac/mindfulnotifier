@@ -189,12 +189,12 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
     setState(() {
       quietHoursStartHour = time.hour;
       quietHoursStartMinute = time.minute;
-      _prefs.setInt(quietHoursStartHourKey, quietHoursStartHour);
-      _prefs.setInt(quietHoursStartMinuteKey, quietHoursStartMinute);
       quietHoursStartTimeController.text = formatDate(
           DateTime(2019, 08, 1, quietHoursStartHour, quietHoursStartMinute),
           [hh, ':', nn, " ", am]).toString();
     });
+    _prefs.setInt(quietHoursStartHourKey, quietHoursStartHour);
+    _prefs.setInt(quietHoursStartMinuteKey, quietHoursStartMinute);
   }
 
   void setQuietHoursEnd(TimeOfDay time) {
@@ -202,12 +202,12 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
     setState(() {
       quietHoursEndHour = time.hour;
       quietHoursEndMinute = time.minute;
-      _prefs.setInt(quietHoursEndHourKey, quietHoursEndHour);
-      _prefs.setInt(quietHoursEndMinuteKey, quietHoursEndMinute);
       quietHoursEndTimeController.text = formatDate(
           DateTime(2019, 08, 1, quietHoursEndHour, quietHoursEndMinute),
           [hh, ':', nn, " ", am]).toString();
     });
+    _prefs.setInt(quietHoursEndHourKey, quietHoursEndHour);
+    _prefs.setInt(quietHoursEndMinuteKey, quietHoursEndMinute);
   }
 }
 
@@ -280,7 +280,7 @@ class _SchedulesWidgetView
                     Text('Minutes'),
                     _buildDropDown(
                         state.periodicMinutes,
-                        state.periodicHours > 0 ? [0] : [0, 15, 30, 45],
+                        state.periodicHours > 0 ? [0] : [0, 15, 30],
                         state.setPeriodicMinutes,
                         true),
                   ],
