@@ -9,6 +9,8 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:audio_session/audio_session.dart';
 
+const bool useSeparateAudio = false;
+
 // const MethodChannel platform = MethodChannel('kmsd.ca/mindfulnotifier');
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -79,26 +81,36 @@ void initializeNotifications() async {
   });
 
   // audio
-  final session = await AudioSession.instance;
-  await session.configure(AudioSessionConfiguration.music());
+  if (useSeparateAudio) {
+    final session = await AudioSession.instance;
+    // await session.configure(AudioSessionConfiguration.music());
+    await session.configure(AudioSessionConfiguration.speech());
+  }
 }
 
 class Notifier {
-  static String channelId = 'mindfulnotifier_channel_id';
+  static const bool useOngoing = false;
   static const String channelName = 'mindfulnotifier_channel_name';
   static const String channelDescription = 'Notifications for mindfulnotifier';
-  final String notifTitle;
+
+  static String channelId = 'mindfulnotifier_channel_id';
   static bool mute = false;
   static bool vibrate = false;
   static String customBellPath;
+
+  final String notifTitle;
   final String defaultBellAsset = 'media/defaultbell.mp3';
+
   String customSoundFile;
-  final bool useSeparateAudio = true;
 
   Notifier(this.notifTitle);
 
   void init() async {
     // Platform.environment
+  }
+
+  static void cancelAll() async {
+    await flutterLocalNotificationsPlugin.cancelAll();
   }
 
   void showNotification(String notifText) async {
@@ -110,13 +122,13 @@ class Notifier {
         channelId = 'defaultbell';
         notifSound = RawResourceAndroidNotificationSound(channelId);
       } else {
-        notifSound = UriAndroidNotificationSound(customBellPath);
         channelId = customBellPath;
+        notifSound = UriAndroidNotificationSound(customBellPath);
       }
     }
     print(
         "[$now] showNotification [channelId=$channelId]: title=$notifTitle text=$notifText mute=$mute");
-    // "[$now] showNotification [channelId=$channelId]: title=$notifTitle text=$notifText mute=$mute, sound=$notifSound");
+
     AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(channelId, channelName, channelDescription,
             importance: Importance.max,
@@ -124,13 +136,14 @@ class Notifier {
             enableVibration: vibrate,
             playSound: !useSeparateAudio && !mute,
             sound: notifSound,
+            ongoing: useOngoing,
+            styleInformation: BigTextStyleInformation(''),
             ticker: 'ticker');
     NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    await flutterLocalNotificationsPlugin.show(
-        0, notifTitle, notifText, platformChannelSpecifics,
-        payload: 'item x');
+    await flutterLocalNotificationsPlugin
+        .show(0, null, notifText, platformChannelSpecifics, payload: 'item x');
 
     if (useSeparateAudio && !mute) {
       final player = AudioPlayer();
@@ -139,8 +152,12 @@ class Notifier {
       } else {
         await player.setFilePath(customBellPath);
       }
+      print('player.play');
       await player.play();
+      print('player.play done');
+      await player.stop();
       await player.dispose();
+      print('player.play done');
     }
   }
 }

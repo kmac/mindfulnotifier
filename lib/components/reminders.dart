@@ -21,7 +21,7 @@ class Reminders {
     "What is the attitude in the mind right now?",
     "May you be safe and free from harm. May you be healthy and free from suffering. May you be happy. May you be peaceful and live with ease.",
     "Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.",
-    "Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself.",
+    "Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself. -- Bashō",
     // "If this fear is with me the rest of my life, that is okay.",
   ];
   List<String> shuffledReminders;

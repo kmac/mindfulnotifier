@@ -49,13 +49,17 @@ class DataStore {
         scheduleType = ScheduleType.RANDOM;
       }
     } else {
-      _prefs.setString(scheduleTypeKey, scheduleType.toString());
+      if (scheduleType == ScheduleType.PERIODIC) {
+        _prefs.setString(scheduleTypeKey, 'periodic');
+      } else {
+        _prefs.setString(scheduleTypeKey, 'random');
+      }
     }
 
     QuietHours quietHours = buildQuietHours();
 
+    var scheduler;
     if (scheduleType == ScheduleType.PERIODIC) {
-      // PERIODIC
       var periodicHours = 1;
       var periodicMinutes = 0;
       if (_prefs.containsKey(periodicHoursKey)) {
@@ -64,33 +68,33 @@ class DataStore {
       if (_prefs.containsKey(periodicMinutesKey)) {
         periodicMinutes = _prefs.getInt(periodicMinutesKey);
       }
-      return PeriodicScheduler(
+      scheduler = PeriodicScheduler(
           controller, periodicHours, periodicMinutes, quietHours, title);
+    } else {
+      var randomMinHours = 0;
+      var randomMinMinutes = 45;
+      var randomMaxHours = 1;
+      var randomMaxMinutes = 30;
+      if (_prefs.containsKey(randomMinHoursKey)) {
+        randomMinHours = _prefs.getInt(randomMinHoursKey);
+      }
+      if (_prefs.containsKey(randomMinMinutesKey)) {
+        randomMinMinutes = _prefs.getInt(randomMinMinutesKey);
+      }
+      if (_prefs.containsKey(randomMaxHoursKey)) {
+        randomMaxHours = _prefs.getInt(randomMaxHoursKey);
+      }
+      if (_prefs.containsKey(randomMaxMinutesKey)) {
+        randomMaxMinutes = _prefs.getInt(randomMaxMinutesKey);
+      }
+      scheduler = RandomScheduler(
+          controller,
+          randomMinHours * 60 + randomMinMinutes,
+          randomMaxHours * 60 + randomMaxMinutes,
+          quietHours,
+          title);
     }
-
-    // RANDOM
-    var randomMinHours = 0;
-    var randomMinMinutes = 45;
-    var randomMaxHours = 1;
-    var randomMaxMinutes = 30;
-    if (_prefs.containsKey(randomMinHoursKey)) {
-      randomMinHours = _prefs.getInt(randomMinHoursKey);
-    }
-    if (_prefs.containsKey(randomMinMinutesKey)) {
-      randomMinMinutes = _prefs.getInt(randomMinMinutesKey);
-    }
-    if (_prefs.containsKey(randomMaxHoursKey)) {
-      randomMaxHours = _prefs.getInt(randomMaxHoursKey);
-    }
-    if (_prefs.containsKey(randomMaxMinutesKey)) {
-      randomMaxMinutes = _prefs.getInt(randomMaxMinutesKey);
-    }
-    return new RandomScheduler(
-        controller,
-        randomMinHours * 60 + randomMinMinutes,
-        randomMaxHours * 60 + randomMaxMinutes,
-        quietHours,
-        title);
+    return scheduler;
   }
 
   QuietHours buildQuietHours() {

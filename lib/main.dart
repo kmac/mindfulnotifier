@@ -9,7 +9,7 @@ void main() async {
   // needed if you intend to initialize in the `main` function
   WidgetsFlutterBinding.ensureInitialized();
 
-  RemindfulApp app = RemindfulApp(appName);
+  MindfulNotifierApp app = MindfulNotifierApp(appName);
   app.init();
   runApp(app);
 }

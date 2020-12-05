@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:date_format/date_format.dart';
 
+import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/screens/widgetview.dart';
 
 class SchedulesWidget extends StatefulWidget {
@@ -54,18 +55,11 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
   TextEditingController quietHoursEndTimeController = TextEditingController();
 
   // UI event handlers, init code, etc goes here
-  SchedulesWidgetController() {}
-
-  String _twoDigits(int source) {
-    if (source < 10) {
-      return "0$source";
-    }
-    return source.toString();
-  }
+  SchedulesWidgetController();
 
   DateTime _getDateTime(int hours, int minutes) {
     return DateTime.parse(
-        "1970-01-01 ${_twoDigits(hours)}:${_twoDigits(minutes)}:00Z");
+        "1970-01-01 ${timeNumToString(hours)}:${timeNumToString(minutes)}:00Z");
   }
 
   @override
@@ -238,8 +232,7 @@ class _SchedulesWidgetView
       items: allowedValues.map<DropdownMenuItem<int>>((int value) {
         return DropdownMenuItem<int>(
           value: value,
-          child:
-              Text(useTwoDigits ? state._twoDigits(value) : value.toString()),
+          child: Text(useTwoDigits ? timeNumToString(value) : value.toString()),
         );
       })?.toList(),
     );
@@ -311,7 +304,7 @@ class _SchedulesWidgetView
                       isForce2Digits: true,
                       time: state.randomMinDateTime,
                       is24HourMode: true,
-                      // spacing: 10,
+                      spacing: 20,
                       minutesInterval: 5,
                       onTimeChange: state.setRandomMinDateTime,
                     ),

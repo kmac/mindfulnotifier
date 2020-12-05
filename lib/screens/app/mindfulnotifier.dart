@@ -12,9 +12,9 @@ import 'package:date_format/date_format.dart';
 
 const bool testing = false;
 
-class RemindfulApp extends StatelessWidget {
+class MindfulNotifierApp extends StatelessWidget {
   final String title;
-  RemindfulApp(this.title);
+  MindfulNotifierApp(this.title);
 
   void init() async {
     initializeNotifications();
@@ -33,7 +33,7 @@ class RemindfulApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       routes: {
-        '/': (context) => RemindfulAppWidget(title: title),
+        '/': (context) => MindfulNotifierAppWidget(title: title),
         '/schedules': (context) => SchedulesWidget(),
         // '/reminders': (context) => RemindersScreen(),
         // '/bells': (context) => BellScreen(),
@@ -43,7 +43,7 @@ class RemindfulApp extends StatelessWidget {
   }
 }
 
-class RemindfulAppWidget extends StatefulWidget {
+class MindfulNotifierAppWidget extends StatefulWidget {
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
   // how it looks.
@@ -77,13 +77,14 @@ If in doubt, start by managing state in the parent widget.
 
   final String title;
 
-  RemindfulAppWidget({Key key, this.title}) : super(key: key);
+  MindfulNotifierAppWidget({Key key, this.title}) : super(key: key);
 
   @override
-  RemindfulWidgetController createState() => RemindfulWidgetController(title);
+  MindfulNotifierWidgetController createState() =>
+      MindfulNotifierWidgetController(title);
 }
 
-class RemindfulWidgetController extends State<RemindfulAppWidget> {
+class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   // UI event handlers, init code, etc goes here
 
   final String title;
@@ -91,11 +92,12 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
   String infoMessage = 'Not Running';
   bool _enabled = false;
   bool _mute = false;
+  bool _vibrate = false;
   static Scheduler scheduler;
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
-  RemindfulWidgetController(this.title) {
+  MindfulNotifierWidgetController(this.title) {
     _getDS();
   }
 
@@ -105,14 +107,14 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
     _ds ??= await DataStore.create();
   }
 
-  Future<void> _handlePermissions() async {
-    // TODO change this to take the user to the settings in UI
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.ignoreBatteryOptimizations,
-      Permission.notification,
-    ].request();
-    print(statuses[Permission.location]);
-  }
+  // Future<void> _handlePermissions() async {
+  //   // TODO change this to take the user to the settings in UI
+  //   Map<Permission, PermissionStatus> statuses = await [
+  //     // Permission.ignoreBatteryOptimizations,
+  //     Permission.notification,
+  //   ].request();
+  //   print(statuses[Permission.location]);
+  // }
 
   void setEnabled(bool enabled) async {
     // await _handlePermissions();
@@ -122,11 +124,10 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
       // so that the display can reflect the updated values.
       _enabled = enabled;
       if (_enabled) {
-        if (scheduler != null) {
-          scheduler.disable();
-        }
-        setMessage('Running');
-        setInfoMessage('Running');
+        scheduler?.disable();
+        //reminders
+        setMessage('Enabled. Awaiting first notification...');
+        setInfoMessage('Enabled');
         scheduler = _ds.buildScheduler(this, title);
         scheduler.enable();
       } else {
@@ -138,13 +139,9 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
     });
   }
 
-  void setNextNotification(TimeOfDay timeOfDay) {
-    var timestr = formatDate(
-        DateTime(2020, 01, 1, timeOfDay.hour, timeOfDay.minute),
-        [hh, ':', nn, " ", am]).toString();
-    if (message == 'Running' || message == 'Disabled') {
-      setMessage("Next notification at $timestr");
-    }
+  void setNextNotification(DateTime dateTime) {
+    var timestr =
+        formatDate(dateTime, [hh, ':', nn, ':', ss, " ", am]).toString();
     setInfoMessage("Next notification at $timestr");
   }
 
@@ -152,6 +149,13 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
     setState(() {
       _mute = mute;
       Notifier.mute = _mute;
+    });
+  }
+
+  void setVibrate(bool vibrate) {
+    setState(() {
+      _vibrate = vibrate;
+      Notifier.vibrate = _vibrate;
     });
   }
 
@@ -189,74 +193,93 @@ class RemindfulWidgetController extends State<RemindfulAppWidget> {
   }
 
   @override
-  Widget build(BuildContext context) => _RemindfulWidgetView(this);
+  Widget build(BuildContext context) => _MindfulNotifierWidgetView(this);
 }
 
-class _RemindfulWidgetView
-    extends WidgetView<RemindfulAppWidget, RemindfulWidgetController> {
-  _RemindfulWidgetView(RemindfulWidgetController state) : super(state);
+class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
+    MindfulNotifierWidgetController> {
+  _MindfulNotifierWidgetView(MindfulNotifierWidgetController state)
+      : super(state);
 
   @override
   Widget build(BuildContext context) {
     // Widget tree
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(state.widget.title),
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
           // Invoke "debug painting" (press "p" in the console, choose the
           // "Toggle Debug Paint" action from the Flutter Inspector in Android
           // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
           // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
-            Text(
-              '${state.message}',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-            // Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: <Widget>[
-                    Text('Enabled'),
-                    Switch(
-                      value: state._enabled,
-                      onChanged: state.setEnabled,
-                    ),
-                  ],
+            Expanded(
+              flex: 15,
+              child: Container(
+                margin:
+                    // EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 24),
+                    EdgeInsets.only(top: 40, left: 40, right: 40, bottom: 40),
+                alignment: Alignment.center,
+                // decoration: BoxDecoration(color: Colors.grey[100]),
+                child: Text(
+                  '${state.message}',
+                  style: Theme.of(context).textTheme.headline4,
+                  // style: Theme.of(context).textTheme.headline5,
+                  textAlign: TextAlign.left,
+                  softWrap: true,
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    Text('Mute'),
-                    Switch(
-                      value: state._mute,
-                      onChanged: state.setMute,
-                    ),
-                  ],
-                )
-              ],
+              ),
             ),
-            Text(
-              '${state.infoMessage}',
+            Expanded(
+              flex: 4,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Switch(
+                        value: state._enabled,
+                        onChanged: state.setEnabled,
+                      ),
+                      Text(state._enabled ? 'Enabled' : 'Enable'),
+                    ],
+                  ),
+                  ToggleButtons(
+                    isSelected: [state._mute, state._vibrate],
+                    onPressed: (index) {
+                      switch (index) {
+                        case 0:
+                          state.setMute(!state._mute);
+                          break;
+                        case 1:
+                          state.setVibrate(!state._vibrate);
+                          break;
+                      }
+                    },
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Text(state._mute ? 'Muted' : 'Mute'),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Text('Vibrate'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: Text(
+                '${state.infoMessage}',
+                style: TextStyle(color: Colors.black38),
+              ),
             ),
           ],
         ),
@@ -278,14 +301,12 @@ class _RemindfulWidgetView
               ),
             ),
             ListTile(
-              //leading: Icon(Icons.message),
               leading: Icon(Icons.schedule),
               title: Text('Schedule'),
               subtitle: Text('Configure reminder frequency'),
               onTap: state.handleScheduleOnTap,
             ),
             ListTile(
-              // leading: Icon(Icons.alarm),
               leading: Icon(Icons.list),
               title: Text('Reminders'),
               subtitle: Text('Configure reminder contents'),
