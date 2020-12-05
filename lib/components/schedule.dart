@@ -145,11 +145,11 @@ class PeriodicScheduler extends Scheduler {
 
   DateTime getInitialStart({DateTime now}) {
     now ??= DateTime.now();
-    int periodInMins = 60 * durationHours + durationMinutes;
-    DateTime startTime = now.add(Duration(minutes: periodInMins));
+    // int periodInMins = 60 * durationHours + durationMinutes;
+    DateTime startTime;
     switch (durationMinutes) {
       case 0:
-      case 45:
+        // case 45:
         // schedule next for top of the hour
         DateTime startTimeRaw = now.add(Duration(hours: 1));
         startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
@@ -169,21 +169,18 @@ class PeriodicScheduler extends Scheduler {
       case 15:
         // schedule next for < 15m
         DateTime startTimeRaw = now.add(Duration(minutes: 15));
-        int newMinute;
+        int newMinute = now.minute + 15;
         int newHour = startTimeRaw.hour;
-        // want to use the diff here, between now and 15m interval
-        if (startTimeRaw.minute >= 0 && startTimeRaw.minute < 15) {
+        if (newMinute >= 60) {
+          ++newHour;
           newMinute = 0;
-        } else if (startTimeRaw.minute >= 15 && startTimeRaw.minute < 30) {
-          newMinute = 15;
-        } else if (startTimeRaw.minute >= 30 && startTimeRaw.minute < 45) {
+        } else if (newMinute >= 45) {
+          newMinute = 45;
+        } else if (newMinute >= 30) {
           newMinute = 30;
+        } else if (newMinute >= 15) {
+          newMinute = 15;
         } else {
-          if (++newHour > 23) {
-            // day rollover
-            startTimeRaw = now.add(Duration(days: 1));
-            newHour = 0;
-          }
           newMinute = 0;
         }
         startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
@@ -220,10 +217,8 @@ class PeriodicScheduler extends Scheduler {
 }
 
 class RandomScheduler extends Scheduler {
-  //DateTimeRange range;
   final int minMinutes;
   final int maxMinutes;
-  final Random random = new Random();
 
   RandomScheduler(var controller, this.minMinutes, this.maxMinutes,
       var quietHours, var appName)
@@ -240,7 +235,7 @@ class RandomScheduler extends Scheduler {
     if ((maxMinutes == minMinutes) || (minMinutes > maxMinutes)) {
       nextMinutes = maxMinutes;
     } else {
-      nextMinutes = minMinutes + random.nextInt(maxMinutes - minMinutes);
+      nextMinutes = minMinutes + Random().nextInt(maxMinutes - minMinutes);
     }
     if (nextMinutes <= 1) {
       nextMinutes = 2;
@@ -251,10 +246,16 @@ class RandomScheduler extends Scheduler {
     //   nextDate = quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
     // }
     if (quietHours.inQuietHours) {
-      controller.setInfoMessage("In quiet hours");
+      print("Scheduling past next quiet hours");
+      nextDate =
+          quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
+      controller.setInfoMessage(
+          "In quiet hours, next reminder at ${nextDate.hour}:${timeNumToString(nextDate.minute)}");
     } else {
       print("Scheduling next random notifcation at $nextDate");
-      controller.setNextNotification(nextDate);
+      // controller.setNextNotification(nextDate);
+      controller.setInfoMessage(
+          "Next: $nextDate, nextMinutes: $nextMinutes, min: $minMinutes, max: $maxMinutes");
     }
     await AndroidAlarmManager.oneShotAt(
         nextDate, scheduleAlarmID, Scheduler.alarmCallback,
