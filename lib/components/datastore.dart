@@ -39,8 +39,8 @@ class DataStore {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  Scheduler buildScheduler(var controller, String title) {
-    print('Building scheduler');
+  DelegatedScheduler buildSchedulerDelegate(Scheduler scheduler) {
+    print('Building scheduler delegate');
     var scheduleType = ScheduleType.PERIODIC;
     if (_prefs.containsKey(scheduleTypeKey)) {
       if (_prefs.getString(scheduleTypeKey) == 'periodic') {
@@ -58,7 +58,7 @@ class DataStore {
 
     QuietHours quietHours = buildQuietHours();
 
-    var scheduler;
+    var delegate;
     if (scheduleType == ScheduleType.PERIODIC) {
       var periodicHours = 1;
       var periodicMinutes = 0;
@@ -68,8 +68,8 @@ class DataStore {
       if (_prefs.containsKey(periodicMinutesKey)) {
         periodicMinutes = _prefs.getInt(periodicMinutesKey);
       }
-      scheduler = PeriodicScheduler(
-          controller, periodicHours, periodicMinutes, quietHours, title);
+      delegate = PeriodicScheduler(
+          scheduler, quietHours, periodicHours, periodicMinutes);
     } else {
       var randomMinHours = 0;
       var randomMinMinutes = 45;
@@ -87,14 +87,13 @@ class DataStore {
       if (_prefs.containsKey(randomMaxMinutesKey)) {
         randomMaxMinutes = _prefs.getInt(randomMaxMinutesKey);
       }
-      scheduler = RandomScheduler(
-          controller,
-          randomMinHours * 60 + randomMinMinutes,
-          randomMaxHours * 60 + randomMaxMinutes,
+      delegate = RandomScheduler(
+          scheduler,
           quietHours,
-          title);
+          randomMinHours * 60 + randomMinMinutes,
+          randomMaxHours * 60 + randomMaxMinutes);
     }
-    return scheduler;
+    return delegate;
   }
 
   QuietHours buildQuietHours() {

@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 // import 'package:permission_handler/permission_handler.dart';
-import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/schedule.dart';
 import 'package:mindfulnotifier/screens/schedules/schedulesview.dart';
@@ -18,7 +17,6 @@ class MindfulNotifierApp extends StatelessWidget {
 
   void init() async {
     initializeNotifications();
-    initializeAlarmManager();
   }
 
   @override
@@ -93,18 +91,12 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   bool _enabled = false;
   bool _mute = false;
   bool _vibrate = false;
-  static Scheduler scheduler;
+  Scheduler scheduler;
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
   MindfulNotifierWidgetController(this.title) {
-    _getDS();
-  }
-
-  static DataStore _ds;
-
-  static void _getDS() async {
-    _ds ??= await DataStore.create();
+    scheduler = Scheduler(this, title);
   }
 
   // Future<void> _handlePermissions() async {
@@ -125,17 +117,13 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
       _enabled = enabled;
     });
     if (_enabled) {
-      scheduler?.disable();
-      //reminders
       setMessage('Enabled. Awaiting first notification...');
       setInfoMessage('Enabled');
-      scheduler = _ds.buildScheduler(this, title);
       scheduler.enable();
     } else {
-      scheduler?.disable();
+      scheduler.disable();
       setMessage('Disabled');
       setInfoMessage('Disabled');
-      scheduler = null;
     }
   }
 

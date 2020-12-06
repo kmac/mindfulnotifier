@@ -6,14 +6,11 @@ import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 
+import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/reminders.dart';
 import 'package:mindfulnotifier/components/utils.dart';
-
-void initializeAlarmManager() async {
-  await AndroidAlarmManager.initialize();
-}
 
 // The name associated with the UI isolate's [SendPort].
 const String isolateName = 'alarmIsolate';
@@ -23,34 +20,38 @@ final ReceivePort port = ReceivePort();
 
 enum ScheduleType { PERIODIC, RANDOM }
 
-abstract class Scheduler {
+class Scheduler {
   final MindfulNotifierWidgetController controller;
-  final ScheduleType scheduleType;
-  final QuietHours quietHours;
   final String appName;
   final int scheduleAlarmID = 10;
   Notifier _notifier;
   bool running = false;
   static bool initialized = false;
-  final Reminders reminders = Reminders();
+  Reminders reminders;
+  DelegatedScheduler delegate;
+  static DataStore _ds;
 
   // The background
   static SendPort uiSendPort;
 
-  Scheduler(this.controller, this.scheduleType, this.quietHours, this.appName) {
-    quietHours.controller = controller;
+  Scheduler(this.controller, this.appName) {
     _notifier = new Notifier(appName);
+    _getDS();
   }
 
-  void init() {
-    print("Initializing scheduler");
+  void _getDS() async {
+    _ds ??= await DataStore.create();
+  }
 
-    // IsolateNameServer.registerPortName(receivePort.sendPort, isolateName);
+  void init() async {
+    reminders = Reminders();
     reminders.init();
 
-    uiSendPort = null;
-
     if (!Scheduler.initialized) {
+      print("Initializing scheduler");
+
+      await AndroidAlarmManager.initialize();
+
       // Register the UI isolate's SendPort to allow for communication from the
       // background isolate.
       bool regResult = IsolateNameServer.registerPortWithName(
@@ -58,7 +59,9 @@ abstract class Scheduler {
         isolateName,
       );
       print("registerPortWithName: $regResult");
-      // assert(regResult);
+      assert(regResult);
+
+      uiSendPort = null;
 
       // Register for events from the background isolate. These messages will
       // always coincide with an alarm firing.
@@ -68,10 +71,10 @@ abstract class Scheduler {
             _triggerNotification();
             break;
           case 'quietStartCallback':
-            quietHours.quietStart();
+            delegate.quietHours.quietStart();
             break;
           case 'quietEndCallback':
-            quietHours.quietEnd();
+            delegate.quietHours.quietEnd();
             break;
         }
       });
@@ -79,32 +82,26 @@ abstract class Scheduler {
     Scheduler.initialized = true;
   }
 
-  void cancelSchedule() async {
-    print("Cancelling notification schedule");
-    await AndroidAlarmManager.cancel(scheduleAlarmID);
-  }
-
   void enable() {
     init();
-    quietHours.initializeTimers();
-    schedule();
-    running = true;
+    delegate = _ds.buildSchedulerDelegate(this);
+    delegate.scheduleNext();
   }
 
   void disable() {
-    cancelSchedule();
+    delegate.cancel();
     Notifier.cancelAll();
-    quietHours.cancelTimers();
-    // port.close();
-    // IsolateNameServer.removePortNameMapping(isolateName);
     running = false;
   }
 
-  void schedule() {
-    print("Scheduling notification, type=$scheduleType");
+  void initialScheduleComplete() {
+    running = true;
   }
 
   void _triggerNotification() {
+    if (!running) {
+      return;
+    }
     // 1) lookup a random reminder
     // 2) trigger a notification based on
     //    https://pub.dev/packages/flutter_local_notifications
@@ -114,13 +111,14 @@ abstract class Scheduler {
     print("[$now] _triggerNotification isolate=$isolateId");
 
     // if (quietHours.isInQuietHours(now)) {
-    if (quietHours.inQuietHours) {
+    if (delegate.quietHours.inQuietHours) {
       print("In quiet hours... ignoring notification");
       return;
     }
     var reminder = reminders.randomReminder();
     _notifier.showNotification(reminder);
     controller.setMessage(reminder);
+    delegate.scheduleNext();
   }
 
   // alarmCallback will not run in the same isolate as the main application.
@@ -143,18 +141,42 @@ abstract class Scheduler {
 // and get rid of the inheritance. Then the scheduler is a singleton, and
 // doesn't go away. But the underlying delegated task can change
 abstract class DelegatedScheduler {
-  void triggerNotification();
-  void schedule();
-  void reschedule();
+  final ScheduleType scheduleType;
+  final Scheduler scheduler;
+  final QuietHours quietHours;
+  bool scheduled = false;
+
+  DelegatedScheduler(this.scheduleType, this.scheduler, this.quietHours);
+
+  void cancel() async {
+    print("Cancelling notification schedule");
+    quietHours.cancelTimers();
+    await AndroidAlarmManager.cancel(scheduler.scheduleAlarmID);
+  }
+
+  void scheduleNext() {
+    if (!scheduled) {
+      quietHours.initializeTimers();
+    }
+    print("Scheduling notification, type=$scheduleType");
+  }
+
+  void initialScheduleComplete() {
+    scheduler.initialScheduleComplete();
+  }
 }
 
-class PeriodicScheduler extends Scheduler {
+class PeriodicScheduler extends DelegatedScheduler {
   final int durationHours;
   final int durationMinutes; // minimum granularity: 15m
 
-  PeriodicScheduler(var controller, this.durationHours, this.durationMinutes,
-      var quietHours, var appName)
-      : super(controller, ScheduleType.PERIODIC, quietHours, appName);
+  PeriodicScheduler(Scheduler scheduler, QuietHours quietHours,
+      this.durationHours, this.durationMinutes)
+      : super(ScheduleType.PERIODIC, scheduler, quietHours);
+
+  void cancel() async {
+    super.cancel();
+  }
 
   DateTime getInitialStart({DateTime now}) {
     now ??= DateTime.now();
@@ -203,47 +225,52 @@ class PeriodicScheduler extends Scheduler {
     return startTime;
   }
 
-  void _triggerNotification() {
-    super._triggerNotification();
-    controller.setInfoMessage(
-        "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}");
-  }
-
-  void schedule() async {
-    super.schedule();
+  void scheduleNext() async {
+    if (scheduler.running) {
+      // don't need to schedule anything
+      if (!scheduled) {
+        scheduler.controller.setInfoMessage(
+            "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}");
+        scheduled = true;
+      }
+      return;
+    }
+    super.scheduleNext();
     DateTime startTime = getInitialStart();
     print("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
     var firstNotifDate =
         formatDate(startTime, [h, ':', nn, " ", am]).toString();
     //controller.setMessage("First notification scheduled for $firstNotifDate");
-    controller.setInfoMessage(
+    scheduler.controller.setInfoMessage(
         "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}," +
             " beginning at $firstNotifDate");
     await AndroidAlarmManager.periodic(
         Duration(hours: durationHours, minutes: durationMinutes),
-        scheduleAlarmID,
+        scheduler.scheduleAlarmID,
         Scheduler.alarmCallback,
         startAt: startTime,
         exact: true,
         wakeup: true);
+
+    initialScheduleComplete();
   }
 }
 
-class RandomScheduler extends Scheduler {
+class RandomScheduler extends DelegatedScheduler {
   final int minMinutes;
   final int maxMinutes;
 
-  RandomScheduler(var controller, this.minMinutes, this.maxMinutes,
-      var quietHours, var appName)
-      : super(controller, ScheduleType.RANDOM, quietHours, appName);
+  RandomScheduler(Scheduler scheduler, QuietHours quietHours, this.minMinutes,
+      this.maxMinutes)
+      : super(ScheduleType.RANDOM, scheduler, quietHours);
 
-  void _triggerNotification() {
-    super._triggerNotification();
-    schedule();
+  void initialScheduleComplete() {
+    scheduler.initialScheduleComplete();
+    scheduled = true;
   }
 
-  void schedule() async {
-    super.schedule();
+  void scheduleNext() async {
+    super.scheduleNext();
     int nextMinutes;
     if ((maxMinutes == minMinutes) || (minMinutes > maxMinutes)) {
       nextMinutes = maxMinutes;
@@ -262,17 +289,21 @@ class RandomScheduler extends Scheduler {
       print("Scheduling past next quiet hours");
       nextDate =
           quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
-      controller.setInfoMessage(
+      scheduler.controller.setInfoMessage(
           "In quiet hours, next reminder at ${nextDate.hour}:${timeNumToString(nextDate.minute)}");
     } else {
       print("Scheduling next random notifcation at $nextDate");
       // controller.setNextNotification(nextDate);
-      controller.setInfoMessage(
+      scheduler.controller.setInfoMessage(
           "Next: $nextDate, nextMinutes: $nextMinutes, min: $minMinutes, max: $maxMinutes");
     }
     await AndroidAlarmManager.oneShotAt(
-        nextDate, scheduleAlarmID, Scheduler.alarmCallback,
+        nextDate, scheduler.scheduleAlarmID, Scheduler.alarmCallback,
         exact: true, wakeup: true);
+
+    if (!scheduled) {
+      initialScheduleComplete();
+    }
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -97,14 +99,16 @@ class Notifier {
   static String channelId = 'mindfulnotifier_channel_id';
   static bool mute = false;
   static bool vibrate = false;
-  static String customBellPath;
 
   final String notifTitle;
   final String defaultBellAsset = 'media/defaultbell.mp3';
 
-  String customSoundFile;
+  File customSoundFile;
 
   Notifier(this.notifTitle);
+  Notifier.withCustomSound(this.notifTitle, File customSoundFile) {
+    this.customSoundFile = customSoundFile;
+  }
 
   void init() async {
     // Platform.environment
@@ -119,13 +123,13 @@ class Notifier {
 
     AndroidNotificationSound notifSound;
     if (!useSeparateAudio) {
-      if (customBellPath == null) {
+      if (customSoundFile == null) {
         channelId = 'defaultbell';
         notifSound = RawResourceAndroidNotificationSound(channelId);
       } else {
         // TODO this will have to be shortened to the file name no extension:
-        channelId = customBellPath;
-        notifSound = UriAndroidNotificationSound(customBellPath);
+        channelId = customSoundFile.path;
+        notifSound = UriAndroidNotificationSound(customSoundFile.path);
       }
       if (mute) {
         channelId += '-mute';
@@ -162,7 +166,7 @@ class Notifier {
       if (customSoundFile == null) {
         await player.setAsset(defaultBellAsset);
       } else {
-        await player.setFilePath(customBellPath);
+        await player.setFilePath(customSoundFile.path);
       }
       print('player.play');
       await player.play();
