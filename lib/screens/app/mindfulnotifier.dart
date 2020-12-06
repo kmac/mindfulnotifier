@@ -191,129 +191,154 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
 
   @override
   Widget build(BuildContext context) {
-    // Widget tree
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(state.widget.title),
-      ),
-      body: Center(
-        child: Column(
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            Expanded(
-              flex: 15,
-              child: Container(
-                margin:
-                    // EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 24),
-                    EdgeInsets.only(top: 30, left: 30, right: 30, bottom: 30),
-                alignment: Alignment.center,
-                // decoration: BoxDecoration(color: Colors.grey[100]),
-                child: Text(
-                  '${state.message}',
-                  style: Theme.of(context).textTheme.headline4,
-                  // style: Theme.of(context).textTheme.headline5,
-                  textAlign: TextAlign.left,
-                  softWrap: true,
+    return WillPopScope(
+        onWillPop: () => showDialog<bool>(
+            context: context,
+            builder: (ctxt) => AlertDialog(
+                  title: Text('Warning'),
+                  content: Text(
+                    "If you use the back button here the app will exit, " +
+                        "and you won't receive any further notifications. Do you really want to exit?",
+                    softWrap: true,
+                  ),
+                  actions: [
+                    FlatButton(
+                      child: Text('Yes'),
+                      onPressed: () {
+                        state.scheduler.shutdown();
+                        Navigator.pop(ctxt, true);
+                      },
+                    ),
+                    FlatButton(
+                      child: Text('No'),
+                      onPressed: () => Navigator.pop(ctxt, false),
+                    ),
+                  ],
+                )),
+        // Widget tree
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(state.widget.title),
+          ),
+          body: Center(
+            child: Column(
+              // Invoke "debug painting" (press "p" in the console, choose the
+              // "Toggle Debug Paint" action from the Flutter Inspector in Android
+              // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
+              // to see the wireframe for each widget.
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                Expanded(
+                  flex: 15,
+                  child: Container(
+                    margin:
+                        // EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 24),
+                        EdgeInsets.only(
+                            top: 30, left: 30, right: 30, bottom: 30),
+                    alignment: Alignment.center,
+                    // decoration: BoxDecoration(color: Colors.grey[100]),
+                    child: Text(
+                      '${state.message}',
+                      style: Theme.of(context).textTheme.headline4,
+                      // style: Theme.of(context).textTheme.headline5,
+                      textAlign: TextAlign.left,
+                      softWrap: true,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Expanded(
-              flex: 4,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: <Widget>[
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                Expanded(
+                  flex: 4,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: <Widget>[
-                      Switch(
-                        value: state._enabled,
-                        onChanged: state.setEnabled,
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Switch(
+                            value: state._enabled,
+                            onChanged: state.setEnabled,
+                          ),
+                          Text(state._enabled ? 'Enabled' : 'Enable'),
+                        ],
                       ),
-                      Text(state._enabled ? 'Enabled' : 'Enable'),
+                      ToggleButtons(
+                        isSelected: [state._mute, state._vibrate],
+                        onPressed: (index) {
+                          switch (index) {
+                            case 0:
+                              state.setMute(!state._mute);
+                              break;
+                            case 1:
+                              state.setVibrate(!state._vibrate);
+                              break;
+                          }
+                        },
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text(state._mute ? 'Muted' : 'Mute'),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text('Vibrate'),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                  ToggleButtons(
-                    isSelected: [state._mute, state._vibrate],
-                    onPressed: (index) {
-                      switch (index) {
-                        case 0:
-                          state.setMute(!state._mute);
-                          break;
-                        case 1:
-                          state.setVibrate(!state._vibrate);
-                          break;
-                      }
-                    },
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text(state._mute ? 'Muted' : 'Mute'),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text('Vibrate'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: Text(
-                '${state.infoMessage}',
-                style: TextStyle(color: Colors.black38),
-              ),
-            ),
-          ],
-        ),
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text(
-                'Settings',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
                 ),
-              ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    '${state.infoMessage}',
+                    style: TextStyle(color: Colors.black38),
+                  ),
+                ),
+              ],
             ),
-            ListTile(
-              leading: Icon(Icons.schedule),
-              title: Text('Schedule'),
-              subtitle: Text('Configure reminder frequency'),
-              onTap: state.handleScheduleOnTap,
+          ),
+          drawer: Drawer(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: <Widget>[
+                DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                  ),
+                  child: Text(
+                    'Settings',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: Icon(Icons.schedule),
+                  title: Text('Schedule'),
+                  subtitle: Text('Configure reminder frequency'),
+                  onTap: state.handleScheduleOnTap,
+                ),
+                ListTile(
+                  leading: Icon(Icons.list),
+                  title: Text('Reminders'),
+                  subtitle: Text('Configure reminder contents'),
+                  onTap: state.handleRemindersOnTap,
+                ),
+                ListTile(
+                  leading: Icon(Icons.notifications),
+                  title: Text('Bell'),
+                  subtitle: Text('Configure bell'),
+                  onTap: state.handleBellOnTap,
+                ),
+                ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('Advanced'),
+                  onTap: state.handleAdvancedOnTap,
+                ),
+              ],
             ),
-            ListTile(
-              leading: Icon(Icons.list),
-              title: Text('Reminders'),
-              subtitle: Text('Configure reminder contents'),
-              onTap: state.handleRemindersOnTap,
-            ),
-            ListTile(
-              leading: Icon(Icons.notifications),
-              title: Text('Bell'),
-              subtitle: Text('Configure bell'),
-              onTap: state.handleBellOnTap,
-            ),
-            ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Advanced'),
-              onTap: state.handleAdvancedOnTap,
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }

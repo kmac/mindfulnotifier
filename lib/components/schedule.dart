@@ -16,7 +16,7 @@ import 'package:mindfulnotifier/components/utils.dart';
 const String isolateName = 'alarmIsolate';
 
 // A port used to communicate from a background isolate to the UI isolate.
-final ReceivePort port = ReceivePort();
+final ReceivePort receivePort = ReceivePort();
 
 enum ScheduleType { PERIODIC, RANDOM }
 
@@ -25,11 +25,12 @@ class Scheduler {
   final String appName;
   final int scheduleAlarmID = 10;
   Notifier _notifier;
-  bool running = false;
+  static bool running = false;
   static bool initialized = false;
   Reminders reminders;
   DelegatedScheduler delegate;
   static DataStore _ds;
+  static var receivePortSubscription;
 
   // The background
   static SendPort uiSendPort;
@@ -55,7 +56,7 @@ class Scheduler {
       // Register the UI isolate's SendPort to allow for communication from the
       // background isolate.
       bool regResult = IsolateNameServer.registerPortWithName(
-        port.sendPort,
+        receivePort.sendPort,
         isolateName,
       );
       print("registerPortWithName: $regResult");
@@ -65,7 +66,7 @@ class Scheduler {
 
       // Register for events from the background isolate. These messages will
       // always coincide with an alarm firing.
-      port.listen((_) {
+      receivePortSubscription = receivePort.listen((_) {
         switch (_) {
           case 'scheduleCallback':
             _triggerNotification();
@@ -77,9 +78,21 @@ class Scheduler {
             delegate.quietHours.quietEnd();
             break;
         }
+      }, onDone: () {
+        print("receivePort is closed");
       });
     }
     Scheduler.initialized = true;
+  }
+
+  void shutdown() async {
+    print("shutdown");
+    disable();
+    await receivePortSubscription.cancel();
+    receivePort.close();
+    // Register the UI isolate's SendPort to allow for communication from the
+    // background isolate.
+    IsolateNameServer.removePortNameMapping(isolateName);
   }
 
   void enable() {
@@ -127,13 +140,13 @@ class Scheduler {
   static void alarmCallback() {
     final DateTime now = DateTime.now();
     final int isolateId = Isolate.current.hashCode;
-    print("[$now] alarmCallback isolate=$isolateId");
-
+    print("[$now] alarmCallback isolate=$isolateId, running=$running");
+    //if (running) {
     // Send to the UI thread
-
     // This will be null if we're running in the background.
     uiSendPort ??= IsolateNameServer.lookupPortByName(isolateName);
-    uiSendPort?.send('scheduleCallback');
+    //  uiSendPort?.send('scheduleCallback');
+    //}
   }
 }
 
@@ -226,7 +239,7 @@ class PeriodicScheduler extends DelegatedScheduler {
   }
 
   void scheduleNext() async {
-    if (scheduler.running) {
+    if (Scheduler.running) {
       // don't need to schedule anything
       if (!scheduled) {
         scheduler.controller.setInfoMessage(
