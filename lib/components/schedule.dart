@@ -386,16 +386,6 @@ class QuietHours {
     return quietStart;
   }
 
-  // DateTime getNextQuietEnd({DateTime now}) {
-  //   now ??= DateTime.now();
-  //   DateTime quietStart = _getTimeOfDayToday(startTime, now: now);
-  //   DateTime quietEnd = _getTimeOfDayToday(endTime, now: now);
-  //   if (quietEnd.isBefore(quietStart)) {
-  //     quietEnd = _getTimeOfDayTomorrow(endTime, now: now);
-  //   }
-  //   return quietEnd;
-  // }
-
   DateTime getNextQuietEnd({DateTime now}) {
     now ??= DateTime.now();
     DateTime quietEnd = _getTimeOfDayToday(endTime, now: now);
