@@ -95,8 +95,22 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
+  @override
+  void initState() {
+    super.initState();
+    initializeReceivePort();
+  }
+
+  @override
+  void dispose() {
+    // scheduler.dispose();
+    super.dispose();
+  }
+
   MindfulNotifierWidgetController(this.title) {
-    scheduler = Scheduler(this, title);
+    scheduler = Scheduler();
+    scheduler.controller = this;
+    scheduler.appName = title;
   }
 
   // Future<void> _handlePermissions() async {
@@ -206,6 +220,7 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
                       child: Text('Yes'),
                       onPressed: () {
                         state.scheduler.shutdown();
+                        shutdownReceivePort();
                         Navigator.pop(ctxt, true);
                       },
                     ),
