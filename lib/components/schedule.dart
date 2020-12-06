@@ -362,9 +362,31 @@ class QuietHours {
   }
 
   bool isInQuietHours(DateTime date) {
-    DateTime quietStart = _getTimeOfDayToday(startTime);
-    DateTime quietEnd = getNextQuietEnd();
-    return (date.isAfter(quietStart) && date.isBefore(quietEnd));
+    /* 
+              now1              now2                now3 (same as now1)
+               V                 V                   V
+        ----------------|---------------------|-------------
+                    quiet start            quiet end
+        
+      Is now before today's quiet start?
+          Y -> not in quiet
+      Is now after today's quiet start?
+          Y -> Is now before today's quiet end?
+              Y -> in quiet
+          N -> Is now before tomorrow's quiet end?
+
+     */
+    if (date.isBefore(_getTimeOfDayToday(startTime))) {
+      return false;
+    } else {
+      // We've past today's quiet start time.
+      // Check if we're within either quiet end times.
+      if (date.isBefore(_getTimeOfDayToday(endTime)) ||
+          date.isBefore(_getTimeOfDayTomorrow(endTime))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void initializeTimers() async {
