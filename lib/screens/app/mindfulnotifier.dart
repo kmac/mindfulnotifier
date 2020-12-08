@@ -247,10 +247,8 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
                 Expanded(
                   flex: 15,
                   child: Container(
-                    margin:
-                        // EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 24),
-                        EdgeInsets.only(
-                            top: 30, left: 30, right: 30, bottom: 30),
+                    margin: EdgeInsets.only(
+                        top: 30, left: 30, right: 30, bottom: 30),
                     alignment: Alignment.center,
                     // decoration: BoxDecoration(color: Colors.grey[100]),
                     child: Text(

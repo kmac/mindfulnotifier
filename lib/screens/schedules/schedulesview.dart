@@ -198,7 +198,6 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
   }
 
   void setQuietHoursEnd(TimeOfDay time) {
-    // print("setQuietHoursEnd: $time");
     setState(() {
       quietHoursEndHour = time.hour;
       quietHoursEndMinute = time.minute;
@@ -223,11 +222,11 @@ class _SchedulesWidgetView
       // icon: Icon(Icons.arrow_downward),
       // iconSize: 24,
       elevation: 16,
-      style: TextStyle(color: Colors.deepPurple),
-      underline: Container(
-        height: 2,
-        color: Colors.deepPurpleAccent,
-      ),
+      // style: TextStyle(color: Colors.deepPurple, fontSize: 20),
+      style: TextStyle(color: Colors.black54, fontSize: 30),
+      underline: Container(height: 2, color: Colors.black54
+          // color: Colors.deepPurpleAccent,
+          ),
       onChanged: onChangedFunc,
       items: allowedValues.map<DropdownMenuItem<int>>((int value) {
         return DropdownMenuItem<int>(
@@ -238,9 +237,9 @@ class _SchedulesWidgetView
     );
   }
 
-  List<Widget> _buildScheduleView() {
+  List<Widget> _buildScheduleView(BuildContext context) {
     List<Widget> widgets = [
-      Text('Schedule'),
+      Text('Schedule Type', style: Theme.of(context).textTheme.headline5),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
         const Text('Periodic'),
         Radio(
@@ -258,37 +257,53 @@ class _SchedulesWidgetView
     ];
     if (state.scheduleType == ScheduleType.periodic) {
       widgets.add(
-        new Center(
-            child: new Column(
+        new Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-                'Choose the notification period. Notifications are aligned on the top of hour, If the period is shorter than one hour, the granularity is 15 minutes.'),
-            new Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                new Column(
+            Padding(
+                // padding: EdgeInsets.all(24.0),
+                padding: EdgeInsets.fromLTRB(30, 0, 30, 20),
+                child: Text(
+                    'Choose the reminder period. ' +
+                        'Reminders are aligned to the top of hour, ' +
+                        'unless the period is shorter than one hour, in which' +
+                        ' case the granularity is 15 minutes.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w300, /*fontSize: 12*/
+                    ),
+                    softWrap: true)),
+            new Container(
+                decoration: BoxDecoration(color: Colors.grey[200]),
+                padding: EdgeInsets.all(8),
+                width: 200,
+                child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Text('Hours'),
-                    _buildDropDown(state.periodicHours, [0, 1, 2, 3, 4, 8, 12],
-                        state.setPeriodicHours),
+                    new Column(
+                      children: [
+                        Text('Hours'),
+                        _buildDropDown(
+                            state.periodicHours,
+                            [0, 1, 2, 3, 4, 8, 12],
+                            state.setPeriodicHours,
+                            true),
+                      ],
+                    ),
+                    Text(' : '),
+                    new Column(
+                      children: [
+                        Text('Minutes'),
+                        _buildDropDown(
+                            state.periodicMinutes,
+                            state.periodicHours > 0 ? [0] : [0, 15, 30],
+                            state.setPeriodicMinutes,
+                            true),
+                      ],
+                    )
                   ],
-                ),
-                Text(':'),
-                new Column(
-                  children: [
-                    Text('Minutes'),
-                    _buildDropDown(
-                        state.periodicMinutes,
-                        state.periodicHours > 0 ? [0] : [0, 15, 30],
-                        state.setPeriodicMinutes,
-                        true),
-                  ],
-                )
-              ],
-            ),
+                )),
           ],
-        )),
+        ),
       );
     } else {
       widgets.add(new Center(
@@ -296,10 +311,12 @@ class _SchedulesWidgetView
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
             new Container(
-                decoration: BoxDecoration(border: Border.all(width: 2)),
+                decoration: BoxDecoration(color: Colors.grey[200]),
+                padding: EdgeInsets.all(8),
                 child: new Column(
                   children: <Widget>[
-                    Text('Minimum Delay'),
+                    Text('Minimum Delay',
+                        style: Theme.of(context).textTheme.bodyText1),
                     TimePickerSpinner(
                       isForce2Digits: true,
                       time: state.randomMinDateTime,
@@ -311,10 +328,12 @@ class _SchedulesWidgetView
                   ],
                 )),
             new Container(
-                decoration: BoxDecoration(border: Border.all(width: 2)),
+                decoration: BoxDecoration(color: Colors.grey[200]),
+                padding: EdgeInsets.all(8),
                 child: new Column(
                   children: <Widget>[
-                    Text('Maximum Delay'),
+                    Text('Maximum Delay',
+                        style: Theme.of(context).textTheme.bodyText1),
                     TimePickerSpinner(
                       isForce2Digits: true,
                       time: state.randomMaxDateTime,
@@ -359,7 +378,7 @@ class _SchedulesWidgetView
 
   List<Widget> _buildQuietHoursView(BuildContext context) {
     List<Widget> widgets = [
-      Text('Quiet Hours'),
+      Text('Quiet Hours', style: Theme.of(context).textTheme.headline5),
       new Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: <Widget>[
@@ -428,7 +447,7 @@ class _SchedulesWidgetView
               alignment: Alignment.topCenter,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: _buildScheduleView(),
+                children: _buildScheduleView(context),
               ),
             ),
             Container(
