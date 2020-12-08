@@ -42,6 +42,7 @@ dependencies:
   # time_range: ^0.5.0
   date_format: ^1.0.9
   permission_handler: ^5.0.1+1
+  get:
 
 dev_dependencies:
   flutter_test:

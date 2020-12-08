@@ -3,43 +3,47 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 // import 'package:permission_handler/permission_handler.dart';
+import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/schedule.dart';
 import 'package:mindfulnotifier/screens/schedules/schedulesview.dart';
 import 'package:mindfulnotifier/screens/widgetview.dart';
 import 'package:date_format/date_format.dart';
 
+const String appName = 'Mindful Notifier';
 const bool testing = false;
 
-class MindfulNotifierApp extends StatelessWidget {
-  final String title;
-  MindfulNotifierApp(this.title);
+// class MindfulNotifierApp extends StatelessWidget {
+//   final String title = appName;
+//   MindfulNotifierApp() {
+//     init();
+//   }
 
-  void init() async {
-    initializeNotifications();
-  }
+//   void init() async {
+//     initializeNotifications();
+//   }
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: title,
-      //home: RemindfulAppWidget(title: title),
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        // This makes the visual density adapt to the platform that you run
-        // the app on.
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      routes: {
-        '/': (context) => MindfulNotifierAppWidget(title: title),
-        '/schedules': (context) => SchedulesWidget(),
-        // '/reminders': (context) => RemindersScreen(),
-        // '/bells': (context) => BellScreen(),
-        // '/advanced': (context) => AdvancedScreen(),
-      },
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: title,
+//       //home: RemindfulAppWidget(title: title),
+//       theme: ThemeData(
+//         primarySwatch: Colors.blue,
+//         // This makes the visual density adapt to the platform that you run
+//         // the app on.
+//         visualDensity: VisualDensity.adaptivePlatformDensity,
+//       ),
+//       routes: {
+//         '/': (context) => MindfulNotifierAppWidget(title: title),
+//         '/schedules': (context) => SchedulesWidget(),
+//         // '/reminders': (context) => RemindersScreen(),
+//         // '/bells': (context) => BellScreen(),
+//         // '/advanced': (context) => AdvancedScreen(),
+//       },
+//     );
+//   }
+// }
 
 class MindfulNotifierAppWidget extends StatefulWidget {
   // This widget is the home page of your application. It is stateful, meaning
@@ -73,19 +77,17 @@ should help you decide:
 If in doubt, start by managing state in the parent widget.
 */
 
-  final String title;
-
-  MindfulNotifierAppWidget({Key key, this.title}) : super(key: key);
+  MindfulNotifierAppWidget({Key key}) : super(key: key);
 
   @override
   MindfulNotifierWidgetController createState() =>
-      MindfulNotifierWidgetController(title);
+      MindfulNotifierWidgetController();
 }
 
 class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   // UI event handlers, init code, etc goes here
 
-  final String title;
+  final String title = appName;
   String message = 'Not Running';
   String infoMessage = 'Not Running';
   bool _enabled = false;
@@ -98,6 +100,7 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   @override
   void initState() {
     super.initState();
+    initializeNotifications();
     initializeReceivePort();
   }
 
@@ -107,7 +110,7 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
     super.dispose();
   }
 
-  MindfulNotifierWidgetController(this.title) {
+  MindfulNotifierWidgetController() {
     scheduler = Scheduler();
     scheduler.controller = this;
     scheduler.appName = title;
@@ -175,12 +178,7 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   }
 
   void handleScheduleOnTap() {
-    // https://flutter.dev/docs/cookbook/navigation/navigation-basics
-    Navigator.pushNamed(
-      context,
-      '/schedules',
-    );
-    // Navigator.pop(context);
+    Get.toNamed('/schedules');
   }
 
   void handleRemindersOnTap() {
@@ -234,7 +232,7 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
         // Widget tree
         child: Scaffold(
           appBar: AppBar(
-            title: Text(state.widget.title),
+            title: Text(state.title),
           ),
           body: Center(
             child: Column(
@@ -317,7 +315,9 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
               children: <Widget>[
                 DrawerHeader(
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    //color: Colors.blue,
+                    color: Theme.of(context).appBarTheme.color,
+                    // style: Theme.of(context).textTheme.headline5,
                   ),
                   child: Text(
                     'Settings',
