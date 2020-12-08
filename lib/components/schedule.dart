@@ -42,6 +42,7 @@ void initializeReceivePort() async {
     // Register for events from the background isolate. These messages will
     // always coincide with an alarm firing.
     receivePortSubscription = receivePort.listen((_) {
+      print("receivePort received: $_");
       // This is running in the UI thread.
       // The Scheduler instance should be the current one.
       Scheduler scheduler = Scheduler();
@@ -120,37 +121,33 @@ class Scheduler {
 
   factory Scheduler() => _instance ?? Scheduler._internal();
 
-  void _getDS() async {
-    _ds ??= await DataStore.create();
-  }
-
   void init() async {
+    print("Initializing scheduler, initialized=$initialized");
     _notifier = new Notifier(appName);
-    _getDS();
 
     reminders = Reminders();
     reminders.init();
 
-    if (!Scheduler.initialized) {
-      print("Initializing scheduler");
+    if (!initialized) {
+      _ds = await DataStore.create();
       await AndroidAlarmManager.initialize();
     }
-    Scheduler.initialized = true;
+    initialized = true;
   }
 
-  void shutdown() async {
+  void shutdown() {
     print("shutdown");
     disable();
   }
 
   void enable() {
-    init();
     delegate = _ds.buildSchedulerDelegate(this);
+    delegate.quietHours.initializeTimers();
     delegate.scheduleNext();
   }
 
   void disable() {
-    delegate.cancel();
+    delegate?.cancel();
     Notifier.cancelAll();
     running = false;
   }
@@ -175,6 +172,10 @@ class Scheduler {
       print("In quiet hours... ignoring notification");
       return;
     }
+    if (delegate.quietHours.isInQuietHours(now)) {
+      print("In quiet hours (!missed alarm!)... ignoring notification");
+      return;
+    }
     var reminder = reminders.randomReminder();
     _notifier.showNotification(reminder);
     controller.setMessage(reminder);
@@ -191,7 +192,9 @@ abstract class DelegatedScheduler {
   final QuietHours quietHours;
   bool scheduled = false;
 
-  DelegatedScheduler(this.scheduleType, this.scheduler, this.quietHours);
+  DelegatedScheduler(this.scheduleType, this.scheduler, this.quietHours) {
+    quietHours.controller = scheduler.controller;
+  }
 
   void cancel() async {
     print("Cancelling notification schedule");
@@ -200,10 +203,7 @@ abstract class DelegatedScheduler {
   }
 
   void scheduleNext() {
-    if (!scheduled) {
-      quietHours.initializeTimers();
-    }
-    print("Scheduling notification, type=$scheduleType");
+    print("Scheduling next notification, type=$scheduleType");
   }
 
   void initialScheduleComplete() {
@@ -218,10 +218,6 @@ class PeriodicScheduler extends DelegatedScheduler {
   PeriodicScheduler(Scheduler scheduler, QuietHours quietHours,
       this.durationHours, this.durationMinutes)
       : super(ScheduleType.PERIODIC, scheduler, quietHours);
-
-  void cancel() async {
-    super.cancel();
-  }
 
   DateTime getInitialStart({DateTime now}) {
     now ??= DateTime.now();
@@ -271,6 +267,7 @@ class PeriodicScheduler extends DelegatedScheduler {
   }
 
   void scheduleNext() async {
+    super.scheduleNext();
     if (Scheduler.running) {
       // don't need to schedule anything
       if (!scheduled) {
@@ -280,7 +277,6 @@ class PeriodicScheduler extends DelegatedScheduler {
       }
       return;
     }
-    super.scheduleNext();
     DateTime startTime = getInitialStart();
     print("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
     var firstNotifDate =
@@ -330,10 +326,10 @@ class RandomScheduler extends DelegatedScheduler {
     //   print("Scheduling past next quiet hours");
     //   nextDate = quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
     // }
-    if (quietHours.inQuietHours) {
-      print("Scheduling past next quiet hours");
+    if (quietHours.inQuietHours || quietHours.isInQuietHours(nextDate)) {
       nextDate =
           quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
+      print("Scheduling next random notification, past quiet hours: $nextDate");
       scheduler.controller.setInfoMessage(
           "In quiet hours, next reminder at ${nextDate.hour}:${timeNumToString(nextDate.minute)}");
     } else {
@@ -434,19 +430,40 @@ class QuietHours {
     print(
         "Initializing quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
     assert(nextQuietStart.isAfter(DateTime.now()));
-    assert(nextQuietStart.isBefore(nextQuietEnd));
-    await AndroidAlarmManager.periodic(
+    if (!await AndroidAlarmManager.periodic(
         Duration(days: 1), quietHoursStartAlarmID, quietHoursStartCallback,
-        startAt: nextQuietStart, exact: true, wakeup: true);
-    await AndroidAlarmManager.periodic(
+        startAt: nextQuietStart,
+        exact: true,
+        wakeup: true,
+        rescheduleOnReboot: false)) {
+      var message =
+          "periodic schedule failed on quiet hours start timer: $quietHoursStartAlarmID";
+      print(message);
+      throw AssertionError(message);
+    }
+    if (!await AndroidAlarmManager.periodic(
         Duration(days: 1), quietHoursEndAlarmID, quietHoursEndCallback,
-        startAt: nextQuietEnd, exact: true, wakeup: true);
+        startAt: nextQuietEnd,
+        exact: true,
+        wakeup: true,
+        rescheduleOnReboot: false)) {
+      var message =
+          "periodic schedule failed on quiet hours end timer: $quietHoursEndAlarmID";
+      print(message);
+      throw AssertionError(message);
+    }
+    print(
+        "Initialized quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
   }
 
   void cancelTimers() async {
     print("Cancelling quiet hours timers");
-    await AndroidAlarmManager.cancel(quietHoursStartAlarmID);
-    await AndroidAlarmManager.cancel(quietHoursEndAlarmID);
+    if (!await AndroidAlarmManager.cancel(quietHoursStartAlarmID)) {
+      print("cancel failed on quiet hours timers: $quietHoursStartAlarmID");
+    }
+    if (!await AndroidAlarmManager.cancel(quietHoursEndAlarmID)) {
+      print("cancel failed on quiet hours timers: $quietHoursEndAlarmID");
+    }
   }
 
   void quietStart() {

@@ -111,6 +111,7 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
     scheduler = Scheduler();
     scheduler.controller = this;
     scheduler.appName = title;
+    scheduler.init();
   }
 
   // Future<void> _handlePermissions() async {
@@ -122,7 +123,7 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   //   print(statuses[Permission.location]);
   // }
 
-  void setEnabled(bool enabled) async {
+  void setEnabled(bool enabled) {
     // await _handlePermissions();
     setState(() {
       // This call to setState tells the Flutter framework that something has
