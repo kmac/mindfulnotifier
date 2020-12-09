@@ -6,9 +6,12 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:date_format/date_format.dart';
+import 'package:logger/logger.dart';
 
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/screens/widgetview.dart';
+
+var logger = Logger();
 
 class SchedulesWidget extends StatefulWidget {
   SchedulesWidget({Key key}) : super(key: key);
@@ -75,7 +78,7 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
   }
 
   void loadPrefs() async {
-    print("loadPrefs");
+    logger.d("loadPrefs");
     _prefs = await SharedPreferences.getInstance();
 
     // scheduleType

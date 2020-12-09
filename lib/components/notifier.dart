@@ -4,12 +4,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:logger/logger.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:audio_session/audio_session.dart';
+
+var logger = Logger();
 
 const bool useSeparateAudio = false;
 
@@ -77,7 +80,7 @@ void initializeNotifications() async {
   await flutterLocalNotificationsPlugin.initialize(initializationSettings,
       onSelectNotification: (String payload) async {
     if (payload != null) {
-      debugPrint('notification payload: $payload');
+      logger.d('notification payload: $payload');
     }
     selectNotificationSubject.add(payload);
   });
@@ -138,7 +141,7 @@ class Notifier {
         channelId += '-vibrate';
       }
     }
-    print(
+    logger.i(
         "[$now] showNotification [channelId=$channelId]: title=$notifTitle text=$notifText mute=$mute");
 
     AndroidNotificationDetails androidPlatformChannelSpecifics =
@@ -168,12 +171,12 @@ class Notifier {
       } else {
         await player.setFilePath(customSoundFile.path);
       }
-      print('player.play');
+      logger.d('player.play');
       await player.play();
-      print('player.play done');
+      logger.d('player.play done');
       await player.stop();
       await player.dispose();
-      print('player.play done');
+      logger.d('player.play done');
     }
   }
 }

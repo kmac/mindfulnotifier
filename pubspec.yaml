@@ -43,6 +43,10 @@ dependencies:
   date_format: ^1.0.9
   permission_handler: ^5.0.1+1
   get:
+  logger: ^0.9.4
+  logger_flutter:
+    git: https://github.com/ewertonrp/logger_flutter.git
+  # logger_flutter: ^0.7.1
 
 dev_dependencies:
   flutter_test:
