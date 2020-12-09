@@ -9,6 +9,8 @@ void main() async {
   // needed if you intend to initialize in the `main` function
   WidgetsFlutterBinding.ensureInitialized();
 
+  // GetxService schedulerService;
+
   runApp(
     // GetMaterialApp(MindfulNotifierApp());
     GetMaterialApp(

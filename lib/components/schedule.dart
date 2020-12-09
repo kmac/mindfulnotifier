@@ -7,6 +7,7 @@ import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:get/get.dart';
 
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
@@ -106,7 +107,7 @@ void quietHoursEndCallback() {
 enum ScheduleType { PERIODIC, RANDOM }
 
 class Scheduler {
-  MindfulNotifierWidgetController controller;
+  MindfulNotifierWidgetController controller = Get.find();
   String appName = 'Mindful Notifier';
   final int scheduleAlarmID = 10;
   Notifier _notifier;
@@ -181,7 +182,7 @@ class Scheduler {
     }
     var reminder = reminders.randomReminder();
     _notifier.showNotification(reminder);
-    controller.setMessage(reminder);
+    controller.message.value = reminder;
     delegate.scheduleNext();
   }
 }
@@ -195,9 +196,7 @@ abstract class DelegatedScheduler {
   final QuietHours quietHours;
   bool scheduled = false;
 
-  DelegatedScheduler(this.scheduleType, this.scheduler, this.quietHours) {
-    quietHours.controller = scheduler.controller;
-  }
+  DelegatedScheduler(this.scheduleType, this.scheduler, this.quietHours);
 
   void cancel() async {
     logger.i("Cancelling notification schedule");
@@ -274,8 +273,8 @@ class PeriodicScheduler extends DelegatedScheduler {
     if (Scheduler.running) {
       // don't need to schedule anything
       if (!scheduled) {
-        scheduler.controller.setInfoMessage(
-            "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}");
+        scheduler.controller.infoMessage.value =
+            "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}";
         scheduled = true;
       }
       return;
@@ -285,9 +284,9 @@ class PeriodicScheduler extends DelegatedScheduler {
     var firstNotifDate =
         formatDate(startTime, [h, ':', nn, " ", am]).toString();
     //controller.setMessage("First notification scheduled for $firstNotifDate");
-    scheduler.controller.setInfoMessage(
+    scheduler.controller.infoMessage.value =
         "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}," +
-            " beginning at $firstNotifDate");
+            " beginning at $firstNotifDate";
     await AndroidAlarmManager.periodic(
         Duration(hours: durationHours, minutes: durationMinutes),
         scheduler.scheduleAlarmID,
@@ -334,14 +333,14 @@ class RandomScheduler extends DelegatedScheduler {
           quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
       logger.i(
           "Scheduling next random notification, past quiet hours: $nextDate");
-      scheduler.controller.setInfoMessage(
-          "In quiet hours, next reminder at ${nextDate.hour}:${timeNumToString(nextDate.minute)}");
+      scheduler.controller.infoMessage.value =
+          "In quiet hours, next reminder at ${nextDate.hour}:${timeNumToString(nextDate.minute)}";
     } else {
       logger.i("Scheduling next random notifcation at $nextDate");
       // controller.setNextNotification(nextDate);
       // This is temporary (switch to above when solid):
-      scheduler.controller.setInfoMessage(
-          "Next: $nextDate, nextMinutes: $nextMinutes, min: $minMinutes, max: $maxMinutes");
+      scheduler.controller.infoMessage.value =
+          "Next: $nextDate, nextMinutes: $nextMinutes, min: $minMinutes, max: $maxMinutes";
     }
     await AndroidAlarmManager.oneShotAt(
         nextDate, scheduler.scheduleAlarmID, scheduleCallback,
@@ -359,7 +358,7 @@ class QuietHours {
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   bool inQuietHours = false;
-  MindfulNotifierWidgetController controller;
+  MindfulNotifierWidgetController controller = Get.find();
 
   QuietHours(this.startTime, this.endTime);
   QuietHours.defaultQuietHours()
@@ -474,13 +473,13 @@ class QuietHours {
     final DateTime now = DateTime.now();
     logger.i("[$now] Quiet hours start");
     inQuietHours = true;
-    controller?.setMessage('In quiet hours');
+    controller?.message?.value = 'In quiet hours';
   }
 
   void quietEnd() {
     final DateTime now = DateTime.now();
     logger.i("[$now] Quiet hours end");
     inQuietHours = false;
-    controller?.setMessage('Quiet Hours have ended.');
+    controller?.message?.value = 'Quiet Hours have ended.';
   }
 }
