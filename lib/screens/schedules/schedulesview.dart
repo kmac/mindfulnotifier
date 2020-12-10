@@ -1,37 +1,29 @@
 import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:date_format/date_format.dart';
 import 'package:logger/logger.dart';
 
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/utils.dart';
-import 'package:mindfulnotifier/screens/widgetview.dart';
+import 'package:mindfulnotifier/components/logging.dart';
 
-var logger = Logger();
+var logger = Logger(printer: SimpleLogPrinter('schedulesview'));
 
 enum ScheduleType { periodic, random }
 
 class SchedulesWidgetController extends GetxController {
-  SharedPreferences _prefs;
+  ScheduleDataStore ds;
   final scheduleType = ScheduleType.periodic.obs;
   final periodicHours = 1.obs;
   final periodicMinutes = 0.obs;
   final randomMinDateTime = DateTime.parse("1970-01-01 00:45:00Z").obs;
   final randomMaxDateTime = DateTime.parse("1970-01-01 01:30:00Z").obs;
-  int randomMinHours = 0;
-  int randomMinMinutes = 45;
-  int randomMaxHours = 1;
-  int randomMaxMinutes = 15;
-  int quietHoursStartHour = 21;
-  int quietHoursStartMinute = 0;
-  int quietHoursEndHour = 9;
-  int quietHoursEndMinute = 0;
 
   TextEditingController quietHoursStartTimeController = TextEditingController();
   TextEditingController quietHoursEndTimeController = TextEditingController();
@@ -46,129 +38,110 @@ class SchedulesWidgetController extends GetxController {
 
   @override
   void onInit() {
+    super.onInit();
+  }
+
+  @override
+  void onReady() {
+    init();
+    super.onReady();
+  }
+
+  Future<ScheduleDataStore> _getDS() async {
+    ds ??= await ScheduleDataStore.create();
+    return ds;
+  }
+
+  void init() async {
+    logger.d("loadPrefs");
+
+    ds ??= await _getDS();
+
+    if (ds.getScheduleTypeStr() == 'periodic') {
+      scheduleType.value = ScheduleType.periodic;
+    } else {
+      scheduleType.value = ScheduleType.random;
+    }
+    periodicHours.value = ds.getPeriodicHours();
+    periodicMinutes.value = ds.getPeriodicMinutes();
+    randomMinDateTime.value =
+        _getDateTime(ds.getRandomMinHours(), ds.getRandomMinMinutes());
+    randomMaxDateTime.value =
+        _getDateTime(ds.getRandomMaxHours(), ds.getRandomMaxMinutes());
+    setQuietHoursStart(TimeOfDay(
+        hour: ds.getQuietHoursStartHour(),
+        minute: ds.getQuietHoursStartMinute()));
+    setQuietHoursEnd(TimeOfDay(
+        hour: ds.getQuietHoursEndHour(), minute: ds.getQuietHoursEndMinute()));
+
+    quietHoursStartTimeController.text = formatDate(
+        DateTime(2020, 01, 1, ds.getQuietHoursStartHour(),
+            ds.getQuietHoursStartMinute()),
+        [hh, ':', nn, " ", am]).toString();
+    quietHoursEndTimeController.text = formatDate(
+        DateTime(2020, 01, 1, ds.getQuietHoursEndHour(),
+            ds.getQuietHoursEndMinute()),
+        [hh, ':', nn, " ", am]).toString();
+
     ever(scheduleType, handleScheduleType);
     ever(periodicHours, handlePeriodicHours);
     ever(periodicMinutes, handlePeriodicMinutes);
     ever(randomMinDateTime, handleRandomMinDateTime);
     ever(randomMaxDateTime, handleRandomMaxDateTime);
-
-    loadPrefs();
-    quietHoursStartTimeController.text = formatDate(
-        DateTime(2020, 01, 1, quietHoursStartHour, quietHoursStartMinute),
-        [hh, ':', nn, " ", am]).toString();
-    quietHoursEndTimeController.text = formatDate(
-        DateTime(2020, 01, 1, quietHoursEndHour, quietHoursEndMinute),
-        [hh, ':', nn, " ", am]).toString();
-    super.onInit();
   }
 
-  void loadPrefs() async {
-    logger.d("loadPrefs");
-    _prefs = await SharedPreferences.getInstance();
-
-    // scheduleType
-    if (_prefs.containsKey(DataStore.scheduleTypeKey)) {
-      if (_prefs.getString(DataStore.scheduleTypeKey) == 'periodic') {
-        scheduleType.value = ScheduleType.periodic;
-      } else {
-        scheduleType.value = ScheduleType.random;
-      }
-    } else {
-      _prefs.setString(DataStore.scheduleTypeKey, scheduleType.toString());
-    }
-
-    // periodicHours / periodicMinutes
-    if (_prefs.containsKey(DataStore.periodicHoursKey)) {
-      periodicHours.value = _prefs.getInt(DataStore.periodicHoursKey);
-    } else {
-      _prefs.setInt(DataStore.periodicHoursKey, periodicHours.value);
-    }
-    if (_prefs.containsKey(DataStore.periodicMinutesKey)) {
-      periodicMinutes.value = _prefs.getInt(DataStore.periodicMinutesKey);
-    } else {
-      _prefs.setInt(DataStore.periodicMinutesKey, periodicMinutes.value);
-    }
-
-    if (_prefs.containsKey(DataStore.randomMinHoursKey)) {
-      randomMinHours = _prefs.getInt(DataStore.randomMinHoursKey);
-    }
-    if (_prefs.containsKey(DataStore.randomMinMinutesKey)) {
-      randomMinMinutes = _prefs.getInt(DataStore.randomMinMinutesKey);
-    }
-    if (_prefs.containsKey(DataStore.randomMaxHoursKey)) {
-      randomMaxHours = _prefs.getInt(DataStore.randomMaxHoursKey);
-    }
-    if (_prefs.containsKey(DataStore.randomMaxMinutesKey)) {
-      randomMaxMinutes = _prefs.getInt(DataStore.randomMaxMinutesKey);
-    }
-    randomMinDateTime.value = _getDateTime(randomMinHours, randomMinMinutes);
-    randomMaxDateTime.value = _getDateTime(randomMaxHours, randomMaxMinutes);
-
-    if (_prefs.containsKey(DataStore.quietHoursStartHourKey)) {
-      quietHoursStartHour = _prefs.getInt(DataStore.quietHoursStartHourKey);
-    }
-    if (_prefs.containsKey(DataStore.quietHoursStartMinuteKey)) {
-      quietHoursStartMinute = _prefs.getInt(DataStore.quietHoursStartMinuteKey);
-    }
-    setQuietHoursStart(
-        TimeOfDay(hour: quietHoursStartHour, minute: quietHoursStartMinute));
-    if (_prefs.containsKey(DataStore.quietHoursEndHourKey)) {
-      quietHoursEndHour = _prefs.getInt(DataStore.quietHoursEndHourKey);
-    }
-    if (_prefs.containsKey(DataStore.quietHoursEndMinuteKey)) {
-      quietHoursEndMinute = _prefs.getInt(DataStore.quietHoursEndMinuteKey);
-    }
-    setQuietHoursEnd(
-        TimeOfDay(hour: quietHoursEndHour, minute: quietHoursEndMinute));
-  }
-
-  void handleScheduleType(ScheduleType t) {
+  void handleScheduleType(ScheduleType t) async {
+    //ds ??= await _getDS();
     if (t == ScheduleType.periodic) {
-      _prefs.setString(DataStore.scheduleTypeKey, 'periodic');
+      ds.setScheduleTypeStr('periodic');
     } else {
-      _prefs.setString(DataStore.scheduleTypeKey, 'random');
+      ds.setScheduleTypeStr('random');
     }
   }
 
   void handlePeriodicHours(int hours) {
-    _prefs.setInt(DataStore.periodicHoursKey, hours);
+    ds.setPeriodicHours(hours);
     if (hours > 0) {
       periodicMinutes.value = 0;
+    } else if (periodicMinutes.value < 15) {
+      periodicMinutes.value = 15;
     }
   }
 
   void handlePeriodicMinutes(int minutes) {
-    _prefs.setInt(DataStore.periodicMinutesKey, minutes);
+    ds.setPeriodicMinutes(minutes);
   }
 
   void handleRandomMinDateTime(DateTime time) {
-    _prefs.setInt(DataStore.randomMinHoursKey, time.hour);
-    _prefs.setInt(DataStore.randomMinMinutesKey, time.minute);
+    ds.setRandomMinHours(time.hour);
+    ds.setRandomMinMinutes(time.minute);
+    if (randomMaxDateTime.value.isBefore(time)) {
+      randomMaxDateTime.value = time.add(Duration(minutes: 15));
+    }
   }
 
   void handleRandomMaxDateTime(DateTime time) {
-    _prefs.setInt(DataStore.randomMaxHoursKey, time.hour);
-    _prefs.setInt(DataStore.randomMaxMinutesKey, time.minute);
+    ds.setRandomMaxHours(time.hour);
+    ds.setRandomMaxMinutes(time.minute);
+    if (randomMinDateTime.value.isAfter(time)) {
+      randomMinDateTime.value = time.subtract(Duration(minutes: 15));
+    }
   }
 
   void setQuietHoursStart(TimeOfDay time) {
-    quietHoursStartHour = time.hour;
-    quietHoursStartMinute = time.minute;
+    ds.setQuietHoursStartHour(time.hour);
+    ds.setQuietHoursStartMinute(time.minute);
     quietHoursStartTimeController.text = formatDate(
-        DateTime(2019, 08, 1, quietHoursStartHour, quietHoursStartMinute),
+        DateTime(2019, 08, 1, time.hour, time.minute),
         [hh, ':', nn, " ", am]).toString();
-    _prefs.setInt(DataStore.quietHoursStartHourKey, quietHoursStartHour);
-    _prefs.setInt(DataStore.quietHoursStartMinuteKey, quietHoursStartMinute);
   }
 
   void setQuietHoursEnd(TimeOfDay time) {
-    quietHoursEndHour = time.hour;
-    quietHoursEndMinute = time.minute;
     quietHoursEndTimeController.text = formatDate(
-        DateTime(2019, 08, 1, quietHoursEndHour, quietHoursEndMinute),
+        DateTime(2019, 08, 1, time.hour, time.minute),
         [hh, ':', nn, " ", am]).toString();
-    _prefs.setInt(DataStore.quietHoursEndHourKey, quietHoursEndHour);
-    _prefs.setInt(DataStore.quietHoursEndMinuteKey, quietHoursEndMinute);
+    ds.setQuietHoursEndHour(time.hour);
+    ds.setQuietHoursEndMinute(time.minute);
   }
 }
 
@@ -257,7 +230,8 @@ class SchedulesWidget extends StatelessWidget {
                         Text('Minutes'),
                         _buildDropDown(
                             controller.periodicMinutes.value,
-                            controller.periodicHours.value > 0
+                            controller.periodicMinutes.value == 0 &&
+                                    controller.periodicHours.value > 0
                                 ? [0]
                                 : [0, 15, 30],
                             (value) => controller.periodicMinutes.value = value,
@@ -318,8 +292,8 @@ class SchedulesWidget extends StatelessWidget {
 
   Future<Null> _selectQuietHoursStartTime(BuildContext context) async {
     var selectedTime = TimeOfDay(
-        hour: controller.quietHoursStartHour,
-        minute: controller.quietHoursStartMinute);
+        hour: controller.ds.getQuietHoursStartHour(),
+        minute: controller.ds.getQuietHoursStartMinute());
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
@@ -332,8 +306,8 @@ class SchedulesWidget extends StatelessWidget {
 
   Future<Null> _selectQuietHoursEndTime(BuildContext context) async {
     var selectedTime = TimeOfDay(
-        hour: controller.quietHoursEndHour,
-        minute: controller.quietHoursEndMinute);
+        hour: controller.ds.getQuietHoursEndHour(),
+        minute: controller.ds.getQuietHoursEndMinute());
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,

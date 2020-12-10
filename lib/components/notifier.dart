@@ -12,7 +12,10 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:audio_session/audio_session.dart';
 
-var logger = Logger();
+import 'package:mindfulnotifier/components/datastore.dart';
+import 'package:mindfulnotifier/components/logging.dart';
+
+var logger = Logger(printer: SimpleLogPrinter('notifier'));
 
 const bool useSeparateAudio = false;
 
@@ -100,11 +103,10 @@ class Notifier {
   static const String channelDescription = 'Notifications for Mindful Notifier';
 
   static String channelId = 'mindfulnotifier_channel_id';
-  static bool mute = false;
-  static bool vibrate = false;
 
   final String notifTitle;
   final String defaultBellAsset = 'media/defaultbell.mp3';
+  ScheduleDataStore ds;
 
   File customSoundFile;
 
@@ -115,6 +117,7 @@ class Notifier {
 
   void init() async {
     // Platform.environment
+    ds = await ScheduleDataStore.create();
   }
 
   static void cancelAll() async {
@@ -123,6 +126,8 @@ class Notifier {
 
   void showNotification(String notifText) async {
     DateTime now = DateTime.now();
+    bool mute = ds.getMute();
+    bool vibrate = ds.getVibrate();
 
     AndroidNotificationSound notifSound;
     if (!useSeparateAudio) {
