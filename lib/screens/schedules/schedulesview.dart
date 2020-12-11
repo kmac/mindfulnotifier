@@ -1,56 +1,30 @@
 import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:date_format/date_format.dart';
+import 'package:logger/logger.dart';
 
+import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/utils.dart';
-import 'package:mindfulnotifier/screens/widgetview.dart';
+import 'package:mindfulnotifier/components/logging.dart';
 
-class SchedulesWidget extends StatefulWidget {
-  SchedulesWidget({Key key}) : super(key: key);
-
-  @override
-  SchedulesWidgetController createState() => SchedulesWidgetController();
-}
+var logger = Logger(printer: SimpleLogPrinter('schedulesview'));
 
 enum ScheduleType { periodic, random }
 
-class ConfigManager {}
+class SchedulesWidgetController extends GetxController {
+  ScheduleDataStore ds;
+  final scheduleType = ScheduleType.periodic.obs;
+  final periodicHours = 1.obs;
+  final periodicMinutes = 0.obs;
+  final randomMinDateTime = DateTime.parse("1970-01-01 00:45:00Z").obs;
+  final randomMaxDateTime = DateTime.parse("1970-01-01 01:30:00Z").obs;
 
-class SchedulesWidgetController extends State<SchedulesWidget> {
-  var scheduleTypeKey = 'scheduleType';
-  var periodicHoursKey = 'periodicDurationHours';
-  var periodicMinutesKey = 'periodicDurationMinutes';
-  var randomMinHoursKey = 'randomMinHours';
-  var randomMinMinutesKey = 'randomMinMinutes';
-  var randomMaxHoursKey = 'randomMaxHours';
-  var randomMaxMinutesKey = 'randomMaxMinutes';
-
-  var quietHoursStartHourKey = 'quietHoursStartHour';
-  var quietHoursStartMinuteKey = 'quietHoursStartMinute';
-  var quietHoursEndHourKey = 'quietHoursEndHour';
-  var quietHoursEndMinuteKey = 'quietHoursEndMinute';
-
-  SharedPreferences _prefs;
-  ScheduleType scheduleType = ScheduleType.periodic;
-  int periodicHours = 1;
-  int periodicMinutes = 0;
-
-  int randomMinHours = 0;
-  int randomMinMinutes = 45;
-  int randomMaxHours = 1;
-  int randomMaxMinutes = 15;
-  DateTime randomMinDateTime = DateTime.parse("1970-01-01 00:45:00Z");
-  DateTime randomMaxDateTime = DateTime.parse("1970-01-01 01:30:00Z");
-
-  int quietHoursStartHour = 21;
-  int quietHoursStartMinute = 0;
-  int quietHoursEndHour = 9;
-  int quietHoursEndMinute = 0;
   TextEditingController quietHoursStartTimeController = TextEditingController();
   TextEditingController quietHoursEndTimeController = TextEditingController();
 
@@ -63,156 +37,111 @@ class SchedulesWidgetController extends State<SchedulesWidget> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    loadPrefs();
-    quietHoursStartTimeController.text = formatDate(
-        DateTime(2020, 01, 1, quietHoursStartHour, quietHoursStartMinute),
-        [hh, ':', nn, " ", am]).toString();
-    quietHoursEndTimeController.text = formatDate(
-        DateTime(2020, 01, 1, quietHoursEndHour, quietHoursEndMinute),
-        [hh, ':', nn, " ", am]).toString();
-  }
-
-  void loadPrefs() async {
-    print("loadPrefs");
-    _prefs = await SharedPreferences.getInstance();
-
-    // scheduleType
-    if (_prefs.containsKey(scheduleTypeKey)) {
-      if (_prefs.getString(scheduleTypeKey) == 'periodic') {
-        scheduleType = ScheduleType.periodic;
-      } else {
-        scheduleType = ScheduleType.random;
-      }
-    } else {
-      _prefs.setString(scheduleTypeKey, scheduleType.toString());
-    }
-    setScheduleType(scheduleType);
-
-    // periodicHours / periodicMinutes
-    if (_prefs.containsKey(periodicHoursKey)) {
-      periodicHours = _prefs.getInt(periodicHoursKey);
-    } else {
-      _prefs.setInt(periodicHoursKey, periodicHours);
-    }
-    if (_prefs.containsKey(periodicMinutesKey)) {
-      periodicMinutes = _prefs.getInt(periodicMinutesKey);
-    } else {
-      _prefs.setInt(periodicMinutesKey, periodicMinutes);
-    }
-
-    if (_prefs.containsKey(randomMinHoursKey)) {
-      randomMinHours = _prefs.getInt(randomMinHoursKey);
-    }
-    if (_prefs.containsKey(randomMinMinutesKey)) {
-      randomMinMinutes = _prefs.getInt(randomMinMinutesKey);
-    }
-    if (_prefs.containsKey(randomMaxHoursKey)) {
-      randomMaxHours = _prefs.getInt(randomMaxHoursKey);
-    }
-    if (_prefs.containsKey(randomMaxMinutesKey)) {
-      randomMaxMinutes = _prefs.getInt(randomMaxMinutesKey);
-    }
-    randomMinDateTime = _getDateTime(randomMinHours, randomMinMinutes);
-    setRandomMinDateTime(randomMinDateTime);
-    randomMaxDateTime = _getDateTime(randomMaxHours, randomMaxMinutes);
-    setRandomMaxDateTime(randomMaxDateTime);
-
-    if (_prefs.containsKey(quietHoursStartHourKey)) {
-      quietHoursStartHour = _prefs.getInt(quietHoursStartHourKey);
-    }
-    if (_prefs.containsKey(quietHoursStartMinuteKey)) {
-      quietHoursStartMinute = _prefs.getInt(quietHoursStartMinuteKey);
-    }
-    setQuietHoursStart(
-        TimeOfDay(hour: quietHoursStartHour, minute: quietHoursStartMinute));
-    if (_prefs.containsKey(quietHoursEndHourKey)) {
-      quietHoursEndHour = _prefs.getInt(quietHoursEndHourKey);
-    }
-    if (_prefs.containsKey(quietHoursEndMinuteKey)) {
-      quietHoursEndMinute = _prefs.getInt(quietHoursEndMinuteKey);
-    }
-    setQuietHoursEnd(
-        TimeOfDay(hour: quietHoursEndHour, minute: quietHoursEndMinute));
+  void onInit() {
+    super.onInit();
   }
 
   @override
-  Widget build(BuildContext context) => _SchedulesWidgetView(this);
+  void onReady() {
+    init();
+    super.onReady();
+  }
 
-  void setScheduleType(ScheduleType t) {
-    setState(() {
-      scheduleType = t;
-    });
-    if (t == ScheduleType.periodic) {
-      _prefs.setString(scheduleTypeKey, 'periodic');
+  void init() async {
+    logger.d("init");
+
+    ds = Get.find();
+
+    if (ds.getScheduleTypeStr() == 'periodic') {
+      scheduleType.value = ScheduleType.periodic;
     } else {
-      _prefs.setString(scheduleTypeKey, 'random');
+      scheduleType.value = ScheduleType.random;
+    }
+    periodicHours.value = ds.getPeriodicHours();
+    periodicMinutes.value = ds.getPeriodicMinutes();
+    randomMinDateTime.value =
+        _getDateTime(ds.getRandomMinHours(), ds.getRandomMinMinutes());
+    randomMaxDateTime.value =
+        _getDateTime(ds.getRandomMaxHours(), ds.getRandomMaxMinutes());
+    setQuietHoursStart(TimeOfDay(
+        hour: ds.getQuietHoursStartHour(),
+        minute: ds.getQuietHoursStartMinute()));
+    setQuietHoursEnd(TimeOfDay(
+        hour: ds.getQuietHoursEndHour(), minute: ds.getQuietHoursEndMinute()));
+
+    quietHoursStartTimeController.text = formatDate(
+        DateTime(2020, 01, 1, ds.getQuietHoursStartHour(),
+            ds.getQuietHoursStartMinute()),
+        [hh, ':', nn, " ", am]).toString();
+    quietHoursEndTimeController.text = formatDate(
+        DateTime(2020, 01, 1, ds.getQuietHoursEndHour(),
+            ds.getQuietHoursEndMinute()),
+        [hh, ':', nn, " ", am]).toString();
+
+    ever(scheduleType, handleScheduleType);
+    ever(periodicHours, handlePeriodicHours);
+    ever(periodicMinutes, handlePeriodicMinutes);
+    ever(randomMinDateTime, handleRandomMinDateTime);
+    ever(randomMaxDateTime, handleRandomMaxDateTime);
+  }
+
+  void handleScheduleType(ScheduleType t) async {
+    if (t == ScheduleType.periodic) {
+      ds.setScheduleTypeStr('periodic');
+    } else {
+      ds.setScheduleTypeStr('random');
     }
   }
 
-  void setPeriodicHours(int hours) {
-    _prefs.setInt(periodicHoursKey, hours);
-    setState(() {
-      periodicHours = hours;
-    });
+  void handlePeriodicHours(int hours) {
+    ds.setPeriodicHours(hours);
     if (hours > 0) {
-      setPeriodicMinutes(0);
+      periodicMinutes.value = 0;
+    } else if (periodicMinutes.value < 15) {
+      periodicMinutes.value = 15;
     }
   }
 
-  void setPeriodicMinutes(int minutes) {
-    _prefs.setInt(periodicMinutesKey, minutes);
-    setState(() {
-      periodicMinutes = minutes;
-    });
+  void handlePeriodicMinutes(int minutes) {
+    ds.setPeriodicMinutes(minutes);
   }
 
-  void setRandomMinDateTime(DateTime time) {
-    _prefs.setInt(randomMinHoursKey, time.hour);
-    _prefs.setInt(randomMinMinutesKey, time.minute);
-    setState(() {
-      randomMinDateTime = time;
-    });
+  void handleRandomMinDateTime(DateTime time) {
+    ds.setRandomMinHours(time.hour);
+    ds.setRandomMinMinutes(time.minute);
+    if (randomMaxDateTime.value.isBefore(time)) {
+      randomMaxDateTime.value = time.add(Duration(minutes: 15));
+    }
   }
 
-  void setRandomMaxDateTime(DateTime time) {
-    _prefs.setInt(randomMaxHoursKey, time.hour);
-    _prefs.setInt(randomMaxMinutesKey, time.minute);
-    setState(() {
-      randomMaxDateTime = time;
-    });
+  void handleRandomMaxDateTime(DateTime time) {
+    ds.setRandomMaxHours(time.hour);
+    ds.setRandomMaxMinutes(time.minute);
+    if (randomMinDateTime.value.isAfter(time)) {
+      randomMinDateTime.value = time.subtract(Duration(minutes: 15));
+    }
   }
 
   void setQuietHoursStart(TimeOfDay time) {
-    // print("setQuietHoursStart: $time");
-    setState(() {
-      quietHoursStartHour = time.hour;
-      quietHoursStartMinute = time.minute;
-      quietHoursStartTimeController.text = formatDate(
-          DateTime(2019, 08, 1, quietHoursStartHour, quietHoursStartMinute),
-          [hh, ':', nn, " ", am]).toString();
-    });
-    _prefs.setInt(quietHoursStartHourKey, quietHoursStartHour);
-    _prefs.setInt(quietHoursStartMinuteKey, quietHoursStartMinute);
+    ds.setQuietHoursStartHour(time.hour);
+    ds.setQuietHoursStartMinute(time.minute);
+    quietHoursStartTimeController.text = formatDate(
+        DateTime(2019, 08, 1, time.hour, time.minute),
+        [hh, ':', nn, " ", am]).toString();
   }
 
   void setQuietHoursEnd(TimeOfDay time) {
-    setState(() {
-      quietHoursEndHour = time.hour;
-      quietHoursEndMinute = time.minute;
-      quietHoursEndTimeController.text = formatDate(
-          DateTime(2019, 08, 1, quietHoursEndHour, quietHoursEndMinute),
-          [hh, ':', nn, " ", am]).toString();
-    });
-    _prefs.setInt(quietHoursEndHourKey, quietHoursEndHour);
-    _prefs.setInt(quietHoursEndMinuteKey, quietHoursEndMinute);
+    quietHoursEndTimeController.text = formatDate(
+        DateTime(2019, 08, 1, time.hour, time.minute),
+        [hh, ':', nn, " ", am]).toString();
+    ds.setQuietHoursEndHour(time.hour);
+    ds.setQuietHoursEndMinute(time.minute);
   }
 }
 
-class _SchedulesWidgetView
-    extends WidgetView<SchedulesWidget, SchedulesWidgetController> {
-  _SchedulesWidgetView(SchedulesWidgetController state) : super(state);
+class SchedulesWidget extends StatelessWidget {
+  final SchedulesWidgetController controller =
+      Get.put(SchedulesWidgetController());
 
   DropdownButton<int> _buildDropDown(
       int dropdownValue, List<int> allowedValues, Function onChangedFunc,
@@ -244,18 +173,18 @@ class _SchedulesWidgetView
         const Text('Periodic'),
         Radio(
           value: ScheduleType.periodic,
-          groupValue: state.scheduleType,
-          onChanged: state.setScheduleType,
+          groupValue: controller.scheduleType.value,
+          onChanged: (value) => controller.scheduleType.value = value,
         ),
         const Text('Random'),
         Radio(
           value: ScheduleType.random,
-          groupValue: state.scheduleType,
-          onChanged: state.setScheduleType,
+          groupValue: controller.scheduleType.value,
+          onChanged: (value) => controller.scheduleType.value = value,
         ),
       ])
     ];
-    if (state.scheduleType == ScheduleType.periodic) {
+    if (controller.scheduleType.value == ScheduleType.periodic) {
       widgets.add(
         new Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -283,9 +212,9 @@ class _SchedulesWidgetView
                       children: [
                         Text('Hours'),
                         _buildDropDown(
-                            state.periodicHours,
+                            controller.periodicHours.value,
                             [0, 1, 2, 3, 4, 8, 12],
-                            state.setPeriodicHours,
+                            (value) => controller.periodicHours.value = value,
                             true),
                       ],
                     ),
@@ -294,9 +223,12 @@ class _SchedulesWidgetView
                       children: [
                         Text('Minutes'),
                         _buildDropDown(
-                            state.periodicMinutes,
-                            state.periodicHours > 0 ? [0] : [0, 15, 30],
-                            state.setPeriodicMinutes,
+                            controller.periodicMinutes.value,
+                            // controller.periodicMinutes.value == 0 &&
+                            controller.periodicHours.value > 0
+                                ? [0]
+                                : [0, 15, 30],
+                            (value) => controller.periodicMinutes.value = value,
                             true),
                       ],
                     )
@@ -319,11 +251,12 @@ class _SchedulesWidgetView
                         style: Theme.of(context).textTheme.bodyText1),
                     TimePickerSpinner(
                       isForce2Digits: true,
-                      time: state.randomMinDateTime,
+                      time: controller.randomMinDateTime.value,
                       is24HourMode: true,
                       spacing: 20,
                       minutesInterval: 5,
-                      onTimeChange: state.setRandomMinDateTime,
+                      onTimeChange: (value) =>
+                          controller.randomMinDateTime.value = value,
                     ),
                   ],
                 )),
@@ -336,10 +269,11 @@ class _SchedulesWidgetView
                         style: Theme.of(context).textTheme.bodyText1),
                     TimePickerSpinner(
                       isForce2Digits: true,
-                      time: state.randomMaxDateTime,
+                      time: controller.randomMaxDateTime.value,
                       // spacing: 10,
                       minutesInterval: 5,
-                      onTimeChange: state.setRandomMaxDateTime,
+                      onTimeChange: (value) =>
+                          controller.randomMaxDateTime.value = value,
                     ),
                   ],
                 )),
@@ -352,26 +286,28 @@ class _SchedulesWidgetView
 
   Future<Null> _selectQuietHoursStartTime(BuildContext context) async {
     var selectedTime = TimeOfDay(
-        hour: state.quietHoursStartHour, minute: state.quietHoursStartMinute);
+        hour: controller.ds.getQuietHoursStartHour(),
+        minute: controller.ds.getQuietHoursStartMinute());
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
     );
     if (picked != null) {
-      state.setQuietHoursStart(picked);
+      controller.setQuietHoursStart(picked);
       selectedTime = picked;
     }
   }
 
   Future<Null> _selectQuietHoursEndTime(BuildContext context) async {
     var selectedTime = TimeOfDay(
-        hour: state.quietHoursEndHour, minute: state.quietHoursEndMinute);
+        hour: controller.ds.getQuietHoursEndHour(),
+        minute: controller.ds.getQuietHoursEndMinute());
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
     );
     if (picked != null) {
-      state.setQuietHoursEnd(picked);
+      controller.setQuietHoursEnd(picked);
       selectedTime = picked;
     }
   }
@@ -396,7 +332,7 @@ class _SchedulesWidgetView
                     textAlign: TextAlign.center,
                     enabled: false,
                     keyboardType: TextInputType.text,
-                    controller: state.quietHoursStartTimeController,
+                    controller: controller.quietHoursStartTimeController,
                     decoration: InputDecoration(
                         disabledBorder:
                             UnderlineInputBorder(borderSide: BorderSide.none),
@@ -419,7 +355,7 @@ class _SchedulesWidgetView
                     textAlign: TextAlign.center,
                     enabled: false,
                     keyboardType: TextInputType.text,
-                    controller: state.quietHoursEndTimeController,
+                    controller: controller.quietHoursEndTimeController,
                     decoration: InputDecoration(
                         disabledBorder:
                             UnderlineInputBorder(borderSide: BorderSide.none),
@@ -440,22 +376,22 @@ class _SchedulesWidgetView
         title: Text('Configure schedule'),
       ),
       body: Center(
-          child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-            Container(
-              alignment: Alignment.topCenter,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: _buildScheduleView(context),
-              ),
-            ),
-            Container(
-                alignment: Alignment.topCenter,
-                child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: _buildQuietHoursView(context))),
-          ])),
+          child: Obx(() => Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    Container(
+                      alignment: Alignment.topCenter,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: _buildScheduleView(context),
+                      ),
+                    ),
+                    Container(
+                        alignment: Alignment.topCenter,
+                        child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: _buildQuietHoursView(context))),
+                  ]))),
     );
   }
 }

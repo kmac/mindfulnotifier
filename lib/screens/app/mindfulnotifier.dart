@@ -1,117 +1,103 @@
 import 'dart:ui';
+import 'dart:isolate';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 // import 'package:permission_handler/permission_handler.dart';
-import 'package:mindfulnotifier/components/notifier.dart';
-import 'package:mindfulnotifier/components/schedule.dart';
-import 'package:mindfulnotifier/screens/schedules/schedulesview.dart';
-import 'package:mindfulnotifier/screens/widgetview.dart';
-import 'package:date_format/date_format.dart';
+import 'package:get/get.dart';
+import 'package:logger/logger.dart';
 
+import 'package:mindfulnotifier/components/datastore.dart';
+import 'package:mindfulnotifier/components/notifier.dart';
+import 'package:date_format/date_format.dart';
+import 'package:mindfulnotifier/components/logging.dart';
+import 'package:mindfulnotifier/components/schedule.dart' as schedule;
+
+var logger = Logger(printer: SimpleLogPrinter('mindfulnotifier'));
+
+const String appName = 'Mindful Notifier';
 const bool testing = false;
 
-class MindfulNotifierApp extends StatelessWidget {
-  final String title;
-  MindfulNotifierApp(this.title);
-
-  void init() async {
-    initializeNotifications();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: title,
-      //home: RemindfulAppWidget(title: title),
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        // This makes the visual density adapt to the platform that you run
-        // the app on.
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      routes: {
-        '/': (context) => MindfulNotifierAppWidget(title: title),
-        '/schedules': (context) => SchedulesWidget(),
-        // '/reminders': (context) => RemindersScreen(),
-        // '/bells': (context) => BellScreen(),
-        // '/advanced': (context) => AdvancedScreen(),
-      },
-    );
-  }
+String getCurrentIsolate() {
+  return "I:${Isolate.current.hashCode}";
 }
 
-class MindfulNotifierAppWidget extends StatefulWidget {
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-/*
-From https://flutter.dev/docs/development/ui/interactive#managing-state:
-Who manages the stateful widget’s state? The widget itself? 
-The parent widget? Both? Another object? The answer is… it depends. 
-There are several valid ways to make your widget interactive. 
-You, as the widget designer, make the decision based on how you expect 
-your widget to be used. Here are the most common ways to manage state:
-
-  - The widget manages its own state
-  - The parent manages the widget’s state
-  - A mix-and-match approach
-
-How do you decide which approach to use? The following principles 
-should help you decide:
-  - If the state in question is user data, for example the checked or 
-    unchecked mode of a checkbox, or the position of a slider, then 
-    the state is best managed by the parent widget.
-  - If the state in question is aesthetic, for example an animation,
-    then the state is best managed by the widget itself.
-If in doubt, start by managing state in the parent widget.
-*/
-
-  final String title;
-
-  MindfulNotifierAppWidget({Key key, this.title}) : super(key: key);
-
-  @override
-  MindfulNotifierWidgetController createState() =>
-      MindfulNotifierWidgetController(title);
-}
-
-class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
-  // UI event handlers, init code, etc goes here
-
-  final String title;
-  String message = 'Not Running';
-  String infoMessage = 'Not Running';
-  bool _enabled = false;
-  bool _mute = false;
-  bool _vibrate = false;
-  Scheduler scheduler;
+class MindfulNotifierWidgetController extends GetxController {
+  final String title = appName;
+  final message = 'Not Running'.obs;
+  final infoMessage = 'Not Running'.obs;
+  final _enabled = false.obs;
+  final _mute = false.obs;
+  final _vibrate = false.obs;
+  ScheduleDataStore ds;
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
   @override
-  void initState() {
-    super.initState();
-    initializeReceivePort();
+  void onInit() {
+    ever(_enabled, handleEnabled);
+    ever(_mute, handleMute);
+    ever(_vibrate, handleVibrate);
+    init();
+    super.onInit();
   }
 
   @override
-  void dispose() {
-    // scheduler.dispose();
-    super.dispose();
+  void onReady() {
+    super.onReady();
   }
 
-  MindfulNotifierWidgetController(this.title) {
-    scheduler = Scheduler();
-    scheduler.controller = this;
-    scheduler.appName = title;
-    scheduler.init();
+  @override
+  void onClose() {
+    // ???
+    // shutdownReceivePort();
+    super.onClose();
+  }
+
+  void init() {
+    // ds = await ScheduleDataStore.create();
+    ds = Get.find();
+    _enabled.value = ds.getEnable();
+    _mute.value = ds.getMute();
+    _vibrate.value = ds.getVibrate();
+    message.value = ds.getMessage();
+    infoMessage.value = ds.getInfoMessage();
+    initializeNotifications();
+  }
+
+  void setMessage(msg) {
+    message.value = msg;
+    ds.setMessage(message.value);
+  }
+
+  void setInfoMessage(msg) {
+    infoMessage.value = msg;
+    ds.setInfoMessage(infoMessage.value);
+  }
+
+  handleEnabled(enabled) {
+    ds.setEnable(enabled);
+    if (enabled) {
+      setMessage('Enabled. Awaiting first notification...');
+      setInfoMessage('Enabled');
+      schedule.Scheduler().enable();
+    } else {
+      setMessage('Disabled');
+      setInfoMessage('Disabled');
+      schedule.Scheduler().disable();
+    }
+    // // Send to the alarm_manager isolate
+    // appCallbackSendPort ??=
+    //     IsolateNameServer.lookupPortByName(sendToAppPortName);
+    // appCallbackSendPort?.send({'enable': enabled ? 'true' : 'false'});
+  }
+
+  void handleMute(bool mute) {
+    ds.setMute(mute);
+  }
+
+  void handleVibrate(bool vibrate) {
+    ds.setVibrate(vibrate);
   }
 
   // Future<void> _handlePermissions() async {
@@ -123,89 +109,36 @@ class MindfulNotifierWidgetController extends State<MindfulNotifierAppWidget> {
   //   print(statuses[Permission.location]);
   // }
 
-  void setEnabled(bool enabled) {
-    // await _handlePermissions();
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values.
-      _enabled = enabled;
-    });
-    if (_enabled) {
-      setMessage('Enabled. Awaiting first notification...');
-      setInfoMessage('Enabled');
-      scheduler.enable();
-    } else {
-      scheduler.disable();
-      setMessage('Disabled');
-      setInfoMessage('Disabled');
-    }
-  }
-
   void setNextNotification(DateTime dateTime) {
     var timestr =
         formatDate(dateTime, [hh, ':', nn, ':', ss, " ", am]).toString();
     setInfoMessage("Next notification at $timestr");
   }
 
-  void setMute(bool mute) {
-    setState(() {
-      _mute = mute;
-    });
-    Notifier.mute = _mute;
-  }
-
-  void setVibrate(bool vibrate) {
-    setState(() {
-      _vibrate = vibrate;
-    });
-    Notifier.vibrate = _vibrate;
-  }
-
-  void setMessage(String msg) {
-    setState(() {
-      message = msg;
-    });
-  }
-
-  void setInfoMessage(String msg) {
-    setState(() {
-      infoMessage = msg;
-    });
-  }
-
   void handleScheduleOnTap() {
-    // https://flutter.dev/docs/cookbook/navigation/navigation-basics
-    Navigator.pushNamed(
-      context,
-      '/schedules',
-    );
-    // Navigator.pop(context);
+    Get.toNamed('/schedules');
   }
 
   void handleRemindersOnTap() {
-    Navigator.pop(context);
+    Get.toNamed('/reminders');
   }
 
   void handleBellOnTap() {
-    Navigator.pop(context);
+    Get.toNamed('/bell');
   }
 
   void handleAdvancedOnTap() {
-    Navigator.pop(context);
+    Get.toNamed('/advanced');
   }
-
-  @override
-  Widget build(BuildContext context) => _MindfulNotifierWidgetView(this);
 }
 
-class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
-    MindfulNotifierWidgetController> {
-  _MindfulNotifierWidgetView(MindfulNotifierWidgetController state)
-      : super(state);
+class MindfulNotifierWidget extends StatelessWidget {
+  final MindfulNotifierWidgetController controller =
+      Get.put(MindfulNotifierWidgetController(), permanent: true);
 
   @override
   Widget build(BuildContext context) {
+    // TODO PROBABLY DON'T NEED THIS - the UI CAN SHUT DOWN NOW! ??????
     return WillPopScope(
         onWillPop: () => showDialog<bool>(
             context: context,
@@ -220,8 +153,7 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
                     FlatButton(
                       child: Text('Yes'),
                       onPressed: () {
-                        state.scheduler.shutdown();
-                        shutdownReceivePort();
+                        schedule.triggerBackgroundShutdown();
                         Navigator.pop(ctxt, true);
                       },
                     ),
@@ -234,7 +166,7 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
         // Widget tree
         child: Scaffold(
           appBar: AppBar(
-            title: Text(state.widget.title),
+            title: Text(controller.title),
           ),
           body: Center(
             child: Column(
@@ -246,68 +178,78 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
               children: <Widget>[
                 Expanded(
                   flex: 15,
-                  child: Container(
-                    margin: EdgeInsets.only(
-                        top: 30, left: 30, right: 30, bottom: 30),
-                    alignment: Alignment.center,
-                    // decoration: BoxDecoration(color: Colors.grey[100]),
-                    child: Text(
-                      '${state.message}',
-                      style: Theme.of(context).textTheme.headline4,
-                      // style: Theme.of(context).textTheme.headline5,
-                      textAlign: TextAlign.left,
-                      softWrap: true,
-                    ),
-                  ),
+                  child: Obx(() => Container(
+                        margin: EdgeInsets.only(
+                            top: 30, left: 30, right: 30, bottom: 30),
+                        alignment: Alignment.center,
+                        // decoration: BoxDecoration(color: Colors.grey[100]),
+                        child: Text(
+                          '${controller.message}',
+                          style: Theme.of(context).textTheme.headline4,
+                          // style: Theme.of(context).textTheme.headline5,
+                          textAlign: TextAlign.left,
+                          softWrap: true,
+                        ),
+                      )),
                 ),
                 Expanded(
                   flex: 4,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                  child: Obx(() => Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: <Widget>[
-                          Switch(
-                            value: state._enabled,
-                            onChanged: state.setEnabled,
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Switch(
+                                value: controller._enabled.value,
+                                onChanged: (newvalue) =>
+                                    controller._enabled.value = newvalue,
+                              ),
+                              Text(controller._enabled.value
+                                  ? 'Enabled'
+                                  : 'Enable'),
+                            ],
                           ),
-                          Text(state._enabled ? 'Enabled' : 'Enable'),
+                          ToggleButtons(
+                            isSelected: [
+                              controller._mute.value,
+                              controller._vibrate.value
+                            ],
+                            onPressed: (index) {
+                              switch (index) {
+                                case 0:
+                                  controller._mute.value =
+                                      !controller._mute.value;
+                                  break;
+                                case 1:
+                                  controller._vibrate.value =
+                                      !controller._vibrate.value;
+                                  break;
+                              }
+                            },
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Text(
+                                    controller._mute.value ? 'Muted' : 'Mute'),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Text('Vibrate'),
+                              ),
+                            ],
+                          ),
                         ],
-                      ),
-                      ToggleButtons(
-                        isSelected: [state._mute, state._vibrate],
-                        onPressed: (index) {
-                          switch (index) {
-                            case 0:
-                              state.setMute(!state._mute);
-                              break;
-                            case 1:
-                              state.setVibrate(!state._vibrate);
-                              break;
-                          }
-                        },
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Text(state._mute ? 'Muted' : 'Mute'),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Text('Vibrate'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      )),
                 ),
                 Expanded(
-                  flex: 1,
-                  child: Text(
-                    '${state.infoMessage}',
-                    style: TextStyle(color: Colors.black38),
-                  ),
-                ),
+                    flex: 1,
+                    child: Obx(
+                      () => Text(
+                        '${controller.infoMessage.value}',
+                        style: TextStyle(color: Colors.black38),
+                      ),
+                    )),
               ],
             ),
           ),
@@ -317,7 +259,9 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
               children: <Widget>[
                 DrawerHeader(
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    //color: Colors.blue,
+                    color: Theme.of(context).appBarTheme.color,
+                    // style: Theme.of(context).textTheme.headline5,
                   ),
                   child: Text(
                     'Settings',
@@ -331,24 +275,24 @@ class _MindfulNotifierWidgetView extends WidgetView<MindfulNotifierAppWidget,
                   leading: Icon(Icons.schedule),
                   title: Text('Schedule'),
                   subtitle: Text('Configure reminder frequency'),
-                  onTap: state.handleScheduleOnTap,
+                  onTap: controller.handleScheduleOnTap,
                 ),
                 ListTile(
                   leading: Icon(Icons.list),
                   title: Text('Reminders'),
                   subtitle: Text('Configure reminder contents'),
-                  onTap: state.handleRemindersOnTap,
+                  onTap: controller.handleRemindersOnTap,
                 ),
                 ListTile(
                   leading: Icon(Icons.notifications),
                   title: Text('Bell'),
                   subtitle: Text('Configure bell'),
-                  onTap: state.handleBellOnTap,
+                  onTap: controller.handleBellOnTap,
                 ),
                 ListTile(
                   leading: Icon(Icons.settings),
                   title: Text('Advanced'),
-                  onTap: state.handleAdvancedOnTap,
+                  onTap: controller.handleAdvancedOnTap,
                 ),
               ],
             ),

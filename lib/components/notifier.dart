@@ -4,12 +4,19 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:get/get.dart';
+import 'package:logger/logger.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:audio_session/audio_session.dart';
+
+import 'package:mindfulnotifier/components/datastore.dart';
+import 'package:mindfulnotifier/components/logging.dart';
+
+var logger = Logger(printer: SimpleLogPrinter('notifier'));
 
 const bool useSeparateAudio = false;
 
@@ -77,7 +84,7 @@ void initializeNotifications() async {
   await flutterLocalNotificationsPlugin.initialize(initializationSettings,
       onSelectNotification: (String payload) async {
     if (payload != null) {
-      debugPrint('notification payload: $payload');
+      logger.d('notification payload: $payload');
     }
     selectNotificationSubject.add(payload);
   });
@@ -97,11 +104,10 @@ class Notifier {
   static const String channelDescription = 'Notifications for Mindful Notifier';
 
   static String channelId = 'mindfulnotifier_channel_id';
-  static bool mute = false;
-  static bool vibrate = false;
 
   final String notifTitle;
   final String defaultBellAsset = 'media/defaultbell.mp3';
+  ScheduleDataStore ds;
 
   File customSoundFile;
 
@@ -110,8 +116,8 @@ class Notifier {
     this.customSoundFile = customSoundFile;
   }
 
-  void init() async {
-    // Platform.environment
+  void init() {
+    ds = Get.find();
   }
 
   static void cancelAll() async {
@@ -120,6 +126,8 @@ class Notifier {
 
   void showNotification(String notifText) async {
     DateTime now = DateTime.now();
+    bool mute = ds.getMute();
+    bool vibrate = ds.getVibrate();
 
     AndroidNotificationSound notifSound;
     if (!useSeparateAudio) {
@@ -138,7 +146,7 @@ class Notifier {
         channelId += '-vibrate';
       }
     }
-    print(
+    logger.i(
         "[$now] showNotification [channelId=$channelId]: title=$notifTitle text=$notifText mute=$mute");
 
     AndroidNotificationDetails androidPlatformChannelSpecifics =
@@ -159,7 +167,7 @@ class Notifier {
     }
     await flutterLocalNotificationsPlugin.show(
         notifId, notifTitle, notifText, platformChannelSpecifics,
-        payload: 'item x');
+        payload: notifText);
 
     if (useSeparateAudio && !mute) {
       final player = AudioPlayer();
@@ -168,12 +176,12 @@ class Notifier {
       } else {
         await player.setFilePath(customSoundFile.path);
       }
-      print('player.play');
+      logger.d('player.play');
       await player.play();
-      print('player.play done');
+      logger.d('player.play done');
       await player.stop();
       await player.dispose();
-      print('player.play done');
+      logger.d('player.play done');
     }
   }
 }
