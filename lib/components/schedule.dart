@@ -227,7 +227,7 @@ class Scheduler {
   static bool initialized = false;
   Reminders reminders;
   DelegatedScheduler delegate;
-  static ScheduleDataStore _ds;
+  static ScheduleDataStore ds;
 
   static Scheduler _instance;
 
@@ -240,14 +240,15 @@ class Scheduler {
   void init() async {
     logger.i(
         "Initializing scheduler, initialized=$initialized ${getCurrentIsolate()}");
+
+    ds = Get.find();
+
     _notifier = new Notifier(appName);
     _notifier.init();
 
     reminders = Reminders();
     reminders.init();
 
-    _ds = await ScheduleDataStore.create();
-    if (!initialized) {}
     initialized = true;
   }
 
@@ -257,12 +258,15 @@ class Scheduler {
   }
 
   void enable() {
-    delegate = _ds.buildSchedulerDelegate(this);
+    disable();
+    logger.i("enable");
+    delegate = ds.buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
     delegate.scheduleNext();
   }
 
   void disable() {
+    logger.i("disable");
     delegate?.cancel();
     Notifier.cancelAll();
     running = false;
@@ -411,6 +415,7 @@ class PeriodicScheduler extends DelegatedScheduler {
 class RandomScheduler extends DelegatedScheduler {
   final int minMinutes;
   final int maxMinutes;
+  static const bool rescheduleAfterQuietHours = false;
 
   RandomScheduler(Scheduler scheduler, QuietHours quietHours, this.minMinutes,
       this.maxMinutes)
@@ -433,8 +438,8 @@ class RandomScheduler extends DelegatedScheduler {
       nextMinutes = 2;
     }
     DateTime nextDate = DateTime.now().add(Duration(minutes: nextMinutes));
-    // DateTime nextDate = DateTime.now().add(Duration(seconds: 30));
-    if (quietHours.inQuietHours || quietHours.isInQuietHours(nextDate)) {
+    if (rescheduleAfterQuietHours &&
+        (quietHours.inQuietHours || quietHours.isInQuietHours(nextDate))) {
       nextDate =
           quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
       logger.i(

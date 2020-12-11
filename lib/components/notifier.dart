@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
@@ -115,9 +116,8 @@ class Notifier {
     this.customSoundFile = customSoundFile;
   }
 
-  void init() async {
-    // Platform.environment
-    ds = await ScheduleDataStore.create();
+  void init() {
+    ds = Get.find();
   }
 
   static void cancelAll() async {

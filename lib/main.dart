@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
 
 import 'package:mindfulnotifier/components/schedule.dart' as schedule;
+import 'package:mindfulnotifier/components/datastore.dart' as ds;
+import 'package:mindfulnotifier/components/notifier.dart' as notifier;
 import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart' as ui;
 
 // Issues:
@@ -16,15 +18,21 @@ import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart' as ui;
 //  --> surely someone has run into this???
 //
 
+const String appName = 'Mindful Notifier';
+
+Future<void> initServices() async {
+  print('starting services ...');
+  await Get.putAsync(() => ds.ScheduleDataStore.create());
+  // GetxService schedulerService;
+  schedule.initializeSchedule(appName);
+  schedule.initializeFromAlarmManagerReceivePort();
+  print('All services started...');
+}
+
 void main() async {
   // needed if you intend to initialize in the `main` function
   WidgetsFlutterBinding.ensureInitialized();
 
-  String title = 'Mindful Notifier';
-
-  // GetxService schedulerService;
-  schedule.initializeSchedule(title);
-  schedule.initializeFromAlarmManagerReceivePort();
   // TODO Turn schedule into a GetxService
   // TODO Turn datastores into a GetxService
 
@@ -40,10 +48,12 @@ void main() async {
   // we just stick the notification in shared prefs and always read from that
   // on the UI side.
 
+  await initServices();
+
   runApp(
     // GetMaterialApp(MindfulNotifierApp());
     GetMaterialApp(
-      title: title,
+      title: appName,
       debugShowCheckedModeBanner: false,
       defaultTransition: Transition.rightToLeft,
       getPages: router.Router.route,

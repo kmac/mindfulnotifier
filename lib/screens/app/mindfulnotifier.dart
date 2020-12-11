@@ -38,12 +38,12 @@ class MindfulNotifierWidgetController extends GetxController {
     ever(_enabled, handleEnabled);
     ever(_mute, handleMute);
     ever(_vibrate, handleVibrate);
+    init();
     super.onInit();
   }
 
   @override
   void onReady() {
-    init();
     super.onReady();
   }
 
@@ -54,8 +54,9 @@ class MindfulNotifierWidgetController extends GetxController {
     super.onClose();
   }
 
-  void init() async {
-    ds = await ScheduleDataStore.create();
+  void init() {
+    // ds = await ScheduleDataStore.create();
+    ds = Get.find();
     _enabled.value = ds.getEnable();
     _mute.value = ds.getMute();
     _vibrate.value = ds.getVibrate();

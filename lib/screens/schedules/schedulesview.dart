@@ -47,15 +47,10 @@ class SchedulesWidgetController extends GetxController {
     super.onReady();
   }
 
-  Future<ScheduleDataStore> _getDS() async {
-    ds ??= await ScheduleDataStore.create();
-    return ds;
-  }
-
   void init() async {
-    logger.d("loadPrefs");
+    logger.d("init");
 
-    ds ??= await _getDS();
+    ds = Get.find();
 
     if (ds.getScheduleTypeStr() == 'periodic') {
       scheduleType.value = ScheduleType.periodic;
@@ -91,7 +86,6 @@ class SchedulesWidgetController extends GetxController {
   }
 
   void handleScheduleType(ScheduleType t) async {
-    //ds ??= await _getDS();
     if (t == ScheduleType.periodic) {
       ds.setScheduleTypeStr('periodic');
     } else {

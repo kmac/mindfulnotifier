@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/components/schedule.dart';
@@ -6,7 +7,7 @@ import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('datastore'));
 
-class ScheduleDataStore {
+class ScheduleDataStore extends GetxService {
   static const String enabledKey = 'enabled';
   static const String muteKey = 'mute';
   static const String vibrateKey = 'vibrate';
@@ -61,6 +62,11 @@ class ScheduleDataStore {
 
   Future<void> _init() async {
     _prefs = await SharedPreferences.getInstance();
+  }
+
+  @override
+  void onInit() async {
+    super.onInit();
   }
 
   void setEnable(bool value) {
