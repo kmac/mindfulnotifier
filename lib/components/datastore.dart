@@ -236,7 +236,7 @@ class ScheduleDataStore {
     if (!_prefs.containsKey(ScheduleDataStore.infoMessageKey)) {
       setInfoMessage(defaultInfoMessage);
     }
-    return (_prefs.getString(ScheduleDataStore.messageKey));
+    return (_prefs.getString(ScheduleDataStore.infoMessageKey));
   }
 
   DelegatedScheduler buildSchedulerDelegate(Scheduler scheduler) {

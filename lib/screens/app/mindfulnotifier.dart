@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'dart:async';
 import 'dart:isolate';
 
 import 'package:flutter/cupertino.dart';
@@ -12,91 +11,15 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:date_format/date_format.dart';
 import 'package:mindfulnotifier/components/logging.dart';
-import 'package:mindfulnotifier/components/schedule.dart';
+import 'package:mindfulnotifier/components/schedule.dart' as schedule;
 
 var logger = Logger(printer: SimpleLogPrinter('mindfulnotifier'));
 
 const String appName = 'Mindful Notifier';
 const bool testing = false;
 
-// The name associated with the UI isolate's [SendPort].
-const String sendToAlarmManagerPortName = 'toAlarmManagerIsolate';
-
-// The name associated with the background isolate's [SendPort].
-const String sendToAppPortName = 'toAppIsolate';
-
-// A port used to communicate from the app isolate to the alarm_manager isolate.
-StreamSubscription fromAlarmManagerStreamSubscription;
-ReceivePort fromAlarmManagerReceivePort;
-
-// The port used to send back to the scheduler isolate from the UI isolate,
-SendPort appCallbackSendPort;
-
 String getCurrentIsolate() {
   return "I:${Isolate.current.hashCode}";
-}
-
-void initializeFromAlarmManagerReceivePort() async {
-  logger.i("initializeFromAlarmManagerReceivePort ${getCurrentIsolate()}");
-
-  if (fromAlarmManagerReceivePort == null) {
-    logger.d("new fromAlarmIsolateReceivePort");
-    fromAlarmManagerReceivePort = ReceivePort();
-  }
-  // Register for events from the alarm_manager isolate. These messages will
-  // always coincide with an alarm firing.
-  fromAlarmManagerStreamSubscription =
-      fromAlarmManagerReceivePort.listen((map) {
-    //
-    // WE ARE IN THE APP ISOLATE
-    //
-    logger
-        .i("fromAlarmIsolateReceivePort received: $map ${getCurrentIsolate()}");
-
-    // Lookup the scheduler singleton - available in this (app) isolate memory space
-    Scheduler scheduler = Scheduler();
-    String key = map.keys.first;
-    String value = map.values.first;
-    switch (key) {
-      case 'scheduleCallback':
-        scheduler.triggerNotification();
-        break;
-      case 'quietHoursCallback':
-        if (value == 'start') {
-          scheduler.delegate.quietHours.quietStart();
-        } else {
-          scheduler.delegate.quietHours.quietEnd();
-        }
-        break;
-      case 'setMessage':
-        MindfulNotifierWidgetController controller = Get.find();
-        controller.message.value = value;
-        break;
-      case 'setInfoMessage':
-        MindfulNotifierWidgetController controller = Get.find();
-        controller.infoMessage.value = value;
-        break;
-    }
-  }, onDone: () {
-    logger.w("fromAlarmIsolateReceivePort is closed");
-  });
-
-  // Register the UI isolate's SendPort to allow for communication from the
-  // background isolate.
-  bool regResult = IsolateNameServer.registerPortWithName(
-    fromAlarmManagerReceivePort.sendPort,
-    sendToAlarmManagerPortName,
-  );
-  logger.d(
-      "registerPortWithName: $sendToAlarmManagerPortName, result=$regResult ${getCurrentIsolate()}");
-  assert(regResult);
-}
-
-void shutdownReceivePort() async {
-  logger.i("shutdownReceivePort");
-  fromAlarmManagerReceivePort.close();
-  await fromAlarmManagerStreamSubscription.cancel();
-  IsolateNameServer.removePortNameMapping(sendToAlarmManagerPortName);
 }
 
 class MindfulNotifierWidgetController extends GetxController {
@@ -136,19 +59,31 @@ class MindfulNotifierWidgetController extends GetxController {
     _enabled.value = ds.getEnable();
     _mute.value = ds.getMute();
     _vibrate.value = ds.getVibrate();
+    message.value = ds.getMessage();
+    infoMessage.value = ds.getInfoMessage();
     initializeNotifications();
+  }
+
+  void setMessage(msg) {
+    message.value = msg;
+    ds.setMessage(message.value);
+  }
+
+  void setInfoMessage(msg) {
+    infoMessage.value = msg;
+    ds.setInfoMessage(infoMessage.value);
   }
 
   handleEnabled(enabled) {
     ds.setEnable(enabled);
     if (enabled) {
-      message.value = 'Enabled. Awaiting first notification...';
-      infoMessage.value = 'Enabled';
-      Scheduler().enable();
+      setMessage('Enabled. Awaiting first notification...');
+      setInfoMessage('Enabled');
+      schedule.Scheduler().enable();
     } else {
-      message.value = 'Disabled';
-      infoMessage.value = 'Disabled';
-      Scheduler().disable();
+      setMessage('Disabled');
+      setInfoMessage('Disabled');
+      schedule.Scheduler().disable();
     }
     // // Send to the alarm_manager isolate
     // appCallbackSendPort ??=
@@ -176,7 +111,7 @@ class MindfulNotifierWidgetController extends GetxController {
   void setNextNotification(DateTime dateTime) {
     var timestr =
         formatDate(dateTime, [hh, ':', nn, ':', ss, " ", am]).toString();
-    infoMessage.value = "Next notification at $timestr";
+    setInfoMessage("Next notification at $timestr");
   }
 
   void handleScheduleOnTap() {
@@ -217,12 +152,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                     FlatButton(
                       child: Text('Yes'),
                       onPressed: () {
-                        // Send to the scheduler/background isolate
-                        appCallbackSendPort ??=
-                            IsolateNameServer.lookupPortByName(
-                                sendToAppPortName);
-                        appCallbackSendPort?.send({'shutdown': '1'});
-                        shutdownReceivePort();
+                        schedule.triggerBackgroundShutdown();
                         Navigator.pop(ctxt, true);
                       },
                     ),

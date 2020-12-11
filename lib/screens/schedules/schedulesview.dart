@@ -230,8 +230,8 @@ class SchedulesWidget extends StatelessWidget {
                         Text('Minutes'),
                         _buildDropDown(
                             controller.periodicMinutes.value,
-                            controller.periodicMinutes.value == 0 &&
-                                    controller.periodicHours.value > 0
+                            // controller.periodicMinutes.value == 0 &&
+                            controller.periodicHours.value > 0
                                 ? [0]
                                 : [0, 15, 30],
                             (value) => controller.periodicMinutes.value = value,

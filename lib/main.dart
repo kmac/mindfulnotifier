@@ -24,7 +24,21 @@ void main() async {
 
   // GetxService schedulerService;
   schedule.initializeSchedule(title);
-  ui.initializeFromAlarmManagerReceivePort();
+  schedule.initializeFromAlarmManagerReceivePort();
+  // TODO Turn schedule into a GetxService
+  // TODO Turn datastores into a GetxService
+
+  // Eventual idea is to turn the Scheduler into an instance that is only accessible
+  // via the alarm callback isolate. It would read all data from shared preferences.
+  // And create the next alarm from that data on the fly.
+  // - complete decoupling of the alarm/notification from the UI
+  // - all data is shared via shared prefs
+  // Alarms for:
+  // - raising a notification
+  // - quiet hours start/end (maybe end not required - just reschedule past next)
+  // The notification raised would either have the reminder in payload, or
+  // we just stick the notification in shared prefs and always read from that
+  // on the UI side.
 
   runApp(
     // GetMaterialApp(MindfulNotifierApp());

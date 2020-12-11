@@ -167,7 +167,7 @@ class Notifier {
     }
     await flutterLocalNotificationsPlugin.show(
         notifId, notifTitle, notifText, platformChannelSpecifics,
-        payload: 'item x');
+        payload: notifText);
 
     if (useSeparateAudio && !mute) {
       final player = AudioPlayer();
