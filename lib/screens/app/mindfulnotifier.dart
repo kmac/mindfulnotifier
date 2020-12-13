@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'dart:isolate';
 
@@ -11,11 +12,12 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:date_format/date_format.dart';
 import 'package:mindfulnotifier/components/logging.dart';
-import 'package:mindfulnotifier/components/schedule.dart' as schedule;
+// import 'package:mindfulnotifier/components/schedule.dart' as schedule;
 
 var logger = Logger(printer: SimpleLogPrinter('mindfulnotifier'));
 
 const String appName = 'Mindful Notifier';
+
 const bool testing = false;
 
 String getCurrentIsolate() {
@@ -23,9 +25,16 @@ String getCurrentIsolate() {
 }
 
 class MindfulNotifierWidgetController extends GetxController {
+  static const String toAppSendPortName = 'toAppIsolate';
+  static const String toSchedulerSendPortName = 'toSchedulerIsolate';
+  static SendPort toSchedulerSendPort;
+  // A port used to communicate from the app isolate to the alarm_manager isolate.
+  static StreamSubscription fromSchedulerStreamSubscription;
+  static ReceivePort fromSchedulerReceivePort;
+
   final String title = appName;
-  final message = 'Not Running'.obs;
-  final infoMessage = 'Not Running'.obs;
+  final _message = 'Not Running'.obs;
+  final _infoMessage = 'Not Running'.obs;
   final _enabled = false.obs;
   final _mute = false.obs;
   final _vibrate = false.obs;
@@ -49,42 +58,105 @@ class MindfulNotifierWidgetController extends GetxController {
 
   @override
   void onClose() {
-    // ???
-    // shutdownReceivePort();
+    shutdownReceivePort();
     super.onClose();
   }
 
-  void init() {
-    // ds = await ScheduleDataStore.create();
-    ds = Get.find();
+  void init() async {
+    ds = await ScheduleDataStore.getInstance();
+    initializeFromSchedulerReceivePort();
     _enabled.value = ds.getEnable();
     _mute.value = ds.getMute();
     _vibrate.value = ds.getVibrate();
-    message.value = ds.getMessage();
-    infoMessage.value = ds.getInfoMessage();
+    _message.value = ds.getMessage();
+    _infoMessage.value = ds.getInfoMessage();
     initializeNotifications();
   }
 
+  void initializeFromSchedulerReceivePort() {
+    logger.i("initializeFromSchedulerReceivePort ${getCurrentIsolate()}");
+
+    if (fromSchedulerReceivePort == null) {
+      logger.d("new fromSchedulerReceivePort");
+      fromSchedulerReceivePort = ReceivePort();
+    }
+    // Register for events from the alarm isolate. These messages will
+    // always coincide with an alarm firing.
+    fromSchedulerStreamSubscription = fromSchedulerReceivePort.listen((map) {
+      //
+      // WE ARE IN THE APP ISOLATE
+      //
+      logger
+          .i("fromSchedulerReceivePort received: $map ${getCurrentIsolate()}");
+
+      String key = map.keys.first;
+      String value = map.values.first;
+      switch (key) {
+        case 'message':
+          _message.value = value;
+          break;
+        case 'infoMessage':
+          _infoMessage.value = value;
+          break;
+        default:
+          logger.e("Unexpected key: $key");
+          break;
+      }
+    }, onDone: () {
+      logger.w("fromSchedulerReceivePort is closed");
+    });
+
+    // Register our SendPort for the Scheduler to be able to send to our ReceivePort
+    bool result = IsolateNameServer.registerPortWithName(
+      fromSchedulerReceivePort.sendPort,
+      toAppSendPortName,
+    );
+    logger.d(
+        "registerPortWithName: $toAppSendPortName, result=$result ${getCurrentIsolate()}");
+    assert(result);
+  }
+
+  void triggerSchedulerShutdown() {
+    // Send to the alarm isolate
+    toSchedulerSendPort ??=
+        IsolateNameServer.lookupPortByName(toAppSendPortName);
+    toSchedulerSendPort?.send({'shutdown': '1'});
+  }
+
+  void shutdownReceivePort() async {
+    logger.i("shutdownReceivePort");
+    fromSchedulerReceivePort.close();
+    await fromSchedulerStreamSubscription.cancel();
+    IsolateNameServer.removePortNameMapping(toAppSendPortName);
+  }
+
   void setMessage(msg) {
-    message.value = msg;
-    ds.setMessage(message.value);
+    _message.value = msg;
+    ds.setMessage(_message.value);
   }
 
   void setInfoMessage(msg) {
-    infoMessage.value = msg;
-    ds.setInfoMessage(infoMessage.value);
+    _infoMessage.value = msg;
+    ds.setInfoMessage(_infoMessage.value);
   }
 
   handleEnabled(enabled) {
     ds.setEnable(enabled);
     if (enabled) {
-      setMessage('Enabled. Awaiting first notification...');
+      if (_message.value == 'Disabled') {
+        setMessage('Enabled. Waiting for notification...');
+      }
       setInfoMessage('Enabled');
-      schedule.Scheduler().enable();
+
+      toSchedulerSendPort ??=
+          IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
+      toSchedulerSendPort?.send({'enable': '1'});
     } else {
       setMessage('Disabled');
       setInfoMessage('Disabled');
-      schedule.Scheduler().disable();
+      toSchedulerSendPort ??=
+          IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
+      toSchedulerSendPort?.send({'disable': '1'});
     }
     // // Send to the alarm_manager isolate
     // appCallbackSendPort ??=
@@ -153,7 +225,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                     FlatButton(
                       child: Text('Yes'),
                       onPressed: () {
-                        schedule.triggerBackgroundShutdown();
+                        controller.triggerSchedulerShutdown();
                         Navigator.pop(ctxt, true);
                       },
                     ),
@@ -178,23 +250,39 @@ class MindfulNotifierWidget extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   flex: 15,
-                  child: Obx(() => Container(
+                  child: Obx(() => Card(
+                      // shape: RoundedRectangleBorder(
+                      //   borderRadius: BorderRadius.circular(15.0),
+                      // ),
+                      color: Theme.of(context).cardColor,
+                      margin: EdgeInsets.only(
+                          top: 15, left: 15, right: 15, bottom: 0),
+                      elevation: 3,
+                      child: Container(
                         margin: EdgeInsets.only(
                             top: 30, left: 30, right: 30, bottom: 30),
                         alignment: Alignment.center,
                         // decoration: BoxDecoration(color: Colors.grey[100]),
                         child: Text(
-                          '${controller.message}',
+                          '${controller._message}',
                           style: Theme.of(context).textTheme.headline4,
                           // style: Theme.of(context).textTheme.headline5,
                           textAlign: TextAlign.left,
                           softWrap: true,
                         ),
-                      )),
+                      ))),
                 ),
                 Expanded(
                   flex: 4,
-                  child: Obx(() => Row(
+                  child: Obx(() => Card(
+                      // shape: RoundedRectangleBorder(
+                      //   borderRadius: BorderRadius.circular(15.0),
+                      // ),
+                      color: Theme.of(context).cardColor,
+                      margin: EdgeInsets.only(
+                          top: 5, left: 15, right: 15, bottom: 15),
+                      elevation: 3,
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: <Widget>[
                           Column(
@@ -240,13 +328,13 @@ class MindfulNotifierWidget extends StatelessWidget {
                             ],
                           ),
                         ],
-                      )),
+                      ))),
                 ),
                 Expanded(
                     flex: 1,
                     child: Obx(
                       () => Text(
-                        '${controller.infoMessage.value}',
+                        '${controller._infoMessage.value}',
                         style: TextStyle(color: Colors.black38),
                       ),
                     )),

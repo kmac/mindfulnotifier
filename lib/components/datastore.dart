@@ -43,16 +43,18 @@ class ScheduleDataStore extends GetxService {
 
   static SharedPreferences _prefs;
 
+  static ScheduleDataStore _instance;
+
   /// Public factory
-  static Future<ScheduleDataStore> create() async {
-    // Call the private constructor
-    var component = ScheduleDataStore._create();
-
-    // ...initialization that requires async...
-    await component._init();
-
+  static Future<ScheduleDataStore> getInstance() async {
+    if (_instance == null) {
+      // Call the private constructor
+      _instance = ScheduleDataStore._create();
+      // ...initialization that requires async...
+      await _instance._init();
+    }
     // Return the fully initialized object
-    return component;
+    return _instance;
   }
 
   /// Private constructor
@@ -64,9 +66,38 @@ class ScheduleDataStore extends GetxService {
     _prefs = await SharedPreferences.getInstance();
   }
 
+  // ScheduleDataStore._internal() {
+  //   _instance = this;
+  //   _init();
+  // }
+  // factory ScheduleDataStore() => _instance ?? ScheduleDataStore._internal();
+  // void _init() async {
+  //   _prefs = await SharedPreferences.getInstance();
+  //   reload();
+  // }
+
   @override
   void onInit() async {
     super.onInit();
+  }
+
+  void reload() async {
+    await _prefs.reload();
+  }
+
+  void dumpToLogOne() {
+    StringBuffer sb = StringBuffer("ScheduleDataStore:\n");
+    for (String key in _prefs.getKeys()) {
+      sb.write("$key=${_prefs.get(key)}\n");
+    }
+    logger.d(sb);
+  }
+
+  void dumpToLog() {
+    logger.d("ScheduleDataStore:");
+    for (String key in _prefs.getKeys()) {
+      logger.d("$key=${_prefs.get(key)}");
+    }
   }
 
   void setEnable(bool value) {
@@ -247,80 +278,34 @@ class ScheduleDataStore extends GetxService {
 
   DelegatedScheduler buildSchedulerDelegate(Scheduler scheduler) {
     print('Building scheduler delegate');
-    var scheduleType = ScheduleType.PERIODIC;
-    if (_prefs.containsKey(scheduleTypeKey)) {
-      if (_prefs.getString(scheduleTypeKey) == 'periodic') {
-        scheduleType = ScheduleType.PERIODIC;
-      } else {
-        scheduleType = ScheduleType.RANDOM;
-      }
+    var scheduleType;
+    if (getScheduleTypeStr() == 'periodic') {
+      scheduleType = ScheduleType.PERIODIC;
     } else {
-      if (scheduleType == ScheduleType.PERIODIC) {
-        _prefs.setString(scheduleTypeKey, 'periodic');
-      } else {
-        _prefs.setString(scheduleTypeKey, 'random');
-      }
+      scheduleType = ScheduleType.RANDOM;
     }
 
     QuietHours quietHours = buildQuietHours();
 
     var delegate;
     if (scheduleType == ScheduleType.PERIODIC) {
-      var periodicHours = 1;
-      var periodicMinutes = 0;
-      if (_prefs.containsKey(periodicHoursKey)) {
-        periodicHours = _prefs.getInt(periodicHoursKey);
-      }
-      if (_prefs.containsKey(periodicMinutesKey)) {
-        periodicMinutes = _prefs.getInt(periodicMinutesKey);
-      }
       delegate = PeriodicScheduler(
-          scheduler, quietHours, periodicHours, periodicMinutes);
+          scheduler, quietHours, getPeriodicHours(), getPeriodicMinutes());
     } else {
-      var randomMinHours = 0;
-      var randomMinMinutes = 45;
-      var randomMaxHours = 1;
-      var randomMaxMinutes = 30;
-      if (_prefs.containsKey(randomMinHoursKey)) {
-        randomMinHours = _prefs.getInt(randomMinHoursKey);
-      }
-      if (_prefs.containsKey(randomMinMinutesKey)) {
-        randomMinMinutes = _prefs.getInt(randomMinMinutesKey);
-      }
-      if (_prefs.containsKey(randomMaxHoursKey)) {
-        randomMaxHours = _prefs.getInt(randomMaxHoursKey);
-      }
-      if (_prefs.containsKey(randomMaxMinutesKey)) {
-        randomMaxMinutes = _prefs.getInt(randomMaxMinutesKey);
-      }
       delegate = RandomScheduler(
           scheduler,
           quietHours,
-          randomMinHours * 60 + randomMinMinutes,
-          randomMaxHours * 60 + randomMaxMinutes);
+          getRandomMinHours() * 60 + getRandomMinMinutes(),
+          getRandomMaxHours() * 60 + getRandomMaxMinutes());
     }
     return delegate;
   }
 
   QuietHours buildQuietHours() {
-    var quietHoursStartHour, quietHoursStartMinute;
-    var quietHoursEndHour, quietHoursEndMinute;
-
-    if (_prefs.containsKey(quietHoursStartHourKey)) {
-      quietHoursStartHour = _prefs.getInt(quietHoursStartHourKey);
-    }
-    if (_prefs.containsKey(quietHoursStartMinuteKey)) {
-      quietHoursStartMinute = _prefs.getInt(quietHoursStartMinuteKey);
-    }
-    if (_prefs.containsKey(quietHoursEndHourKey)) {
-      quietHoursEndHour = _prefs.getInt(quietHoursEndHourKey);
-    }
-    if (_prefs.containsKey(quietHoursEndMinuteKey)) {
-      quietHoursEndMinute = _prefs.getInt(quietHoursEndMinuteKey);
-    }
-
     return new QuietHours(
-        new TimeOfDay(hour: quietHoursStartHour, minute: quietHoursStartMinute),
-        new TimeOfDay(hour: quietHoursEndHour, minute: quietHoursEndMinute));
+        new TimeOfDay(
+            hour: getQuietHoursStartHour(), minute: getQuietHoursStartMinute()),
+        new TimeOfDay(
+            hour: getQuietHoursEndHour(), minute: getQuietHoursEndMinute()));
   }
 }

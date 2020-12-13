@@ -1,12 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
-import 'package:mindfulnotifier/components/router.dart' as router;
-
-import 'package:mindfulnotifier/components/schedule.dart' as schedule;
+import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart' as ds;
-import 'package:mindfulnotifier/components/notifier.dart' as notifier;
-import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart' as ui;
+import 'package:mindfulnotifier/components/router.dart' as router;
+import 'package:mindfulnotifier/components/schedule.dart' as schedule;
 
 // Issues:
 // https://stackoverflow.com/questions/63068311/run-a-background-task-with-android-alarm-manager-in-flutter
@@ -18,23 +17,36 @@ import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart' as ui;
 //  --> surely someone has run into this???
 //
 
-const String appName = 'Mindful Notifier';
-
 Future<void> initServices() async {
   print('starting services ...');
-  await Get.putAsync(() => ds.ScheduleDataStore.create());
+  // await Get.putAsync(() => ds.ScheduleDataStore.create());
   // GetxService schedulerService;
-  schedule.initializeSchedule(appName);
-  schedule.initializeFromAlarmManagerReceivePort();
+  // await Get.putAsync(schedule.Scheduler()).init();
+
+  // move into class
+  // WILL NEED TO TRIGGER AN ALARM IN ORDER TO INITIALIZE SCHEDULER ON THE ALARM ISOLATE
+
+  // startScheduler();
   print('All services started...');
+}
+
+void startScheduler() async {
+  print("startScheduler");
+  await schedule.initializeScheduler();
+}
+
+void onStartService() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final service = FlutterBackgroundService();
+  bool isRunning = await service.isServiceRunning();
+  print("onStartService running=$isRunning");
+  startScheduler();
+  // service.setForegroundMode(false);
 }
 
 void main() async {
   // needed if you intend to initialize in the `main` function
   WidgetsFlutterBinding.ensureInitialized();
-
-  // TODO Turn schedule into a GetxService
-  // TODO Turn datastores into a GetxService
 
   // Eventual idea is to turn the Scheduler into an instance that is only accessible
   // via the alarm callback isolate. It would read all data from shared preferences.
@@ -48,14 +60,18 @@ void main() async {
   // we just stick the notification in shared prefs and always read from that
   // on the UI side.
 
-  await initServices();
+  // await initServices();
+
+  await FlutterBackgroundService.initialize(onStartService,
+      autoStart: true, foreground: true);
 
   runApp(
     // GetMaterialApp(MindfulNotifierApp());
     GetMaterialApp(
-      title: appName,
-      debugShowCheckedModeBanner: false,
-      defaultTransition: Transition.rightToLeft,
+      title: constants.appName,
+      debugShowCheckedModeBanner: true,
+      // defaultTransition: Transition.rightToLeft,
+      defaultTransition: Transition.fade,
       getPages: router.Router.route,
       initialRoute: '/',
       smartManagement: SmartManagement.full,

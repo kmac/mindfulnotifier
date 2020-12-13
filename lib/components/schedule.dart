@@ -6,10 +6,10 @@ import 'dart:ui';
 import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 
-import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
+// import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
+import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/reminders.dart';
@@ -18,238 +18,101 @@ import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('schedule'));
 
-bool alarmManagerInitialized = false;
-
-void initializeSchedule(String title) async {
-  if (!alarmManagerInitialized) {
-    logger.i("Initializing AndroidAlarmManager");
-    await AndroidAlarmManager.initialize();
-    alarmManagerInitialized = true;
-  }
-  Scheduler scheduler = Scheduler();
-  scheduler.appName = title;
-  scheduler.init();
-  // initializeFromAppIsolateReceivePort();
-}
-
-// StreamSubscription fromAppIsolateStreamSubscription;
-// ReceivePort fromAppIsolateReceivePort = ReceivePort();
-
 String getCurrentIsolate() {
   return "I:${Isolate.current.hashCode}";
 }
 
-MindfulNotifierWidgetController getController() {
-  return Get.find();
-}
-
-// The name associated with the UI isolate's [SendPort].
-const String sendToAlarmManagerPortName = 'toAlarmManagerIsolate';
-
-// The name associated with the background isolate's [SendPort].
-const String sendToAppPortName = 'toAppIsolate';
-
-// A port used to communicate from the app isolate to the alarm_manager isolate.
-StreamSubscription fromAlarmManagerStreamSubscription;
-ReceivePort fromAlarmManagerReceivePort;
-
-// The port used to send back to the scheduler isolate from the UI isolate,
-SendPort appCallbackSendPort;
-
-void initializeFromAlarmManagerReceivePort() async {
-  logger.i("initializeFromAlarmManagerReceivePort ${getCurrentIsolate()}");
-
-  if (fromAlarmManagerReceivePort == null) {
-    logger.d("new fromAlarmIsolateReceivePort");
-    fromAlarmManagerReceivePort = ReceivePort();
-  }
-  // Register for events from the alarm_manager isolate. These messages will
-  // always coincide with an alarm firing.
-  fromAlarmManagerStreamSubscription =
-      fromAlarmManagerReceivePort.listen((map) {
-    //
-    // WE ARE IN THE APP ISOLATE
-    //
-    logger
-        .i("fromAlarmIsolateReceivePort received: $map ${getCurrentIsolate()}");
-
-    // Lookup the scheduler singleton - available in this (app) isolate memory space
-    Scheduler scheduler = Scheduler();
-    String key = map.keys.first;
-    String value = map.values.first;
-    switch (key) {
-      case 'scheduleCallback':
-        scheduler.triggerNotification();
-        break;
-      case 'quietHoursCallback':
-        if (value == 'start') {
-          scheduler.delegate.quietHours.quietStart();
-        } else {
-          scheduler.delegate.quietHours.quietEnd();
-        }
-        break;
-      case 'shutdown':
-        scheduler.shutdown();
-        break;
-      // case 'setMessage':
-      //   MindfulNotifierWidgetController controller = Get.find();
-      //   controller.message.value = value;
-      //   break;
-      // case 'setInfoMessage':
-      //   MindfulNotifierWidgetController controller = Get.find();
-      //   controller.infoMessage.value = value;
-      //   break;
-      default:
-        logger.e("Unexpected key: $key");
-        break;
-    }
-  }, onDone: () {
-    logger.w("fromAlarmIsolateReceivePort is closed");
-  });
-
-  // Register the UI isolate's SendPort to allow for communication from the
-  // background isolate.
-  bool regResult = IsolateNameServer.registerPortWithName(
-    fromAlarmManagerReceivePort.sendPort,
-    sendToAlarmManagerPortName,
-  );
-  logger.d(
-      "registerPortWithName: $sendToAlarmManagerPortName, result=$regResult ${getCurrentIsolate()}");
-  assert(regResult);
-}
-
-void triggerBackgroundShutdown() {
-  // Send to the scheduler/background isolate
-  appCallbackSendPort ??= IsolateNameServer.lookupPortByName(sendToAppPortName);
-  appCallbackSendPort?.send({'shutdown': '1'});
-  shutdownReceivePort();
-}
-
-void shutdownReceivePort() async {
-  logger.i("shutdownReceivePort");
-  fromAlarmManagerReceivePort.close();
-  await fromAlarmManagerStreamSubscription.cancel();
-  IsolateNameServer.removePortNameMapping(sendToAlarmManagerPortName);
-}
-
-// void initializeFromAppIsolateReceivePort() async {
-//   logger.i("initializeFromAppIsolateReceivePort ${getCurrentIsolate()}");
-
-//   // Register for events from the UI isolate. These messages will
-//   // be triggered from the UI side
-//   fromAppIsolateStreamSubscription = fromAppIsolateReceivePort.listen((map) {
-//     //
-//     // WE ARE IN THE ?? ISOLATE
-//     //
-//     logger.i("fromAppIsolateReceivePort received: $map ${getCurrentIsolate()}");
-//     String key = map.keys.first;
-//     String value = map.values.first;
-//     Scheduler scheduler = Scheduler();
-//     switch (key) {
-//       case 'enable':
-//         if (value == 'true') {
-//           scheduler.enable();
-//         } else {
-//           scheduler.disable();
-//         }
-//         break;
-//       case 'shutdown':
-//         scheduler.shutdown();
-//         break;
-//     }
-//   }, onDone: () {
-//     logger.w("fromAppIsolateReceivePort is closed ${getCurrentIsolate()}");
-//   });
-
-//   // Register the UI isolate's SendPort to allow for communication from the
-//   // background isolate.
-//   bool regResult = IsolateNameServer.registerPortWithName(
-//     fromAppIsolateReceivePort.sendPort,
-//     sendToAppPortName,
-//   );
-//   logger.d("registerPortWithName: $regResult");
-//   assert(regResult);
-// }
-
-// void shutdownAppReceivePort() async {
-//   logger.i("shutdownReceivePort");
-//   fromAppIsolateReceivePort.close();
-//   await fromAppIsolateStreamSubscription.cancel();
-//   IsolateNameServer.removePortNameMapping(sendToAlarmManagerPortName);
-// }
-
-SendPort alarmManagerCallbackSendPort;
-
-// alarmCallback will not run in the same isolate as the main application.
-// This method does not share memory with anything else here!
-
-void scheduleCallback() {
-  logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
-  //
-  // WE ARE IN THE ALARM MANAGER ISOLATE
-  //
-  // We are on the alarm_manager isolate. Send to the app thread
-  alarmManagerCallbackSendPort ??=
-      IsolateNameServer.lookupPortByName(sendToAlarmManagerPortName);
-  alarmManagerCallbackSendPort.send({'scheduleCallback': '1'});
-}
-
-void quietHoursStartCallback() {
-  logger
-      .i("[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
-  //
-  // WE ARE IN THE ALARM MANAGER ISOLATE
-  //
-  // We are on the alarm_manager isolate. Send to the app thread
-  alarmManagerCallbackSendPort ??=
-      IsolateNameServer.lookupPortByName(sendToAlarmManagerPortName);
-  alarmManagerCallbackSendPort.send({'quietHoursCallback': 'start'});
-}
-
-void quietHoursEndCallback() {
-  logger.i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
-  //
-  // WE ARE IN THE ALARM MANAGER ISOLATE
-  //
-  // We are on the alarm_manager isolate. Send to the app thread
-  alarmManagerCallbackSendPort ??=
-      IsolateNameServer.lookupPortByName(sendToAlarmManagerPortName);
-  alarmManagerCallbackSendPort.send({'quietHoursCallback': 'end'});
-}
-
 enum ScheduleType { PERIODIC, RANDOM }
 
+const bool rescheduleOnReboot = false;
+const bool useHeartbeat = false;
+const int controlAlarmId = 5;
+bool androidAlarmManagerInitialized = false;
+
+Future<void> initializeScheduler() async {
+  if (!androidAlarmManagerInitialized) {
+    logger.i("Initializing AndroidAlarmManager");
+    await AndroidAlarmManager.initialize();
+    androidAlarmManagerInitialized = true;
+  }
+
+  // Send ourselves a bootstrap message which will come back in on the
+  // alarm manager isolate (which we're also calling the scheduler isolate)
+  if (useHeartbeat) {
+    await AndroidAlarmManager.cancel(controlAlarmId);
+    if (!await AndroidAlarmManager.periodic(
+        Duration(minutes: 2), controlAlarmId, controlCallback,
+        startAt: DateTime.now(),
+        exact: true,
+        wakeup: true,
+        rescheduleOnReboot: true)) {
+      var errmsg =
+          "Scheduling periodic control alarm failed on timer id: $controlAlarmId";
+      logger.e(errmsg);
+      throw AssertionError(errmsg);
+    }
+  } else {
+    if (!await AndroidAlarmManager.oneShot(
+        Duration(seconds: 1), controlAlarmId, controlCallback,
+        exact: true, wakeup: true, rescheduleOnReboot: false)) {
+      var errmsg =
+          "Scheduling oneShot control alarm failed on timer id: $controlAlarmId";
+      logger.e(errmsg);
+      throw AssertionError(errmsg);
+    }
+  }
+}
+
+void controlCallback() async {
+  logger.i("controlCallback ${getCurrentIsolate()}");
+  // WE ARE IN THE ALARM MANAGER ISOLATE
+  // Create and initialize the Scheduler singleton
+  // This is only available in the alarm manager isolate
+  if (!Scheduler.initialized) {
+    await Scheduler().init();
+  }
+  if (useHeartbeat) {
+    Scheduler.setInfoMessage("Received heartbeat callback [${DateTime.now()}]");
+  } else {
+    Scheduler.setInfoMessage("Received controlCallback [${DateTime.now()}]");
+  }
+}
+
 class Scheduler {
-  String appName = 'Mindful Notifier';
-  final int scheduleAlarmID = 10;
-  Notifier _notifier;
+  static const int scheduleAlarmID = 10;
+
   static bool running = false;
   static bool initialized = false;
-  Reminders reminders;
+  static SendPort toAppSendPort;
+
+  ScheduleDataStore schedDS;
+  bool alarmManagerInitialized = false;
+  Notifier _notifier;
+  static Reminders _reminders;
   DelegatedScheduler delegate;
-  static ScheduleDataStore ds;
+  StreamSubscription fromAppIsolateStreamSubscription;
+  ReceivePort fromAppIsolateReceivePort;
 
+  // Singleton
   static Scheduler _instance;
-
   Scheduler._internal() {
     _instance = this;
   }
-
   factory Scheduler() => _instance ?? Scheduler._internal();
 
-  void init() async {
+  Future<void> init() async {
     logger.i(
         "Initializing scheduler, initialized=$initialized ${getCurrentIsolate()}");
-
-    ds = Get.find();
-
-    _notifier = new Notifier(appName);
+    schedDS = await ScheduleDataStore.getInstance();
+    initializeFromAppIsolateReceivePort();
+    _notifier = Notifier();
     _notifier.init();
-
-    reminders = Reminders();
-    reminders.init();
-
+    _reminders = await Reminders.create();
     initialized = true;
+    if (schedDS.getEnable()) {
+      logger.i("Re-enabling on init!");
+      enable();
+    }
   }
 
   void shutdown() {
@@ -257,18 +120,90 @@ class Scheduler {
     disable();
   }
 
-  void enable() {
-    disable();
+  void initializeFromAppIsolateReceivePort() async {
+    logger.i("initializeFromAppIsolateReceivePort ${getCurrentIsolate()}");
+
+    fromAppIsolateReceivePort = ReceivePort();
+
+    // Register for events from the UI isolate. These messages will
+    // be triggered from the UI side
+    fromAppIsolateStreamSubscription = fromAppIsolateReceivePort.listen((map) {
+      //
+      // WE ARE IN THE ALARM ISOLATE
+      //
+      logger
+          .i("fromAppIsolateReceivePort received: $map ${getCurrentIsolate()}");
+      String key = map.keys.first;
+      // String value = map.values.first;
+      Scheduler scheduler = Scheduler();
+      switch (key) {
+        case 'enable':
+          scheduler.enable();
+          break;
+        case 'disable':
+          scheduler.disable();
+          break;
+        case 'shutdown':
+          scheduler.shutdown();
+          break;
+      }
+    }, onDone: () {
+      logger.w("fromAppIsolateReceivePort is closed ${getCurrentIsolate()}");
+    });
+
+    // Register our SendPort for the app to be able to send to our ReceivePort
+    bool result = IsolateNameServer.registerPortWithName(
+      fromAppIsolateReceivePort.sendPort,
+      constants.toSchedulerSendPortName,
+    );
+    logger.d(
+        "registerPortWithName: ${constants.toSchedulerSendPortName}, result=$result ${getCurrentIsolate()}");
+    assert(result);
+  }
+
+  void shutdownReceivePort() async {
+    logger.i("shutdownReceivePort");
+    fromAppIsolateReceivePort.close();
+    await fromAppIsolateStreamSubscription.cancel();
+    IsolateNameServer.removePortNameMapping(constants.toSchedulerSendPortName);
+  }
+
+  static void setMessage(String msg) async {
+    (await ScheduleDataStore.getInstance()).setMessage(msg);
+    toAppSendPort ??=
+        IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
+    toAppSendPort?.send({'message': msg});
+  }
+
+  static void setInfoMessage(String msg) async {
+    (await ScheduleDataStore.getInstance()).setInfoMessage(msg);
+    toAppSendPort ??=
+        IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
+    toAppSendPort?.send({'infoMessage': msg});
+  }
+
+  void enable() async {
+    if (running) {
+      disable();
+    }
     logger.i("enable");
+    // PROBLEM: the SharedPreference changes are written asynchronously to disk.
+    // There is a cache, but we don't see the cache changes here because we're in
+    // a different isolate. We're going to need to send the changes over the receive port??
+    ScheduleDataStore ds = await ScheduleDataStore.getInstance();
+    ds.reload();
+    // ds.dumpToLog();
+    // sleep(Duration(seconds: 60);
     delegate = ds.buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
     delegate.scheduleNext();
   }
 
-  void disable() {
+  void disable() async {
     logger.i("disable");
     delegate?.cancel();
     Notifier.cancelAll();
+    await AndroidAlarmManager.cancel(controlAlarmId);
     running = false;
   }
 
@@ -295,10 +230,37 @@ class Scheduler {
       logger.w("In quiet hours (!missed alarm!)... ignoring notification");
       return;
     }
-    var reminder = reminders.randomReminder();
+    var reminder = _reminders.randomReminder();
     _notifier.showNotification(reminder);
-    getController().setMessage(reminder);
+    setMessage(reminder);
     delegate.scheduleNext();
+  }
+
+  static void checkInitiialized() {
+    if (!Scheduler.initialized) {
+      logger.e('Scheduler is not initialized');
+      Scheduler().init();
+    }
+  }
+
+  static void scheduleCallback() {
+    logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
+    checkInitiialized();
+    Scheduler().triggerNotification();
+  }
+
+  static void quietHoursStartCallback() {
+    logger.i(
+        "[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
+    checkInitiialized();
+    Scheduler().delegate.quietHours.quietStart();
+  }
+
+  static void quietHoursEndCallback() {
+    logger
+        .i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
+    checkInitiialized();
+    Scheduler().delegate.quietHours.quietEnd();
   }
 }
 
@@ -313,7 +275,7 @@ abstract class DelegatedScheduler {
   void cancel() async {
     logger.i("Cancelling notification schedule ${getCurrentIsolate()}");
     quietHours.cancelTimers();
-    await AndroidAlarmManager.cancel(scheduler.scheduleAlarmID);
+    await AndroidAlarmManager.cancel(Scheduler.scheduleAlarmID);
   }
 
   void scheduleNext() {
@@ -341,7 +303,7 @@ class PeriodicScheduler extends DelegatedScheduler {
     switch (durationMinutes) {
       case 0:
         // case 45:
-        // schedule next for top of the hour
+        // schedule next for top of the next hour
         DateTime startTimeRaw = now.add(Duration(hours: 1));
         startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
             startTimeRaw.day, startTimeRaw.hour, 0, 0, 0, 0);
@@ -350,9 +312,11 @@ class PeriodicScheduler extends DelegatedScheduler {
         // schedule next for either top or bottom the hour (< 30m)
         DateTime startTimeRaw = now.add(Duration(minutes: 30));
         if (startTimeRaw.minute < 30) {
+          // we can schedule it for the top of the next hour
           startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
               startTimeRaw.day, startTimeRaw.hour, 0, 0, 0, 0);
         } else {
+          // schedule it for the bottom of the next
           startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
               startTimeRaw.day, startTimeRaw.hour, 30, 0, 0, 0);
         }
@@ -363,7 +327,7 @@ class PeriodicScheduler extends DelegatedScheduler {
         int newMinute = now.minute + 15;
         int newHour = startTimeRaw.hour;
         if (newMinute >= 60) {
-          ++newHour;
+          // ++newHour;
           newMinute = 0;
         } else if (newMinute >= 45) {
           newMinute = 45;
@@ -386,7 +350,7 @@ class PeriodicScheduler extends DelegatedScheduler {
     if (Scheduler.running) {
       // don't need to schedule anything
       if (!scheduled) {
-        getController().setInfoMessage(
+        Scheduler.setInfoMessage(
             "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}");
         scheduled = true;
       }
@@ -397,16 +361,17 @@ class PeriodicScheduler extends DelegatedScheduler {
     var firstNotifDate =
         formatDate(startTime, [h, ':', nn, " ", am]).toString();
     //controller.setMessage("First notification scheduled for $firstNotifDate");
-    getController().setInfoMessage(
+    Scheduler.setInfoMessage(
         "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}," +
             " beginning at $firstNotifDate");
     await AndroidAlarmManager.periodic(
         Duration(hours: durationHours, minutes: durationMinutes),
-        scheduler.scheduleAlarmID,
-        scheduleCallback,
+        Scheduler.scheduleAlarmID,
+        Scheduler.scheduleCallback,
         startAt: startTime,
         exact: true,
-        wakeup: true);
+        wakeup: true,
+        rescheduleOnReboot: rescheduleOnReboot);
 
     initialScheduleComplete();
   }
@@ -444,7 +409,7 @@ class RandomScheduler extends DelegatedScheduler {
           quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
       logger.i(
           "Scheduling next random notification, past quiet hours: $nextDate");
-      getController().setInfoMessage(
+      Scheduler.setInfoMessage(
           "In quiet hours, next reminder at ${nextDate.hour}:${timeNumToString(nextDate.minute)}");
     } else {
       logger.i("Scheduling next random notification at $nextDate");
@@ -452,11 +417,14 @@ class RandomScheduler extends DelegatedScheduler {
           formatDate(nextDate, [hh, ':', nn, ':', ss, " ", am]).toString();
       // This is temporary (switch to above when solid):
       timestr += " (${nextMinutes}m/$minMinutes/$maxMinutes)";
-      getController().setInfoMessage("Next notification at $timestr");
+      Scheduler.setInfoMessage("Next notification at $timestr");
     }
     await AndroidAlarmManager.oneShotAt(
-        nextDate, scheduler.scheduleAlarmID, scheduleCallback,
-        exact: true, wakeup: true);
+        nextDate, Scheduler.scheduleAlarmID, Scheduler.scheduleCallback,
+        exact: true,
+        wakeup: true,
+        allowWhileIdle: true,
+        rescheduleOnReboot: rescheduleOnReboot);
 
     if (!scheduled) {
       initialScheduleComplete();
@@ -544,23 +512,23 @@ class QuietHours {
     logger.i(
         "Initializing quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
     assert(nextQuietStart.isAfter(DateTime.now()));
-    if (!await AndroidAlarmManager.periodic(
-        Duration(days: 1), quietHoursStartAlarmID, quietHoursStartCallback,
+    if (!await AndroidAlarmManager.periodic(Duration(days: 1),
+        quietHoursStartAlarmID, Scheduler.quietHoursStartCallback,
         startAt: nextQuietStart,
         exact: true,
         wakeup: true,
-        rescheduleOnReboot: false)) {
+        rescheduleOnReboot: rescheduleOnReboot)) {
       var message =
           "periodic schedule failed on quiet hours start timer: $quietHoursStartAlarmID";
       logger.e(message);
       throw AssertionError(message);
     }
-    if (!await AndroidAlarmManager.periodic(
-        Duration(days: 1), quietHoursEndAlarmID, quietHoursEndCallback,
+    if (!await AndroidAlarmManager.periodic(Duration(days: 1),
+        quietHoursEndAlarmID, Scheduler.quietHoursEndCallback,
         startAt: nextQuietEnd,
         exact: true,
         wakeup: true,
-        rescheduleOnReboot: false)) {
+        rescheduleOnReboot: rescheduleOnReboot)) {
       var message =
           "periodic schedule failed on quiet hours end timer: $quietHoursEndAlarmID";
       logger.e(message);
@@ -584,13 +552,13 @@ class QuietHours {
     final DateTime now = DateTime.now();
     logger.i("[$now] Quiet hours start");
     inQuietHours = true;
-    getController().setMessage('In quiet hours');
+    Scheduler.setMessage('In quiet hours');
   }
 
   void quietEnd() {
     final DateTime now = DateTime.now();
     logger.i("[$now] Quiet hours end");
     inQuietHours = false;
-    getController().setMessage('Quiet Hours have ended.');
+    Scheduler.setMessage('Quiet Hours have ended.');
   }
 }
