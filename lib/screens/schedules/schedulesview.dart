@@ -50,7 +50,8 @@ class SchedulesWidgetController extends GetxController {
   void init() async {
     logger.d("init");
 
-    ds = Get.find();
+    // ds = Get.find();
+    ds = await ScheduleDataStore.getInstance();
 
     if (ds.getScheduleTypeStr() == 'periodic') {
       scheduleType.value = ScheduleType.periodic;

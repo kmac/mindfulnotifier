@@ -13,6 +13,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:audio_session/audio_session.dart';
 
+import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
@@ -105,19 +106,19 @@ class Notifier {
 
   static String channelId = 'mindfulnotifier_channel_id';
 
-  final String notifTitle;
+  final String notifTitle = constants.appName;
   final String defaultBellAsset = 'media/defaultbell.mp3';
   ScheduleDataStore ds;
 
   File customSoundFile;
 
-  Notifier(this.notifTitle);
-  Notifier.withCustomSound(this.notifTitle, File customSoundFile) {
+  Notifier();
+  Notifier.withCustomSound(File customSoundFile) {
     this.customSoundFile = customSoundFile;
   }
 
-  void init() {
-    ds = Get.find();
+  void init() async {
+    ds = await ScheduleDataStore.getInstance();
   }
 
   static void cancelAll() async {

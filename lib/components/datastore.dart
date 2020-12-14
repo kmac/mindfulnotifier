@@ -43,17 +43,25 @@ class ScheduleDataStore extends GetxService {
 
   static SharedPreferences _prefs;
 
+  static ScheduleDataStore _instance;
+
   /// Public factory
-  static Future<ScheduleDataStore> create() async {
-    // Call the private constructor
-    var component = ScheduleDataStore._create();
-
-    // ...initialization that requires async...
-    await component._init();
-
+  static Future<ScheduleDataStore> getInstance() async {
+    if (_instance == null) {
+      // Call the private constructor
+      _instance = ScheduleDataStore._create();
+      // ...initialization that requires async...
+      await _instance._init();
+    }
     // Return the fully initialized object
-    return component;
+    return _instance;
   }
+
+  // static Future<ScheduleDataStore> getNewInstance() async {
+  //   ScheduleDataStore newInstance = ScheduleDataStore._create();
+  //   await newInstance._init();
+  //   return newInstance;
+  // }
 
   /// Private constructor
   ScheduleDataStore._create() {
@@ -64,13 +72,42 @@ class ScheduleDataStore extends GetxService {
     _prefs = await SharedPreferences.getInstance();
   }
 
+  // ScheduleDataStore._internal() {
+  //   _instance = this;
+  //   _init();
+  // }
+  // factory ScheduleDataStore() => _instance ?? ScheduleDataStore._internal();
+  // void _init() async {
+  //   _prefs = await SharedPreferences.getInstance();
+  //   reload();
+  // }
+
   @override
   void onInit() async {
     super.onInit();
   }
 
-  void setEnable(bool value) {
-    _prefs.setBool(ScheduleDataStore.enabledKey, value);
+  void reload() async {
+    await _prefs.reload();
+  }
+
+  void dumpToLogOne() {
+    StringBuffer sb = StringBuffer("ScheduleDataStore:\n");
+    for (String key in _prefs.getKeys()) {
+      sb.write("$key=${_prefs.get(key)}\n");
+    }
+    logger.d(sb);
+  }
+
+  void dumpToLog() {
+    logger.d("ScheduleDataStore:");
+    for (String key in _prefs.getKeys()) {
+      logger.d("$key=${_prefs.get(key)}");
+    }
+  }
+
+  void setEnable(bool value) async {
+    await _prefs.setBool(ScheduleDataStore.enabledKey, value);
   }
 
   bool getEnable() {
@@ -80,8 +117,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getBool(ScheduleDataStore.enabledKey));
   }
 
-  void setMute(bool value) {
-    _prefs.setBool(ScheduleDataStore.muteKey, value);
+  void setMute(bool value) async {
+    await _prefs.setBool(ScheduleDataStore.muteKey, value);
   }
 
   bool getMute() {
@@ -91,8 +128,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getBool(ScheduleDataStore.muteKey));
   }
 
-  void setVibrate(bool value) {
-    _prefs.setBool(ScheduleDataStore.vibrateKey, value);
+  void setVibrate(bool value) async {
+    await _prefs.setBool(ScheduleDataStore.vibrateKey, value);
   }
 
   bool getVibrate() {
@@ -102,8 +139,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getBool(ScheduleDataStore.vibrateKey));
   }
 
-  void setScheduleTypeStr(String value) {
-    _prefs.setString(ScheduleDataStore.scheduleTypeKey, value);
+  void setScheduleTypeStr(String value) async {
+    await _prefs.setString(ScheduleDataStore.scheduleTypeKey, value);
   }
 
   String getScheduleTypeStr() {
@@ -113,8 +150,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getString(ScheduleDataStore.scheduleTypeKey));
   }
 
-  void setPeriodicHours(int value) {
-    _prefs.setInt(periodicHoursKey, value);
+  void setPeriodicHours(int value) async {
+    await _prefs.setInt(periodicHoursKey, value);
   }
 
   int getPeriodicHours() {
@@ -124,8 +161,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.periodicHoursKey));
   }
 
-  void setPeriodicMinutes(int value) {
-    _prefs.setInt(periodicMinutesKey, value);
+  void setPeriodicMinutes(int value) async {
+    await _prefs.setInt(periodicMinutesKey, value);
   }
 
   int getPeriodicMinutes() {
@@ -135,8 +172,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.periodicMinutesKey));
   }
 
-  void setRandomMinHours(int value) {
-    _prefs.setInt(randomMinHoursKey, value);
+  void setRandomMinHours(int value) async {
+    await _prefs.setInt(randomMinHoursKey, value);
   }
 
   int getRandomMinHours() {
@@ -146,8 +183,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.randomMinHoursKey));
   }
 
-  void setRandomMinMinutes(int value) {
-    _prefs.setInt(randomMinMinutesKey, value);
+  void setRandomMinMinutes(int value) async {
+    await _prefs.setInt(randomMinMinutesKey, value);
   }
 
   int getRandomMinMinutes() {
@@ -157,8 +194,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.randomMinMinutesKey));
   }
 
-  void setRandomMaxHours(int value) {
-    _prefs.setInt(randomMaxHoursKey, value);
+  void setRandomMaxHours(int value) async {
+    await _prefs.setInt(randomMaxHoursKey, value);
   }
 
   int getRandomMaxHours() {
@@ -168,8 +205,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.randomMaxHoursKey));
   }
 
-  void setRandomMaxMinutes(int value) {
-    _prefs.setInt(randomMaxMinutesKey, value);
+  void setRandomMaxMinutes(int value) async {
+    await _prefs.setInt(randomMaxMinutesKey, value);
   }
 
   int getRandomMaxMinutes() {
@@ -179,8 +216,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.randomMaxMinutesKey));
   }
 
-  void setQuietHoursStartHour(int value) {
-    _prefs.setInt(quietHoursStartHourKey, value);
+  void setQuietHoursStartHour(int value) async {
+    await _prefs.setInt(quietHoursStartHourKey, value);
   }
 
   int getQuietHoursStartHour() {
@@ -190,8 +227,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.quietHoursStartHourKey));
   }
 
-  void setQuietHoursStartMinute(int value) {
-    _prefs.setInt(quietHoursStartMinuteKey, value);
+  void setQuietHoursStartMinute(int value) async {
+    await _prefs.setInt(quietHoursStartMinuteKey, value);
   }
 
   int getQuietHoursStartMinute() {
@@ -201,8 +238,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.quietHoursStartMinuteKey));
   }
 
-  void setQuietHoursEndHour(int value) {
-    _prefs.setInt(quietHoursEndHourKey, value);
+  void setQuietHoursEndHour(int value) async {
+    await _prefs.setInt(quietHoursEndHourKey, value);
   }
 
   int getQuietHoursEndHour() {
@@ -212,8 +249,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.quietHoursEndHourKey));
   }
 
-  void setQuietHoursEndMinute(int value) {
-    _prefs.setInt(quietHoursEndMinuteKey, value);
+  void setQuietHoursEndMinute(int value) async {
+    await _prefs.setInt(quietHoursEndMinuteKey, value);
   }
 
   int getQuietHoursEndMinute() {
@@ -223,8 +260,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getInt(ScheduleDataStore.quietHoursEndMinuteKey));
   }
 
-  void setMessage(String value) {
-    _prefs.setString(messageKey, value);
+  void setMessage(String value) async {
+    await _prefs.setString(messageKey, value);
   }
 
   String getMessage() {
@@ -234,8 +271,8 @@ class ScheduleDataStore extends GetxService {
     return (_prefs.getString(ScheduleDataStore.messageKey));
   }
 
-  void setInfoMessage(String value) {
-    _prefs.setString(infoMessageKey, value);
+  void setInfoMessage(String value) async {
+    await _prefs.setString(infoMessageKey, value);
   }
 
   String getInfoMessage() {
@@ -243,84 +280,5 @@ class ScheduleDataStore extends GetxService {
       setInfoMessage(defaultInfoMessage);
     }
     return (_prefs.getString(ScheduleDataStore.infoMessageKey));
-  }
-
-  DelegatedScheduler buildSchedulerDelegate(Scheduler scheduler) {
-    print('Building scheduler delegate');
-    var scheduleType = ScheduleType.PERIODIC;
-    if (_prefs.containsKey(scheduleTypeKey)) {
-      if (_prefs.getString(scheduleTypeKey) == 'periodic') {
-        scheduleType = ScheduleType.PERIODIC;
-      } else {
-        scheduleType = ScheduleType.RANDOM;
-      }
-    } else {
-      if (scheduleType == ScheduleType.PERIODIC) {
-        _prefs.setString(scheduleTypeKey, 'periodic');
-      } else {
-        _prefs.setString(scheduleTypeKey, 'random');
-      }
-    }
-
-    QuietHours quietHours = buildQuietHours();
-
-    var delegate;
-    if (scheduleType == ScheduleType.PERIODIC) {
-      var periodicHours = 1;
-      var periodicMinutes = 0;
-      if (_prefs.containsKey(periodicHoursKey)) {
-        periodicHours = _prefs.getInt(periodicHoursKey);
-      }
-      if (_prefs.containsKey(periodicMinutesKey)) {
-        periodicMinutes = _prefs.getInt(periodicMinutesKey);
-      }
-      delegate = PeriodicScheduler(
-          scheduler, quietHours, periodicHours, periodicMinutes);
-    } else {
-      var randomMinHours = 0;
-      var randomMinMinutes = 45;
-      var randomMaxHours = 1;
-      var randomMaxMinutes = 30;
-      if (_prefs.containsKey(randomMinHoursKey)) {
-        randomMinHours = _prefs.getInt(randomMinHoursKey);
-      }
-      if (_prefs.containsKey(randomMinMinutesKey)) {
-        randomMinMinutes = _prefs.getInt(randomMinMinutesKey);
-      }
-      if (_prefs.containsKey(randomMaxHoursKey)) {
-        randomMaxHours = _prefs.getInt(randomMaxHoursKey);
-      }
-      if (_prefs.containsKey(randomMaxMinutesKey)) {
-        randomMaxMinutes = _prefs.getInt(randomMaxMinutesKey);
-      }
-      delegate = RandomScheduler(
-          scheduler,
-          quietHours,
-          randomMinHours * 60 + randomMinMinutes,
-          randomMaxHours * 60 + randomMaxMinutes);
-    }
-    return delegate;
-  }
-
-  QuietHours buildQuietHours() {
-    var quietHoursStartHour, quietHoursStartMinute;
-    var quietHoursEndHour, quietHoursEndMinute;
-
-    if (_prefs.containsKey(quietHoursStartHourKey)) {
-      quietHoursStartHour = _prefs.getInt(quietHoursStartHourKey);
-    }
-    if (_prefs.containsKey(quietHoursStartMinuteKey)) {
-      quietHoursStartMinute = _prefs.getInt(quietHoursStartMinuteKey);
-    }
-    if (_prefs.containsKey(quietHoursEndHourKey)) {
-      quietHoursEndHour = _prefs.getInt(quietHoursEndHourKey);
-    }
-    if (_prefs.containsKey(quietHoursEndMinuteKey)) {
-      quietHoursEndMinute = _prefs.getInt(quietHoursEndMinuteKey);
-    }
-
-    return new QuietHours(
-        new TimeOfDay(hour: quietHoursStartHour, minute: quietHoursStartMinute),
-        new TimeOfDay(hour: quietHoursEndHour, minute: quietHoursEndMinute));
   }
 }

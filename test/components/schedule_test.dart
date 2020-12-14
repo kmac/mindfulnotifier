@@ -6,10 +6,14 @@ import 'package:mindfulnotifier/components/schedule.dart';
 void main() {
   Scheduler scheduler;
 
+  bool initialized = false;
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     scheduler = Scheduler();
-    scheduler.init();
+    if (!initialized) {
+      scheduler.init();
+      initialized = true;
+    }
   });
   tearDown(() {});
 
@@ -100,6 +104,34 @@ void main() {
           DateTime(dt.year, dt.month, dt.day, 21, 0));
       expect(quietHours.getNextQuietEnd(now: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0));
+    });
+    test('quiet hours - midnight', () {
+      // start @11:55pm
+      var quietHours = QuietHours(
+          TimeOfDay(hour: 23, minute: 55), TimeOfDay(hour: 9, minute: 0));
+      // before quiet:
+      DateTime dt = DateTime.parse("2020-01-01 23:00:00");
+      expect(quietHours.getNextQuietStart(now: dt),
+          DateTime(dt.year, dt.month, dt.day, 23, 55));
+      expect(quietHours.getNextQuietEnd(now: dt),
+          DateTime(dt.year, dt.month, dt.day, 9, 0).add(Duration(days: 1)));
+      expect(
+          false,
+          quietHours.isInQuietHours(DateTime.parse("2020-01-01 23:00:00"),
+              now: dt));
+      expect(
+          true,
+          quietHours.isInQuietHours(DateTime.parse("2020-01-01 23:57:00"),
+              now: DateTime.parse("2020-01-01 23:57:00")));
+      expect(
+          true,
+          quietHours.isInQuietHours(DateTime.parse("2020-01-02 01:57:00"),
+              now: DateTime.parse("2020-01-01 23:57:00")));
+      // failing:
+      expect(
+          true,
+          quietHours.isInQuietHours(DateTime.parse("2020-01-02 01:58:00"),
+              now: DateTime.parse("2020-01-02 01:57:00")));
     });
     test('quiet hours - late start', () {
       // start @1am
