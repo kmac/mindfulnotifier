@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
+import 'dart:io';
 
 import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:date_format/date_format.dart';
@@ -85,7 +86,7 @@ class Scheduler {
   static bool initialized = false;
   static SendPort toAppSendPort;
 
-  ScheduleDataStore schedDS;
+  static ScheduleDataStore schedDS;
   bool alarmManagerInitialized = false;
   Notifier _notifier;
   static Reminders _reminders;
@@ -139,9 +140,13 @@ class Scheduler {
       switch (key) {
         case 'enable':
           scheduler.enable();
+          // scheduler.reenable();
           break;
         case 'disable':
           scheduler.disable();
+          break;
+        case 'reenable':
+          scheduler.reenable();
           break;
         case 'shutdown':
           scheduler.shutdown();
@@ -169,20 +174,20 @@ class Scheduler {
   }
 
   static void setMessage(String msg) async {
-    (await ScheduleDataStore.getInstance()).setMessage(msg);
+    schedDS.setMessage(msg);
     toAppSendPort ??=
         IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
     toAppSendPort?.send({'message': msg});
   }
 
   static void setInfoMessage(String msg) async {
-    (await ScheduleDataStore.getInstance()).setInfoMessage(msg);
+    schedDS.setInfoMessage(msg);
     toAppSendPort ??=
         IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
     toAppSendPort?.send({'infoMessage': msg});
   }
 
-  void enable() async {
+  void enable() {
     if (running) {
       disable();
     }
@@ -190,11 +195,9 @@ class Scheduler {
     // PROBLEM: the SharedPreference changes are written asynchronously to disk.
     // There is a cache, but we don't see the cache changes here because we're in
     // a different isolate. We're going to need to send the changes over the receive port??
-    ScheduleDataStore ds = await ScheduleDataStore.getInstance();
-    ds.reload();
-    // ds.dumpToLog();
-    // sleep(Duration(seconds: 60);
-    delegate = ds.buildSchedulerDelegate(this);
+    schedDS.reload();
+    // schedDS.dumpToLog();
+    delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
     delegate.scheduleNext();
   }
@@ -207,8 +210,43 @@ class Scheduler {
     running = false;
   }
 
+  void reenable() {
+    disable();
+    sleep(Duration(seconds: 1));
+    enable();
+  }
+
   void initialScheduleComplete() {
     running = true;
+  }
+
+  DelegatedScheduler _buildSchedulerDelegate(Scheduler scheduler) {
+    logger.i('Building scheduler delegate: ${schedDS.getScheduleTypeStr()}');
+    var scheduleType;
+    if (schedDS.getScheduleTypeStr() == 'periodic') {
+      scheduleType = ScheduleType.PERIODIC;
+    } else {
+      scheduleType = ScheduleType.RANDOM;
+    }
+    QuietHours quietHours = new QuietHours(
+        new TimeOfDay(
+            hour: schedDS.getQuietHoursStartHour(),
+            minute: schedDS.getQuietHoursStartMinute()),
+        new TimeOfDay(
+            hour: schedDS.getQuietHoursEndHour(),
+            minute: schedDS.getQuietHoursEndMinute()));
+    var delegate;
+    if (scheduleType == ScheduleType.PERIODIC) {
+      delegate = PeriodicScheduler(scheduler, quietHours,
+          schedDS.getPeriodicHours(), schedDS.getPeriodicMinutes());
+    } else {
+      delegate = RandomScheduler(
+          scheduler,
+          quietHours,
+          schedDS.getRandomMinHours() * 60 + schedDS.getRandomMinMinutes(),
+          schedDS.getRandomMaxHours() * 60 + schedDS.getRandomMaxMinutes());
+    }
+    return delegate;
   }
 
   void triggerNotification() {
@@ -224,10 +262,13 @@ class Scheduler {
 
     if (delegate.quietHours.inQuietHours) {
       logger.i("In quiet hours... ignoring notification");
+      setInfoMessage("In quiet hours $now");
       return;
     }
     if (delegate.quietHours.isInQuietHours(now)) {
-      logger.w("In quiet hours (!missed alarm!)... ignoring notification");
+      // Note: this could happen if enabled in quiet hours:
+      logger.i("In quiet hours (missed alarm)... ignoring notification");
+      setInfoMessage("In quiet hours $now");
       return;
     }
     var reminder = _reminders.randomReminder();
@@ -443,62 +484,84 @@ class QuietHours {
   QuietHours.defaultQuietHours()
       : this(TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
 
-  DateTime _getTimeOfDayToday(TimeOfDay tod, {DateTime now}) {
+  DateTime _convertTimeOfDayToToday(TimeOfDay tod, {DateTime now}) {
+    // now can be overridden for testing
     now ??= DateTime.now();
     return DateTime(now.year, now.month, now.day, tod.hour, tod.minute);
   }
 
-  DateTime _getTimeOfDayTomorrow(TimeOfDay tod, {DateTime now}) {
+  DateTime _convertTimeOfDayToTomorrow(TimeOfDay tod, {DateTime now}) {
+    // now can be overridden for testing
     now ??= DateTime.now();
     final tomorrow = now.add(Duration(days: 1));
     return DateTime(
         tomorrow.year, tomorrow.month, tomorrow.day, tod.hour, tod.minute);
   }
 
+  DateTime _convertTimeOfDayToYesterday(TimeOfDay tod, {DateTime now}) {
+    // now can be overridden for testing
+    now ??= DateTime.now();
+    final yesterday = now.subtract(Duration(days: 1));
+    return DateTime(
+        yesterday.year, yesterday.month, yesterday.day, tod.hour, tod.minute);
+  }
+
   DateTime getNextQuietStart({DateTime now}) {
     now ??= DateTime.now();
-    DateTime quietStart = _getTimeOfDayToday(startTime, now: now);
+    DateTime quietStart = _convertTimeOfDayToToday(startTime, now: now);
     if (quietStart.isBefore(now)) {
-      quietStart = _getTimeOfDayTomorrow(startTime, now: now);
+      quietStart = _convertTimeOfDayToTomorrow(startTime, now: now);
     }
     return quietStart;
   }
 
   DateTime getNextQuietEnd({DateTime now}) {
     now ??= DateTime.now();
-    DateTime quietEnd = _getTimeOfDayToday(endTime, now: now);
+    DateTime quietEnd = _convertTimeOfDayToToday(endTime, now: now);
     // if (quietEnd.isAtSameMomentAs(now) || quietEnd.isBefore(now)) {
     if (quietEnd.isBefore(now)) {
-      quietEnd = _getTimeOfDayTomorrow(endTime, now: now);
+      quietEnd = _convertTimeOfDayToTomorrow(endTime, now: now);
     }
     return quietEnd;
   }
 
   bool isInQuietHours(DateTime date, {DateTime now}) {
     /* 
+            ???   today   ???         ???     tomorrow  ???
+        ---------------------------------------------------------------
               now1              now2                now3 (same as now1)
                V                 V                   V
         ----------------|---------------------|-------------
                     quiet start            quiet end
         
-      Is now before today's quiet start?
+      Is now before today's quiet start AND before today's end?
           Y -> not in quiet
-      Is now after today's quiet start?
-          Y -> Is now before today's quiet end?
-              Y -> in quiet
-          N -> Is now before tomorrow's quiet end?
-
+          N -> Is now after today's quiet start?
+              Y -> Is now before today's quiet end or before tomorrow's end?
+                  Y -> in quiet
+              N -> Is now before yesterday's start AND before tomorrow's quiet end?
+                  Y -> in quiet
      */
     now ??= DateTime.now();
-    if (date.isBefore(_getTimeOfDayToday(startTime, now: now))) {
-      return false;
+    DateTime todayStart = _convertTimeOfDayToToday(startTime, now: now);
+    DateTime todayEnd = _convertTimeOfDayToToday(endTime, now: now);
+    if (now.isBefore(todayStart)) {
+      if (now.isBefore(todayEnd)) {
+        return true;
+      } else {
+        return false;
+      }
     } else {
-      // We've past today's quiet start time.
-      // Check if we're within either quiet end times.
-      if (date.isBefore(_getTimeOfDayToday(endTime, now: now)) ||
-          date.isBefore(_getTimeOfDayTomorrow(endTime, now: now))) {
+      // we are after today's start
+      DateTime tomorrowEnd = _convertTimeOfDayToTomorrow(endTime, now: now);
+      if (now.isBefore(todayEnd) || now.isBefore(tomorrowEnd)) {
         return true;
       }
+    }
+    // but what if it started yesterday?
+    DateTime yesterdayStart = _convertTimeOfDayToYesterday(startTime, now: now);
+    if (now.isAfter(yesterdayStart) && now.isBefore(todayEnd)) {
+      return true;
     }
     return false;
   }

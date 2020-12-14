@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
-import 'package:mindfulnotifier/components/datastore.dart' as ds;
 import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/schedule.dart' as schedule;
 

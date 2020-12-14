@@ -140,19 +140,23 @@ class MindfulNotifierWidgetController extends GetxController {
     ds.setInfoMessage(_infoMessage.value);
   }
 
-  handleEnabled(enabled) {
+  void handleEnabled(enabled) {
     ds.setEnable(enabled);
     if (enabled) {
-      if (_message.value == 'Disabled') {
-        setMessage('Enabled. Waiting for notification...');
-      }
-      setInfoMessage('Enabled');
+      // if (_message.value == 'Disabled') {
+      //   setMessage('Enabled. Waiting for notification...');
+      // }
+      // setInfoMessage('Enabled');
+      setInfoMessage('Enabled. Waiting for notification.');
 
+      // THIS IS GETTING SENT BEFORE THE SHARED PREF IS COMMITTING??? MUST BE.
+      //
+      //
       toSchedulerSendPort ??=
           IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
       toSchedulerSendPort?.send({'enable': '1'});
     } else {
-      setMessage('Disabled');
+      // setMessage('Disabled');
       setInfoMessage('Disabled');
       toSchedulerSendPort ??=
           IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
@@ -251,13 +255,13 @@ class MindfulNotifierWidget extends StatelessWidget {
                 Expanded(
                   flex: 15,
                   child: Obx(() => Card(
-                      // shape: RoundedRectangleBorder(
-                      //   borderRadius: BorderRadius.circular(15.0),
-                      // ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15.0),
+                      ),
                       color: Theme.of(context).cardColor,
                       margin: EdgeInsets.only(
                           top: 15, left: 15, right: 15, bottom: 0),
-                      elevation: 3,
+                      elevation: 5,
                       child: Container(
                         margin: EdgeInsets.only(
                             top: 30, left: 30, right: 30, bottom: 30),
@@ -265,23 +269,29 @@ class MindfulNotifierWidget extends StatelessWidget {
                         // decoration: BoxDecoration(color: Colors.grey[100]),
                         child: Text(
                           '${controller._message}',
-                          style: Theme.of(context).textTheme.headline4,
+                          // style: Theme.of(context).textTheme.headline4,
                           // style: Theme.of(context).textTheme.headline5,
+                          style: TextStyle(
+                              color: Colors.grey[800],
+                              fontWeight: FontWeight.w900,
+                              fontStyle: FontStyle.italic,
+                              fontFamily: 'Open Sans',
+                              fontSize: 30),
                           textAlign: TextAlign.left,
                           softWrap: true,
                         ),
                       ))),
                 ),
                 Expanded(
-                  flex: 4,
+                  flex: 3,
                   child: Obx(() => Card(
                       // shape: RoundedRectangleBorder(
                       //   borderRadius: BorderRadius.circular(15.0),
                       // ),
                       color: Theme.of(context).cardColor,
                       margin: EdgeInsets.only(
-                          top: 5, left: 15, right: 15, bottom: 15),
-                      elevation: 3,
+                          top: 15, left: 15, right: 15, bottom: 15),
+                      elevation: 4,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: <Widget>[
@@ -336,6 +346,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                       () => Text(
                         '${controller._infoMessage.value}',
                         style: TextStyle(color: Colors.black38),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     )),
               ],
