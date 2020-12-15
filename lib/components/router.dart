@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
 import 'package:mindfulnotifier/screens/schedules/schedulesview.dart';
+import 'package:mindfulnotifier/screens/reminders/reminderview.dart';
 
 class Router {
   static final route = [
@@ -14,7 +15,7 @@ class Router {
     ),
     GetPage(
       name: '/reminders',
-      page: () => MindfulNotifierWidget(),
+      page: () => ReminderWidget(),
     ),
     GetPage(
       name: '/bell',
