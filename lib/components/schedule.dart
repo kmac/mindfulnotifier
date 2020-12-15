@@ -25,8 +25,8 @@ String getCurrentIsolate() {
 
 enum ScheduleType { PERIODIC, RANDOM }
 
-const bool rescheduleOnReboot = false;
-const bool useHeartbeat = false;
+const bool useHeartbeat = true;
+const bool rescheduleOnReboot = useHeartbeat;
 const int controlAlarmId = 5;
 bool androidAlarmManagerInitialized = false;
 
@@ -39,11 +39,25 @@ Future<void> initializeScheduler() async {
 
   // Send ourselves a bootstrap message which will come back in on the
   // alarm manager isolate (which we're also calling the scheduler isolate)
+  if (!await AndroidAlarmManager.oneShot(
+      Duration(seconds: 1), controlAlarmId, controlCallback,
+      exact: true, wakeup: true, rescheduleOnReboot: false)) {
+    var errmsg =
+        "Scheduling oneShot control alarm failed on timer id: $controlAlarmId";
+    logger.e(errmsg);
+    throw AssertionError(errmsg);
+  }
+}
+
+void enableHeartbeat() async {
+  // Heartbeat is a last-ditch alarm triggered hourly. This is just in case
+  // we miss the scheduler alarm on a reboot.
   if (useHeartbeat) {
     await AndroidAlarmManager.cancel(controlAlarmId);
+    logger.i("Enabling heartbeat");
     if (!await AndroidAlarmManager.periodic(
-        Duration(minutes: 2), controlAlarmId, controlCallback,
-        startAt: DateTime.now(),
+        Duration(hours: 1), controlAlarmId, controlCallback,
+        startAt: DateTime.now().add(Duration(hours: 1)),
         exact: true,
         wakeup: true,
         rescheduleOnReboot: true)) {
@@ -52,15 +66,13 @@ Future<void> initializeScheduler() async {
       logger.e(errmsg);
       throw AssertionError(errmsg);
     }
-  } else {
-    if (!await AndroidAlarmManager.oneShot(
-        Duration(seconds: 1), controlAlarmId, controlCallback,
-        exact: true, wakeup: true, rescheduleOnReboot: false)) {
-      var errmsg =
-          "Scheduling oneShot control alarm failed on timer id: $controlAlarmId";
-      logger.e(errmsg);
-      throw AssertionError(errmsg);
-    }
+  }
+}
+
+void disableHeartbeat() async {
+  if (useHeartbeat) {
+    logger.i("Cancelling heartbeat");
+    await AndroidAlarmManager.cancel(controlAlarmId);
   }
 }
 
@@ -69,13 +81,13 @@ void controlCallback() async {
   // WE ARE IN THE ALARM MANAGER ISOLATE
   // Create and initialize the Scheduler singleton
   // This is only available in the alarm manager isolate
-  if (!Scheduler.initialized) {
-    await Scheduler().init();
-  }
+  bool wasInit = await Scheduler.checkInitialized();
   if (useHeartbeat) {
-    Scheduler.setInfoMessage("Received heartbeat callback [${DateTime.now()}]");
+    Scheduler.setInfoMessage(
+        "Received heartbeat callback [${wasInit ? 'T' : 'F'}/${DateTime.now()}]");
   } else {
-    Scheduler.setInfoMessage("Received controlCallback [${DateTime.now()}]");
+    Scheduler.setInfoMessage(
+        "Received controlCallback [${wasInit ? 'T' : 'F'}/${DateTime.now()}]");
   }
 }
 
@@ -84,7 +96,6 @@ class Scheduler {
 
   static bool running = false;
   static bool initialized = false;
-  static SendPort toAppSendPort;
 
   static ScheduleDataStore schedDS;
   bool alarmManagerInitialized = false;
@@ -119,6 +130,8 @@ class Scheduler {
   void shutdown() {
     logger.i("shutdown");
     disable();
+    shutdownReceivePort();
+    initialized = false;
   }
 
   void initializeFromAppIsolateReceivePort() async {
@@ -175,14 +188,14 @@ class Scheduler {
 
   static void setMessage(String msg) async {
     schedDS.setMessage(msg);
-    toAppSendPort ??=
+    var toAppSendPort =
         IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
     toAppSendPort?.send({'message': msg});
   }
 
   static void setInfoMessage(String msg) async {
     schedDS.setInfoMessage(msg);
-    toAppSendPort ??=
+    var toAppSendPort =
         IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
     toAppSendPort?.send({'infoMessage': msg});
   }
@@ -192,6 +205,7 @@ class Scheduler {
       disable();
     }
     logger.i("enable");
+    enableHeartbeat();
     // PROBLEM: the SharedPreference changes are written asynchronously to disk.
     // There is a cache, but we don't see the cache changes here because we're in
     // a different isolate. We're going to need to send the changes over the receive port??
@@ -206,7 +220,7 @@ class Scheduler {
     logger.i("disable");
     delegate?.cancel();
     Notifier.cancelAll();
-    await AndroidAlarmManager.cancel(controlAlarmId);
+    disableHeartbeat();
     running = false;
   }
 
@@ -277,30 +291,32 @@ class Scheduler {
     delegate.scheduleNext();
   }
 
-  static void checkInitiialized() {
+  static Future<bool> checkInitialized() async {
     if (!Scheduler.initialized) {
-      logger.e('Scheduler is not initialized');
-      Scheduler().init();
+      logger.w('checkInitialized: Scheduler is not initialized');
+      await Scheduler().init();
+      return false; // was not initialized
     }
+    return true;
   }
 
   static void scheduleCallback() {
     logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
-    checkInitiialized();
+    checkInitialized();
     Scheduler().triggerNotification();
   }
 
   static void quietHoursStartCallback() {
     logger.i(
         "[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
-    checkInitiialized();
+    checkInitialized();
     Scheduler().delegate.quietHours.quietStart();
   }
 
   static void quietHoursEndCallback() {
     logger
         .i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
-    checkInitiialized();
+    checkInitialized();
     Scheduler().delegate.quietHours.quietEnd();
   }
 }

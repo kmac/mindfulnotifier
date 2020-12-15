@@ -86,7 +86,7 @@ class SchedulesWidgetController extends GetxController {
     ever(randomMaxDateTime, handleRandomMaxDateTime);
   }
 
-  void handleScheduleType(ScheduleType t) async {
+  void handleScheduleType(ScheduleType t) {
     if (t == ScheduleType.periodic) {
       ds.setScheduleTypeStr('periodic');
     } else {
