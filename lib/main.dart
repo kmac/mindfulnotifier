@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/router.dart' as router;
@@ -25,22 +24,13 @@ Future<void> initServices() async {
   // move into class
   // WILL NEED TO TRIGGER AN ALARM IN ORDER TO INITIALIZE SCHEDULER ON THE ALARM ISOLATE
 
-  // startScheduler();
+  startScheduler();
   print('All services started...');
 }
 
 void startScheduler() async {
   print("startScheduler");
   await schedule.initializeScheduler();
-}
-
-void onStartService() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final service = FlutterBackgroundService();
-  bool isRunning = await service.isServiceRunning();
-  print("onStartService running=$isRunning");
-  startScheduler();
-  // service.setForegroundMode(false);
 }
 
 void main() async {
@@ -59,10 +49,7 @@ void main() async {
   // we just stick the notification in shared prefs and always read from that
   // on the UI side.
 
-  // await initServices();
-
-  await FlutterBackgroundService.initialize(onStartService,
-      autoStart: true, foreground: true);
+  await initServices();
 
   runApp(
     // GetMaterialApp(MindfulNotifierApp());

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'dart:isolate';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -107,6 +108,7 @@ class MindfulNotifierWidgetController extends GetxController {
     });
 
     // Register our SendPort for the Scheduler to be able to send to our ReceivePort
+    IsolateNameServer.removePortNameMapping(toAppSendPortName);
     bool result = IsolateNameServer.registerPortWithName(
       fromSchedulerReceivePort.sendPort,
       toAppSendPortName,
@@ -230,6 +232,8 @@ class MindfulNotifierWidget extends StatelessWidget {
                       child: Text('Yes'),
                       onPressed: () {
                         controller.triggerSchedulerShutdown();
+                        sleep(Duration(seconds: 2));
+                        controller.shutdownReceivePort();
                         Navigator.pop(ctxt, true);
                       },
                     ),
@@ -254,7 +258,8 @@ class MindfulNotifierWidget extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   flex: 15,
-                  child: Obx(() => Card(
+                  child: Obx(() =>
+                      /*Card(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15.0),
                       ),
@@ -262,7 +267,8 @@ class MindfulNotifierWidget extends StatelessWidget {
                       margin: EdgeInsets.only(
                           top: 15, left: 15, right: 15, bottom: 0),
                       elevation: 5,
-                      child: Container(
+                      child: */
+                      Container(
                         margin: EdgeInsets.only(
                             top: 30, left: 30, right: 30, bottom: 30),
                         alignment: Alignment.center,
@@ -280,7 +286,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                           textAlign: TextAlign.left,
                           softWrap: true,
                         ),
-                      ))),
+                      )) /*)*/,
                 ),
                 Expanded(
                   flex: 3,

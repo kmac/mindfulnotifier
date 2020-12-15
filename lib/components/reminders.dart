@@ -2,15 +2,14 @@ import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('notifier'));
+var logger = Logger(printer: SimpleLogPrinter('reminders'));
 
 class Reminders {
-  static SharedPreferences _prefs;
-  static final String reminderKey = 'reminders';
-  static final String reminderInitializedKey = 'remindersInitialized';
+  static const String reminderKey = 'reminders';
+  static const String reminderInitializedKey = 'remindersInitialized';
 
   // This is the initial list of reminders. It will only be used until the reminders are persisted...
-  List<String> reminders = [
+  static const List<String> defaultReminders = [
     "Are you aware?",
     "Breathe deeply. There is only the present moment.",
     "Be present in this moment.",
@@ -28,6 +27,9 @@ class Reminders {
     "Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself. -- Bashō",
     // "If this fear is with me the rest of my life, that is okay.",
   ];
+  static SharedPreferences _prefs;
+
+  List<String> reminders;
   List<String> shuffledReminders;
 
   /// Public factory
@@ -44,12 +46,12 @@ class Reminders {
 
   Future<void> _init() async {
     _prefs = await SharedPreferences.getInstance();
-    await _prefs.reload();
+    reload();
     if (_prefs.containsKey(reminderInitializedKey)) {
       load();
     } else {
-      print("Initial reminders persistence");
-      persist();
+      print("Creating initial default reminders");
+      persist(defaultReminders);
     }
     shuffledReminders = reminders.toList();
   }
@@ -59,10 +61,17 @@ class Reminders {
     return shuffledReminders.first;
   }
 
-  void persist() {
+  void persist([List<String> newReminderList]) async {
+    if (newReminderList == null) {
+      newReminderList = reminders;
+    }
     print("Persisting reminders into storage");
-    _prefs.setStringList(reminderKey, reminders);
-    _prefs.setBool(reminderInitializedKey, true);
+    await _prefs.setStringList(reminderKey, newReminderList);
+    await _prefs.setBool(reminderInitializedKey, true);
+  }
+
+  void reload() async {
+    await _prefs.reload();
   }
 
   void load() {
