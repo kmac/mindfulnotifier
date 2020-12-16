@@ -127,8 +127,8 @@ class Notifier {
 
   void showNotification(String notifText) async {
     DateTime now = DateTime.now();
-    bool mute = ds.getMute();
-    bool vibrate = ds.getVibrate();
+    bool mute = ds.mute;
+    bool vibrate = ds.vibrate;
 
     AndroidNotificationSound notifSound;
     if (!useSeparateAudio) {

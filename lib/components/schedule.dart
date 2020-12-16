@@ -31,8 +31,11 @@ const int controlAlarmId = 5;
 bool androidAlarmManagerInitialized = false;
 
 Future<void> initializeScheduler() async {
+  // THIS IS ON THE 'MAIN' ISOLATE
+  // Nothing else in this file should be on the main isolate.
+
   if (!androidAlarmManagerInitialized) {
-    logger.i("Initializing AndroidAlarmManager");
+    logger.i("Initializing AndroidAlarmManager ${getCurrentIsolate()}");
     await AndroidAlarmManager.initialize();
     androidAlarmManagerInitialized = true;
   }
@@ -84,10 +87,10 @@ void controlCallback() async {
   bool wasInit = await Scheduler.checkInitialized();
   if (useHeartbeat) {
     Scheduler.setInfoMessage(
-        "Received heartbeat callback [${wasInit ? 'T' : 'F'}/${DateTime.now()}]");
+        "heartbeat callback [${wasInit ? 'T' : 'F'}/${formatHHMMSS(DateTime.now())}]");
   } else {
     Scheduler.setInfoMessage(
-        "Received controlCallback [${wasInit ? 'T' : 'F'}/${DateTime.now()}]");
+        "controlCallback [${wasInit ? 'T' : 'F'}/${formatHHMMSS(DateTime.now())}]");
   }
 }
 
@@ -97,7 +100,7 @@ class Scheduler {
   static bool running = false;
   static bool initialized = false;
 
-  static ScheduleDataStore schedDS;
+  static ScheduleDataStoreRO schedDS;
   bool alarmManagerInitialized = false;
   Notifier _notifier;
   static Reminders _reminders;
@@ -115,13 +118,16 @@ class Scheduler {
   Future<void> init() async {
     logger.i(
         "Initializing scheduler, initialized=$initialized ${getCurrentIsolate()}");
-    schedDS = await ScheduleDataStore.getInstance();
+    // schedDS = await ScheduleDataStore.getInstance();
     initializeFromAppIsolateReceivePort();
     _notifier = Notifier();
     _notifier.init();
     _reminders = await Reminders.create();
     initialized = true;
-    if (schedDS.getEnable()) {
+    // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
+    schedDS ??=
+        (await ScheduleDataStore.getInstance()).getScheduleDataStoreRO();
+    if (schedDS.enable) {
       logger.i("Re-enabling on init!");
       enable();
     }
@@ -152,7 +158,8 @@ class Scheduler {
       Scheduler scheduler = Scheduler();
       switch (key) {
         case 'enable':
-          scheduler.enable();
+          ScheduleDataStoreRO dataStoreRO = map.values.first;
+          scheduler.enable(dataStoreRO);
           // scheduler.reenable();
           break;
         case 'disable':
@@ -187,20 +194,23 @@ class Scheduler {
   }
 
   static void setMessage(String msg) async {
-    schedDS.setMessage(msg);
+    // schedDS.message = msg;
     var toAppSendPort =
         IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
     toAppSendPort?.send({'message': msg});
   }
 
   static void setInfoMessage(String msg) async {
-    schedDS.setInfoMessage(msg);
+    // schedDS.infoMessage = msg;
     var toAppSendPort =
         IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
     toAppSendPort?.send({'infoMessage': msg});
   }
 
-  void enable() {
+  void enable([ScheduleDataStoreRO dataStoreRO]) {
+    if (dataStoreRO != null) {
+      schedDS = dataStoreRO;
+    }
     if (running) {
       disable();
     }
@@ -209,7 +219,7 @@ class Scheduler {
     // PROBLEM: the SharedPreference changes are written asynchronously to disk.
     // There is a cache, but we don't see the cache changes here because we're in
     // a different isolate. We're going to need to send the changes over the receive port??
-    schedDS.reload();
+    // schedDS.reload();
     // schedDS.dumpToLog();
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
@@ -235,30 +245,30 @@ class Scheduler {
   }
 
   DelegatedScheduler _buildSchedulerDelegate(Scheduler scheduler) {
-    logger.i('Building scheduler delegate: ${schedDS.getScheduleTypeStr()}');
+    logger.i('Building scheduler delegate: ${schedDS.scheduleTypeStr}');
     var scheduleType;
-    if (schedDS.getScheduleTypeStr() == 'periodic') {
+    if (schedDS.scheduleTypeStr == 'periodic') {
       scheduleType = ScheduleType.PERIODIC;
     } else {
       scheduleType = ScheduleType.RANDOM;
     }
     QuietHours quietHours = new QuietHours(
         new TimeOfDay(
-            hour: schedDS.getQuietHoursStartHour(),
-            minute: schedDS.getQuietHoursStartMinute()),
+            hour: schedDS.quietHoursStartHour,
+            minute: schedDS.quietHoursStartMinute),
         new TimeOfDay(
-            hour: schedDS.getQuietHoursEndHour(),
-            minute: schedDS.getQuietHoursEndMinute()));
+            hour: schedDS.quietHoursEndHour,
+            minute: schedDS.quietHoursEndMinute));
     var delegate;
     if (scheduleType == ScheduleType.PERIODIC) {
-      delegate = PeriodicScheduler(scheduler, quietHours,
-          schedDS.getPeriodicHours(), schedDS.getPeriodicMinutes());
+      delegate = PeriodicScheduler(scheduler, quietHours, schedDS.periodicHours,
+          schedDS.periodicMinutes);
     } else {
       delegate = RandomScheduler(
           scheduler,
           quietHours,
-          schedDS.getRandomMinHours() * 60 + schedDS.getRandomMinMinutes(),
-          schedDS.getRandomMaxHours() * 60 + schedDS.getRandomMaxMinutes());
+          schedDS.randomMinHours * 60 + schedDS.randomMinMinutes,
+          schedDS.randomMaxHours * 60 + schedDS.randomMaxMinutes);
     }
     return delegate;
   }
@@ -415,8 +425,7 @@ class PeriodicScheduler extends DelegatedScheduler {
     }
     DateTime startTime = getInitialStart();
     logger.d("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
-    var firstNotifDate =
-        formatDate(startTime, [h, ':', nn, " ", am]).toString();
+    var firstNotifDate = formatHHMMSS(startTime);
     //controller.setMessage("First notification scheduled for $firstNotifDate");
     Scheduler.setInfoMessage(
         "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}," +
@@ -470,8 +479,7 @@ class RandomScheduler extends DelegatedScheduler {
           "In quiet hours, next reminder at ${nextDate.hour}:${timeNumToString(nextDate.minute)}");
     } else {
       logger.i("Scheduling next random notification at $nextDate");
-      var timestr =
-          formatDate(nextDate, [hh, ':', nn, ':', ss, " ", am]).toString();
+      var timestr = formatHHMMSS(nextDate);
       // This is temporary (switch to above when solid):
       timestr += " (${nextMinutes}m/$minMinutes/$maxMinutes)";
       Scheduler.setInfoMessage("Next notification at $timestr");

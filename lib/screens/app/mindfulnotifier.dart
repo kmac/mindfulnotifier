@@ -11,9 +11,8 @@ import 'package:logger/logger.dart';
 
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
-import 'package:date_format/date_format.dart';
 import 'package:mindfulnotifier/components/logging.dart';
-// import 'package:mindfulnotifier/components/schedule.dart' as schedule;
+import 'package:mindfulnotifier/components/utils.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('mindfulnotifier'));
 
@@ -66,11 +65,11 @@ class MindfulNotifierWidgetController extends GetxController {
   void init() async {
     ds = await ScheduleDataStore.getInstance();
     initializeFromSchedulerReceivePort();
-    _enabled.value = ds.getEnable();
-    _mute.value = ds.getMute();
-    _vibrate.value = ds.getVibrate();
-    _message.value = ds.getMessage();
-    _infoMessage.value = ds.getInfoMessage();
+    _enabled.value = ds.enable;
+    _mute.value = ds.mute;
+    _vibrate.value = ds.vibrate;
+    _message.value = ds.message;
+    _infoMessage.value = ds.infoMessage;
     initializeNotifications();
   }
 
@@ -134,16 +133,16 @@ class MindfulNotifierWidgetController extends GetxController {
 
   void setMessage(msg) {
     _message.value = msg;
-    ds.setMessage(_message.value);
+    ds.message = _message.value;
   }
 
   void setInfoMessage(msg) {
     _infoMessage.value = msg;
-    ds.setInfoMessage(_infoMessage.value);
+    ds.infoMessage = _infoMessage.value;
   }
 
   void handleEnabled(enabled) {
-    ds.setEnable(enabled);
+    ds.enable = enabled;
     if (enabled) {
       // if (_message.value == 'Disabled') {
       //   setMessage('Enabled. Waiting for notification...');
@@ -156,7 +155,7 @@ class MindfulNotifierWidgetController extends GetxController {
       //
       toSchedulerSendPort ??=
           IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
-      toSchedulerSendPort?.send({'enable': '1'});
+      toSchedulerSendPort?.send({'enable': ds.getScheduleDataStoreRO()});
     } else {
       // setMessage('Disabled');
       setInfoMessage('Disabled');
@@ -171,11 +170,11 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void handleMute(bool mute) {
-    ds.setMute(mute);
+    ds.mute = mute;
   }
 
   void handleVibrate(bool vibrate) {
-    ds.setVibrate(vibrate);
+    ds.vibrate = vibrate;
   }
 
   // Future<void> _handlePermissions() async {
@@ -188,9 +187,7 @@ class MindfulNotifierWidgetController extends GetxController {
   // }
 
   void setNextNotification(DateTime dateTime) {
-    var timestr =
-        formatDate(dateTime, [hh, ':', nn, ':', ss, " ", am]).toString();
-    setInfoMessage("Next notification at $timestr");
+    setInfoMessage("Next notification at ${formatHHMMSS(dateTime)}");
   }
 
   void handleScheduleOnTap() {

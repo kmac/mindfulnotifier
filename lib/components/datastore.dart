@@ -4,7 +4,128 @@ import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('datastore'));
 
-class ScheduleDataStore {
+abstract class ScheduleDataStoreBase {
+  bool get enable;
+  bool get mute;
+
+  bool get vibrate;
+  String get scheduleTypeStr;
+  int get periodicHours;
+  int get periodicMinutes;
+  int get randomMinHours;
+  int get randomMinMinutes;
+  int get randomMaxHours;
+  int get randomMaxMinutes;
+  int get quietHoursStartHour;
+  int get quietHoursStartMinute;
+  int get quietHoursEndHour;
+  int get quietHoursEndMinute;
+  String get message;
+  String get infoMessage;
+}
+
+class ScheduleDataStoreRO implements ScheduleDataStoreBase {
+  final bool _enable;
+  final bool _mute;
+  final bool _vibrate;
+  final String _scheduleTypeStr;
+  final int _periodicHours;
+  final int _periodicMinutes;
+  final int _randomMinHours;
+  final int _randomMinMinutes;
+  final int _randomMaxHours;
+  final int _randomMaxMinutes;
+  final int _quietHoursStartHour;
+  final int _quietHoursStartMinute;
+  final int _quietHoursEndHour;
+  final int _quietHoursEndMinute;
+  final String _message;
+  final String _infoMessage;
+
+  ScheduleDataStoreRO(
+      this._enable,
+      this._mute,
+      this._vibrate,
+      this._scheduleTypeStr,
+      this._periodicHours,
+      this._periodicMinutes,
+      this._randomMinHours,
+      this._randomMinMinutes,
+      this._randomMaxHours,
+      this._randomMaxMinutes,
+      this._quietHoursStartHour,
+      this._quietHoursStartMinute,
+      this._quietHoursEndHour,
+      this._quietHoursEndMinute,
+      this._message,
+      this._infoMessage);
+
+  bool get enable {
+    return _enable;
+  }
+
+  bool get mute {
+    return _mute;
+  }
+
+  bool get vibrate {
+    return _vibrate;
+  }
+
+  String get scheduleTypeStr {
+    return _scheduleTypeStr;
+  }
+
+  int get periodicHours {
+    return _periodicHours;
+  }
+
+  int get periodicMinutes {
+    return _periodicMinutes;
+  }
+
+  int get randomMinHours {
+    return _randomMinHours;
+  }
+
+  int get randomMinMinutes {
+    return _randomMinMinutes;
+  }
+
+  int get randomMaxHours {
+    return _randomMaxHours;
+  }
+
+  int get randomMaxMinutes {
+    return _randomMaxMinutes;
+  }
+
+  int get quietHoursStartHour {
+    return _quietHoursStartHour;
+  }
+
+  int get quietHoursStartMinute {
+    return _quietHoursStartMinute;
+  }
+
+  int get quietHoursEndHour {
+    return _quietHoursEndHour;
+  }
+
+  int get quietHoursEndMinute {
+    return _quietHoursEndMinute;
+  }
+
+  String get message {
+    return _message;
+  }
+
+  String get infoMessage {
+    return _infoMessage;
+  }
+}
+
+class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String enabledKey = 'enabled';
   static const String muteKey = 'mute';
   static const String vibrateKey = 'vibrate';
@@ -66,6 +187,7 @@ class ScheduleDataStore {
   }
 
   Future<void> _init() async {
+    logger.i("Initializing SharedPreferences");
     _prefs = await SharedPreferences.getInstance();
   }
 
@@ -98,179 +220,215 @@ class ScheduleDataStore {
     }
   }
 
-  void setEnable(bool value) async {
-    await _prefs.setBool(ScheduleDataStore.enabledKey, value);
+  set enable(bool value) {
+    _prefs.setBool(ScheduleDataStore.enabledKey, value);
   }
 
-  bool getEnable() {
+  @override
+  bool get enable {
     if (!_prefs.containsKey(ScheduleDataStore.enabledKey)) {
-      setEnable(false);
+      enable = false;
     }
     return (_prefs.getBool(ScheduleDataStore.enabledKey));
   }
 
-  void setMute(bool value) async {
-    await _prefs.setBool(ScheduleDataStore.muteKey, value);
+  set mute(bool value) {
+    _prefs.setBool(ScheduleDataStore.muteKey, value);
   }
 
-  bool getMute() {
+  @override
+  bool get mute {
     if (!_prefs.containsKey(ScheduleDataStore.muteKey)) {
-      setMute(false);
+      mute = false;
     }
     return (_prefs.getBool(ScheduleDataStore.muteKey));
   }
 
-  void setVibrate(bool value) async {
-    await _prefs.setBool(ScheduleDataStore.vibrateKey, value);
+  set vibrate(bool value) {
+    _prefs.setBool(ScheduleDataStore.vibrateKey, value);
   }
 
-  bool getVibrate() {
+  @override
+  bool get vibrate {
     if (!_prefs.containsKey(ScheduleDataStore.vibrateKey)) {
-      setVibrate(false);
+      vibrate = false;
     }
     return (_prefs.getBool(ScheduleDataStore.vibrateKey));
   }
 
-  void setScheduleTypeStr(String value) async {
-    await _prefs.setString(ScheduleDataStore.scheduleTypeKey, value);
+  set scheduleTypeStr(String value) {
+    _prefs.setString(ScheduleDataStore.scheduleTypeKey, value);
   }
 
-  String getScheduleTypeStr() {
+  @override
+  String get scheduleTypeStr {
     if (!_prefs.containsKey(ScheduleDataStore.scheduleTypeKey)) {
-      setScheduleTypeStr(defaultScheduleTypeStr);
+      scheduleTypeStr = defaultScheduleTypeStr;
     }
     return (_prefs.getString(ScheduleDataStore.scheduleTypeKey));
   }
 
-  void setPeriodicHours(int value) async {
-    await _prefs.setInt(periodicHoursKey, value);
+  set periodicHours(int value) {
+    _prefs.setInt(periodicHoursKey, value);
   }
 
-  int getPeriodicHours() {
+  @override
+  int get periodicHours {
     if (!_prefs.containsKey(ScheduleDataStore.periodicHoursKey)) {
-      setPeriodicHours(defaultPeriodicHours);
+      periodicHours = defaultPeriodicHours;
     }
     return (_prefs.getInt(ScheduleDataStore.periodicHoursKey));
   }
 
-  void setPeriodicMinutes(int value) async {
-    await _prefs.setInt(periodicMinutesKey, value);
+  set periodicMinutes(int value) {
+    _prefs.setInt(periodicMinutesKey, value);
   }
 
-  int getPeriodicMinutes() {
+  @override
+  int get periodicMinutes {
     if (!_prefs.containsKey(ScheduleDataStore.periodicMinutesKey)) {
-      setPeriodicMinutes(defaultPeriodicMinutes);
+      periodicMinutes = defaultPeriodicMinutes;
     }
     return (_prefs.getInt(ScheduleDataStore.periodicMinutesKey));
   }
 
-  void setRandomMinHours(int value) async {
-    await _prefs.setInt(randomMinHoursKey, value);
+  set randomMinHours(int value) {
+    _prefs.setInt(randomMinHoursKey, value);
   }
 
-  int getRandomMinHours() {
+  @override
+  int get randomMinHours {
     if (!_prefs.containsKey(ScheduleDataStore.randomMinHoursKey)) {
-      setRandomMinHours(defaultRandomMinHours);
+      randomMinHours = defaultRandomMinHours;
     }
     return (_prefs.getInt(ScheduleDataStore.randomMinHoursKey));
   }
 
-  void setRandomMinMinutes(int value) async {
-    await _prefs.setInt(randomMinMinutesKey, value);
+  set randomMinMinutes(int value) {
+    _prefs.setInt(randomMinMinutesKey, value);
   }
 
-  int getRandomMinMinutes() {
+  @override
+  int get randomMinMinutes {
     if (!_prefs.containsKey(ScheduleDataStore.randomMinMinutesKey)) {
-      setRandomMinMinutes(defaultRandomMinMinutes);
+      randomMinMinutes = defaultRandomMinMinutes;
     }
     return (_prefs.getInt(ScheduleDataStore.randomMinMinutesKey));
   }
 
-  void setRandomMaxHours(int value) async {
-    await _prefs.setInt(randomMaxHoursKey, value);
+  set randomMaxHours(int value) {
+    _prefs.setInt(randomMaxHoursKey, value);
   }
 
-  int getRandomMaxHours() {
+  @override
+  int get randomMaxHours {
     if (!_prefs.containsKey(ScheduleDataStore.randomMaxHoursKey)) {
-      setRandomMaxHours(defaultRandomMaxHours);
+      randomMaxHours = defaultRandomMaxHours;
     }
     return (_prefs.getInt(ScheduleDataStore.randomMaxHoursKey));
   }
 
-  void setRandomMaxMinutes(int value) async {
-    await _prefs.setInt(randomMaxMinutesKey, value);
+  set randomMaxMinutes(int value) {
+    _prefs.setInt(randomMaxMinutesKey, value);
   }
 
-  int getRandomMaxMinutes() {
+  @override
+  int get randomMaxMinutes {
     if (!_prefs.containsKey(ScheduleDataStore.randomMaxMinutesKey)) {
-      setRandomMaxMinutes(defaultRandomMaxMinutes);
+      randomMaxMinutes = defaultRandomMaxMinutes;
     }
     return (_prefs.getInt(ScheduleDataStore.randomMaxMinutesKey));
   }
 
-  void setQuietHoursStartHour(int value) async {
-    await _prefs.setInt(quietHoursStartHourKey, value);
+  set quietHoursStartHour(int value) {
+    _prefs.setInt(quietHoursStartHourKey, value);
   }
 
-  int getQuietHoursStartHour() {
+  @override
+  int get quietHoursStartHour {
     if (!_prefs.containsKey(ScheduleDataStore.quietHoursStartHourKey)) {
-      setQuietHoursStartHour(defaultQuietHoursStartHour);
+      quietHoursStartHour = defaultQuietHoursStartHour;
     }
     return (_prefs.getInt(ScheduleDataStore.quietHoursStartHourKey));
   }
 
-  void setQuietHoursStartMinute(int value) async {
-    await _prefs.setInt(quietHoursStartMinuteKey, value);
+  set quietHoursStartMinute(int value) {
+    _prefs.setInt(quietHoursStartMinuteKey, value);
   }
 
-  int getQuietHoursStartMinute() {
+  @override
+  int get quietHoursStartMinute {
     if (!_prefs.containsKey(ScheduleDataStore.quietHoursStartMinuteKey)) {
-      setQuietHoursStartMinute(defaultQuietHoursStartMinute);
+      quietHoursStartMinute = defaultQuietHoursStartMinute;
     }
     return (_prefs.getInt(ScheduleDataStore.quietHoursStartMinuteKey));
   }
 
-  void setQuietHoursEndHour(int value) async {
-    await _prefs.setInt(quietHoursEndHourKey, value);
+  set quietHoursEndHour(int value) {
+    _prefs.setInt(quietHoursEndHourKey, value);
   }
 
-  int getQuietHoursEndHour() {
+  @override
+  int get quietHoursEndHour {
     if (!_prefs.containsKey(ScheduleDataStore.quietHoursEndHourKey)) {
-      setQuietHoursEndHour(defaultQuietHoursEndHour);
+      quietHoursEndHour = defaultQuietHoursEndHour;
     }
     return (_prefs.getInt(ScheduleDataStore.quietHoursEndHourKey));
   }
 
-  void setQuietHoursEndMinute(int value) async {
-    await _prefs.setInt(quietHoursEndMinuteKey, value);
+  set quietHoursEndMinute(int value) {
+    _prefs.setInt(quietHoursEndMinuteKey, value);
   }
 
-  int getQuietHoursEndMinute() {
+  @override
+  int get quietHoursEndMinute {
     if (!_prefs.containsKey(ScheduleDataStore.quietHoursEndMinuteKey)) {
-      setQuietHoursEndMinute(defaultQuietHoursEndMinute);
+      quietHoursEndMinute = defaultQuietHoursEndMinute;
     }
     return (_prefs.getInt(ScheduleDataStore.quietHoursEndMinuteKey));
   }
 
-  void setMessage(String value) async {
-    await _prefs.setString(messageKey, value);
+  set message(String value) {
+    _prefs.setString(messageKey, value);
   }
 
-  String getMessage() {
+  @override
+  String get message {
     if (!_prefs.containsKey(ScheduleDataStore.messageKey)) {
-      setMessage(defaultMessage);
+      message = defaultMessage;
     }
     return (_prefs.getString(ScheduleDataStore.messageKey));
   }
 
-  void setInfoMessage(String value) async {
-    await _prefs.setString(infoMessageKey, value);
+  set infoMessage(String value) {
+    _prefs.setString(infoMessageKey, value);
   }
 
-  String getInfoMessage() {
+  @override
+  String get infoMessage {
     if (!_prefs.containsKey(ScheduleDataStore.infoMessageKey)) {
-      setInfoMessage(defaultInfoMessage);
+      infoMessage = defaultInfoMessage;
     }
     return (_prefs.getString(ScheduleDataStore.infoMessageKey));
+  }
+
+  ScheduleDataStoreRO getScheduleDataStoreRO() {
+    return ScheduleDataStoreRO(
+        enable,
+        mute,
+        vibrate,
+        scheduleTypeStr,
+        periodicHours,
+        periodicMinutes,
+        randomMinHours,
+        randomMinMinutes,
+        randomMaxHours,
+        randomMaxMinutes,
+        quietHoursStartHour,
+        quietHoursStartMinute,
+        quietHoursEndHour,
+        quietHoursEndMinute,
+        message,
+        infoMessage);
   }
 }
