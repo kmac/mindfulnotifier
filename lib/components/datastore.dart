@@ -5,7 +5,7 @@ import 'package:mindfulnotifier/components/logging.dart';
 var logger = Logger(printer: SimpleLogPrinter('datastore'));
 
 abstract class ScheduleDataStoreBase {
-  bool get enable;
+  bool get enabled;
   bool get mute;
 
   bool get vibrate;
@@ -60,7 +60,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._message,
       this._infoMessage);
 
-  bool get enable {
+  bool get enabled {
     return _enable;
   }
 
@@ -220,14 +220,14 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     }
   }
 
-  set enable(bool value) {
+  set enabled(bool value) {
     _prefs.setBool(ScheduleDataStore.enabledKey, value);
   }
 
   @override
-  bool get enable {
+  bool get enabled {
     if (!_prefs.containsKey(ScheduleDataStore.enabledKey)) {
-      enable = false;
+      enabled = false;
     }
     return (_prefs.getBool(ScheduleDataStore.enabledKey));
   }
@@ -414,7 +414,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
 
   ScheduleDataStoreRO getScheduleDataStoreRO() {
     return ScheduleDataStoreRO(
-        enable,
+        enabled,
         mute,
         vibrate,
         scheduleTypeStr,

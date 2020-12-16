@@ -65,7 +65,7 @@ class MindfulNotifierWidgetController extends GetxController {
   void init() async {
     ds = await ScheduleDataStore.getInstance();
     initializeFromSchedulerReceivePort();
-    _enabled.value = ds.enable;
+    _enabled.value = ds.enabled;
     _mute.value = ds.mute;
     _vibrate.value = ds.vibrate;
     _message.value = ds.message;
@@ -142,7 +142,7 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void handleEnabled(enabled) {
-    ds.enable = enabled;
+    ds.enabled = enabled;
     if (enabled) {
       // if (_message.value == 'Disabled') {
       //   setMessage('Enabled. Waiting for notification...');

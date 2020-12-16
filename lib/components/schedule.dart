@@ -127,7 +127,7 @@ class Scheduler {
     // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
     schedDS ??=
         (await ScheduleDataStore.getInstance()).getScheduleDataStoreRO();
-    if (schedDS.enable) {
+    if (schedDS.enabled) {
       logger.i("Re-enabling on init!");
       enable();
     }
