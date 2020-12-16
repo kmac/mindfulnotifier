@@ -42,12 +42,11 @@ dependencies:
   # time_range: ^0.5.0
   date_format: ^1.0.9
   #permission_handler: ^5.0.1+1
-  get:
+  get: ^3.23.1
   logger: ^0.9.4
   logger_flutter:
     git: https://github.com/ewertonrp/logger_flutter.git
   # logger_flutter: ^0.7.1
-  # flutter_background_service: ^0.0.1+19
   rflutter_alert: ^1.1.0
 
 dev_dependencies:

@@ -25,7 +25,7 @@ abstract class ScheduleDataStoreBase {
 }
 
 class ScheduleDataStoreRO implements ScheduleDataStoreBase {
-  final bool _enable;
+  final bool _enabled;
   final bool _mute;
   final bool _vibrate;
   final String _scheduleTypeStr;
@@ -43,7 +43,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final String _infoMessage;
 
   ScheduleDataStoreRO(
-      this._enable,
+      this._enabled,
       this._mute,
       this._vibrate,
       this._scheduleTypeStr,
@@ -61,7 +61,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._infoMessage);
 
   bool get enabled {
-    return _enable;
+    return _enabled;
   }
 
   bool get mute {
@@ -175,12 +175,6 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _instance;
   }
 
-  // static Future<ScheduleDataStore> getNewInstance() async {
-  //   ScheduleDataStore newInstance = ScheduleDataStore._create();
-  //   await newInstance._init();
-  //   return newInstance;
-  // }
-
   /// Private constructor
   ScheduleDataStore._create() {
     logger.i("Creating DataStore");
@@ -191,26 +185,8 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  // ScheduleDataStore._internal() {
-  //   _instance = this;
-  //   _init();
-  // }
-  // factory ScheduleDataStore() => _instance ?? ScheduleDataStore._internal();
-  // void _init() async {
-  //   _prefs = await SharedPreferences.getInstance();
-  //   reload();
-  // }
-
   void reload() async {
     await _prefs.reload();
-  }
-
-  void dumpToLogOne() {
-    StringBuffer sb = StringBuffer("ScheduleDataStore:\n");
-    for (String key in _prefs.getKeys()) {
-      sb.write("$key=${_prefs.get(key)}\n");
-    }
-    logger.d(sb);
   }
 
   void dumpToLog() {
@@ -229,7 +205,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.enabledKey)) {
       enabled = false;
     }
-    return (_prefs.getBool(ScheduleDataStore.enabledKey));
+    return _prefs.getBool(ScheduleDataStore.enabledKey);
   }
 
   set mute(bool value) {
@@ -241,7 +217,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.muteKey)) {
       mute = false;
     }
-    return (_prefs.getBool(ScheduleDataStore.muteKey));
+    return _prefs.getBool(ScheduleDataStore.muteKey);
   }
 
   set vibrate(bool value) {
@@ -253,7 +229,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.vibrateKey)) {
       vibrate = false;
     }
-    return (_prefs.getBool(ScheduleDataStore.vibrateKey));
+    return _prefs.getBool(ScheduleDataStore.vibrateKey);
   }
 
   set scheduleTypeStr(String value) {
@@ -265,7 +241,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.scheduleTypeKey)) {
       scheduleTypeStr = defaultScheduleTypeStr;
     }
-    return (_prefs.getString(ScheduleDataStore.scheduleTypeKey));
+    return _prefs.getString(ScheduleDataStore.scheduleTypeKey);
   }
 
   set periodicHours(int value) {
@@ -277,7 +253,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.periodicHoursKey)) {
       periodicHours = defaultPeriodicHours;
     }
-    return (_prefs.getInt(ScheduleDataStore.periodicHoursKey));
+    return _prefs.getInt(ScheduleDataStore.periodicHoursKey);
   }
 
   set periodicMinutes(int value) {
@@ -289,7 +265,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.periodicMinutesKey)) {
       periodicMinutes = defaultPeriodicMinutes;
     }
-    return (_prefs.getInt(ScheduleDataStore.periodicMinutesKey));
+    return _prefs.getInt(ScheduleDataStore.periodicMinutesKey);
   }
 
   set randomMinHours(int value) {
@@ -301,7 +277,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.randomMinHoursKey)) {
       randomMinHours = defaultRandomMinHours;
     }
-    return (_prefs.getInt(ScheduleDataStore.randomMinHoursKey));
+    return _prefs.getInt(ScheduleDataStore.randomMinHoursKey);
   }
 
   set randomMinMinutes(int value) {
@@ -313,7 +289,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.randomMinMinutesKey)) {
       randomMinMinutes = defaultRandomMinMinutes;
     }
-    return (_prefs.getInt(ScheduleDataStore.randomMinMinutesKey));
+    return _prefs.getInt(ScheduleDataStore.randomMinMinutesKey);
   }
 
   set randomMaxHours(int value) {
@@ -325,7 +301,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.randomMaxHoursKey)) {
       randomMaxHours = defaultRandomMaxHours;
     }
-    return (_prefs.getInt(ScheduleDataStore.randomMaxHoursKey));
+    return _prefs.getInt(ScheduleDataStore.randomMaxHoursKey);
   }
 
   set randomMaxMinutes(int value) {
@@ -337,7 +313,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.randomMaxMinutesKey)) {
       randomMaxMinutes = defaultRandomMaxMinutes;
     }
-    return (_prefs.getInt(ScheduleDataStore.randomMaxMinutesKey));
+    return _prefs.getInt(ScheduleDataStore.randomMaxMinutesKey);
   }
 
   set quietHoursStartHour(int value) {
@@ -349,7 +325,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.quietHoursStartHourKey)) {
       quietHoursStartHour = defaultQuietHoursStartHour;
     }
-    return (_prefs.getInt(ScheduleDataStore.quietHoursStartHourKey));
+    return _prefs.getInt(ScheduleDataStore.quietHoursStartHourKey);
   }
 
   set quietHoursStartMinute(int value) {
@@ -361,7 +337,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.quietHoursStartMinuteKey)) {
       quietHoursStartMinute = defaultQuietHoursStartMinute;
     }
-    return (_prefs.getInt(ScheduleDataStore.quietHoursStartMinuteKey));
+    return _prefs.getInt(ScheduleDataStore.quietHoursStartMinuteKey);
   }
 
   set quietHoursEndHour(int value) {
@@ -373,7 +349,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.quietHoursEndHourKey)) {
       quietHoursEndHour = defaultQuietHoursEndHour;
     }
-    return (_prefs.getInt(ScheduleDataStore.quietHoursEndHourKey));
+    return _prefs.getInt(ScheduleDataStore.quietHoursEndHourKey);
   }
 
   set quietHoursEndMinute(int value) {
@@ -385,7 +361,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.quietHoursEndMinuteKey)) {
       quietHoursEndMinute = defaultQuietHoursEndMinute;
     }
-    return (_prefs.getInt(ScheduleDataStore.quietHoursEndMinuteKey));
+    return _prefs.getInt(ScheduleDataStore.quietHoursEndMinuteKey);
   }
 
   set message(String value) {
@@ -397,7 +373,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.messageKey)) {
       message = defaultMessage;
     }
-    return (_prefs.getString(ScheduleDataStore.messageKey));
+    return _prefs.getString(ScheduleDataStore.messageKey);
   }
 
   set infoMessage(String value) {
@@ -409,7 +385,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     if (!_prefs.containsKey(ScheduleDataStore.infoMessageKey)) {
       infoMessage = defaultInfoMessage;
     }
-    return (_prefs.getString(ScheduleDataStore.infoMessageKey));
+    return _prefs.getString(ScheduleDataStore.infoMessageKey);
   }
 
   ScheduleDataStoreRO getScheduleDataStoreRO() {

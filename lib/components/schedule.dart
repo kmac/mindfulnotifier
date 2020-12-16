@@ -87,10 +87,10 @@ void controlCallback() async {
   bool wasInit = await Scheduler.checkInitialized();
   if (useHeartbeat) {
     Scheduler.setInfoMessage(
-        "heartbeat callback [${wasInit ? 'T' : 'F'}/${formatHHMMSS(DateTime.now())}]");
+        "Heartbeat [${wasInit ? 'T' : 'F'}/${formatHHMMSS(DateTime.now())}]");
   } else {
     Scheduler.setInfoMessage(
-        "controlCallback [${wasInit ? 'T' : 'F'}/${formatHHMMSS(DateTime.now())}]");
+        "Control [${wasInit ? 'T' : 'F'}/${formatHHMMSS(DateTime.now())}]");
   }
 }
 
@@ -165,8 +165,9 @@ class Scheduler {
         case 'disable':
           scheduler.disable();
           break;
-        case 'reenable':
-          scheduler.reenable();
+        case 'restart':
+          ScheduleDataStoreRO dataStoreRO = map.values.first;
+          scheduler.restart(dataStoreRO);
           break;
         case 'shutdown':
           scheduler.shutdown();
@@ -216,11 +217,6 @@ class Scheduler {
     }
     logger.i("enable");
     enableHeartbeat();
-    // PROBLEM: the SharedPreference changes are written asynchronously to disk.
-    // There is a cache, but we don't see the cache changes here because we're in
-    // a different isolate. We're going to need to send the changes over the receive port??
-    // schedDS.reload();
-    // schedDS.dumpToLog();
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
     delegate.scheduleNext();
@@ -234,10 +230,10 @@ class Scheduler {
     running = false;
   }
 
-  void reenable() {
+  void restart(ScheduleDataStoreRO store) {
     disable();
     sleep(Duration(seconds: 1));
-    enable();
+    enable(store);
   }
 
   void initialScheduleComplete() {
@@ -425,7 +421,7 @@ class PeriodicScheduler extends DelegatedScheduler {
     }
     DateTime startTime = getInitialStart();
     logger.d("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
-    var firstNotifDate = formatHHMMSS(startTime);
+    var firstNotifDate = formatHHMM(startTime);
     //controller.setMessage("First notification scheduled for $firstNotifDate");
     Scheduler.setInfoMessage(
         "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}," +

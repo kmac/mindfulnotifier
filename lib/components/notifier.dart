@@ -127,6 +127,8 @@ class Notifier {
 
   void showNotification(String notifText) async {
     DateTime now = DateTime.now();
+    ds.reload();
+    // WHY IS THIS NOT BEING UPDATED
     bool mute = ds.mute;
     bool vibrate = ds.vibrate;
 

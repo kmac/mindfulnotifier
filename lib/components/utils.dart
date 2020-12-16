@@ -7,8 +7,13 @@ String timeNumToString(int source) {
   return source.toString();
 }
 
-String formatHHMMSS(DateTime dt) {
+String formatHHMM(DateTime dt) {
   return formatDate(
           DateTime(2019, 08, 1, dt.hour, dt.minute), [hh, ':', nn, " ", am])
       .toString();
+}
+
+String formatHHMMSS(DateTime dt) {
+  return formatDate(DateTime(2019, 08, 1, dt.hour, dt.minute, dt.second),
+      [hh, ':', nn, ':', ss, " ", am]).toString();
 }

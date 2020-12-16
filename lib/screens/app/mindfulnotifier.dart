@@ -120,8 +120,22 @@ class MindfulNotifierWidgetController extends GetxController {
   void triggerSchedulerShutdown() {
     // Send to the alarm isolate
     toSchedulerSendPort ??=
-        IsolateNameServer.lookupPortByName(toAppSendPortName);
+        IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
     toSchedulerSendPort?.send({'shutdown': '1'});
+  }
+
+  void triggerSchedulerRestart() {
+    if (_enabled.value) {
+      logger.i("sending restart to scheduler");
+      // Send to the alarm isolate
+      toSchedulerSendPort ??=
+          IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
+      toSchedulerSendPort?.send({'restart': ds.getScheduleDataStoreRO()});
+      // alert user
+      Get.snackbar(
+          "Restarting", "Configuration changed, restarting the notifier.",
+          snackPosition: SnackPosition.BOTTOM, instantInit: false);
+    }
   }
 
   void shutdownReceivePort() async {
@@ -148,6 +162,9 @@ class MindfulNotifierWidgetController extends GetxController {
       //   setMessage('Enabled. Waiting for notification...');
       // }
       // setInfoMessage('Enabled');
+      if (_message.value == 'In quiet hours') {
+        setMessage('Enabled. Waiting for notification...');
+      }
       setInfoMessage('Enabled. Waiting for notification.');
 
       // THIS IS GETTING SENT BEFORE THE SHARED PREF IS COMMITTING??? MUST BE.
@@ -280,7 +297,8 @@ class MindfulNotifierWidget extends StatelessWidget {
                               fontStyle: FontStyle.italic,
                               fontFamily: 'Open Sans',
                               fontSize: 30),
-                          textAlign: TextAlign.left,
+                          // textAlign: TextAlign.left,
+                          textAlign: TextAlign.center,
                           softWrap: true,
                         ),
                       )) /*)*/,

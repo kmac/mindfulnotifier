@@ -11,6 +11,7 @@ import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/components/logging.dart';
+import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('schedulesview'));
 
@@ -23,6 +24,9 @@ class SchedulesWidgetController extends GetxController {
   final periodicMinutes = 0.obs;
   final randomMinDateTime = DateTime.parse("1970-01-01 00:45:00Z").obs;
   final randomMaxDateTime = DateTime.parse("1970-01-01 01:30:00Z").obs;
+  final scheduleDirty = false.obs;
+  final quietHoursStartPicked = TimeOfDay(hour: 1, minute: 0).obs;
+  final quietHoursEndPicked = TimeOfDay(hour: 1, minute: 0).obs;
 
   TextEditingController quietHoursStartTimeController = TextEditingController();
   TextEditingController quietHoursEndTimeController = TextEditingController();
@@ -57,20 +61,21 @@ class SchedulesWidgetController extends GetxController {
     } else {
       scheduleType.value = ScheduleType.random;
     }
+
     periodicHours.value = ds.periodicHours;
     periodicMinutes.value = ds.periodicMinutes;
     randomMinDateTime.value =
         _getDateTime(ds.randomMinHours, ds.randomMinMinutes);
     randomMaxDateTime.value =
         _getDateTime(ds.randomMaxHours, ds.randomMaxMinutes);
-    setQuietHoursStart(TimeOfDay(
-        hour: ds.quietHoursStartHour, minute: ds.quietHoursStartMinute));
-    setQuietHoursEnd(
-        TimeOfDay(hour: ds.quietHoursEndHour, minute: ds.quietHoursEndMinute));
 
-    quietHoursStartTimeController.text = formatHHMMSS(DateTime(
+    quietHoursStartPicked.value = TimeOfDay(
+        hour: ds.quietHoursStartHour, minute: ds.quietHoursStartMinute);
+    quietHoursEndPicked.value =
+        TimeOfDay(hour: ds.quietHoursEndHour, minute: ds.quietHoursEndMinute);
+    quietHoursStartTimeController.text = formatHHMM(DateTime(
         2020, 01, 1, ds.quietHoursStartHour, ds.quietHoursStartMinute));
-    quietHoursEndTimeController.text = formatHHMMSS(
+    quietHoursEndTimeController.text = formatHHMM(
         DateTime(2020, 01, 1, ds.quietHoursEndHour, ds.quietHoursEndMinute));
 
     ever(scheduleType, handleScheduleType);
@@ -78,6 +83,8 @@ class SchedulesWidgetController extends GetxController {
     ever(periodicMinutes, handlePeriodicMinutes);
     ever(randomMinDateTime, handleRandomMinDateTime);
     ever(randomMaxDateTime, handleRandomMaxDateTime);
+    ever(quietHoursStartPicked, handleQuietHoursStartPicked);
+    ever(quietHoursEndPicked, handleQuietHoursEndPicked);
   }
 
   void handleScheduleType(ScheduleType t) {
@@ -86,6 +93,7 @@ class SchedulesWidgetController extends GetxController {
     } else {
       ds.scheduleTypeStr = 'random';
     }
+    scheduleDirty.value = true;
   }
 
   void handlePeriodicHours(int hours) {
@@ -95,10 +103,12 @@ class SchedulesWidgetController extends GetxController {
     } else if (periodicMinutes.value < 15) {
       periodicMinutes.value = 15;
     }
+    scheduleDirty.value = true;
   }
 
   void handlePeriodicMinutes(int minutes) {
     ds.periodicMinutes = minutes;
+    scheduleDirty.value = true;
   }
 
   void handleRandomMinDateTime(DateTime time) {
@@ -107,6 +117,7 @@ class SchedulesWidgetController extends GetxController {
     if (randomMaxDateTime.value.isBefore(time)) {
       randomMaxDateTime.value = time.add(Duration(minutes: 15));
     }
+    scheduleDirty.value = true;
   }
 
   void handleRandomMaxDateTime(DateTime time) {
@@ -115,20 +126,28 @@ class SchedulesWidgetController extends GetxController {
     if (randomMinDateTime.value.isAfter(time)) {
       randomMinDateTime.value = time.subtract(Duration(minutes: 15));
     }
+    scheduleDirty.value = true;
   }
 
-  void setQuietHoursStart(TimeOfDay time) {
+  void handleScheduleDirty() {
+    logger.d("handleScheduleDirty");
+    Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart();
+  }
+
+  void handleQuietHoursStartPicked(TimeOfDay time) {
     ds.quietHoursStartHour = time.hour;
     ds.quietHoursStartMinute = time.minute;
     quietHoursStartTimeController.text =
-        formatHHMMSS(DateTime(2019, 08, 1, time.hour, time.minute));
+        formatHHMM(DateTime(2020, 01, 1, time.hour, time.minute));
+    scheduleDirty.value = true;
   }
 
-  void setQuietHoursEnd(TimeOfDay time) {
+  void handleQuietHoursEndPicked(TimeOfDay time) {
     quietHoursEndTimeController.text =
-        formatHHMMSS(DateTime(2019, 08, 1, time.hour, time.minute));
+        formatHHMM(DateTime(2020, 01, 1, time.hour, time.minute));
     ds.quietHoursEndHour = time.hour;
     ds.quietHoursEndMinute = time.minute;
+    scheduleDirty.value = true;
   }
 }
 
@@ -286,8 +305,8 @@ class SchedulesWidget extends StatelessWidget {
       initialTime: selectedTime,
     );
     if (picked != null) {
-      controller.setQuietHoursStart(picked);
       selectedTime = picked;
+      controller.quietHoursStartPicked.value = picked;
     }
   }
 
@@ -300,8 +319,8 @@ class SchedulesWidget extends StatelessWidget {
       initialTime: selectedTime,
     );
     if (picked != null) {
-      controller.setQuietHoursEnd(picked);
       selectedTime = picked;
+      controller.quietHoursEndPicked.value = picked;
     }
   }
 
@@ -363,28 +382,38 @@ class SchedulesWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Text('Configure schedule'),
-      ),
-      body: Center(
-          child: Obx(() => Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: <Widget>[
-                    Container(
-                      alignment: Alignment.topCenter,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: _buildScheduleView(context),
-                      ),
-                    ),
-                    Container(
-                        alignment: Alignment.topCenter,
-                        child: Column(
+    return WillPopScope(
+        onWillPop: () async {
+          if (controller.scheduleDirty.value) {
+            logger.d("schedule is dirty");
+            controller.handleScheduleDirty();
+            controller.scheduleDirty.value = false;
+          }
+          return true;
+        },
+        child: Scaffold(
+            appBar: AppBar(
+              centerTitle: true,
+              title: Text('Configure schedule'),
+            ),
+            body: Center(
+              child: Obx(() => Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        Container(
+                          alignment: Alignment.topCenter,
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: _buildQuietHoursView(context))),
-                  ]))),
-    );
+                            children: _buildScheduleView(context),
+                          ),
+                        ),
+                        Container(
+                            alignment: Alignment.topCenter,
+                            child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: _buildQuietHoursView(context))),
+                      ])),
+            )));
   }
 }
