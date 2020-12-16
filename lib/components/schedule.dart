@@ -5,8 +5,8 @@ import 'dart:ui';
 import 'dart:io';
 
 import 'package:android_alarm_manager/android_alarm_manager.dart';
-import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 
 // import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
@@ -60,7 +60,7 @@ void enableHeartbeat() async {
     logger.i("Enabling heartbeat");
     if (!await AndroidAlarmManager.periodic(
         Duration(hours: 1), controlAlarmId, controlCallback,
-        startAt: DateTime.now().add(Duration(hours: 1)),
+        // startAt: DateTime.now().add(Duration(hours: 1)),
         exact: true,
         wakeup: true,
         rescheduleOnReboot: true)) {
@@ -86,11 +86,11 @@ void controlCallback() async {
   // This is only available in the alarm manager isolate
   bool wasInit = await Scheduler.checkInitialized();
   if (useHeartbeat) {
-    Scheduler.setInfoMessage(
-        "Heartbeat [${wasInit ? 'T' : 'F'}/${formatHHMMSS(DateTime.now())}]");
+    Scheduler.sendControlMessage(
+        "HB:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
   } else {
-    Scheduler.setInfoMessage(
-        "Control [${wasInit ? 'T' : 'F'}/${formatHHMMSS(DateTime.now())}]");
+    Scheduler.sendControlMessage(
+        "CO:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
   }
 }
 
@@ -100,7 +100,7 @@ class Scheduler {
   static bool running = false;
   static bool initialized = false;
 
-  static ScheduleDataStoreRO schedDS;
+  static ScheduleDataStoreRO _ds;
   bool alarmManagerInitialized = false;
   Notifier _notifier;
   static Reminders _reminders;
@@ -125,9 +125,10 @@ class Scheduler {
     _reminders = await Reminders.create();
     initialized = true;
     // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
-    schedDS ??=
-        (await ScheduleDataStore.getInstance()).getScheduleDataStoreRO();
-    if (schedDS.enabled) {
+    if (_ds == null) {
+      update((await ScheduleDataStore.getInstance()).getScheduleDataStoreRO());
+    }
+    if (_ds.enabled) {
       logger.i("Re-enabling on init!");
       enable();
     }
@@ -157,6 +158,11 @@ class Scheduler {
       // String value = map.values.first;
       Scheduler scheduler = Scheduler();
       switch (key) {
+        case 'update':
+          ScheduleDataStoreRO dataStoreRO = map.values.first;
+          scheduler.update(dataStoreRO);
+          // scheduler.reenable();
+          break;
         case 'enable':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
           scheduler.enable(dataStoreRO);
@@ -202,15 +208,25 @@ class Scheduler {
   }
 
   static void setInfoMessage(String msg) async {
-    // schedDS.infoMessage = msg;
     var toAppSendPort =
         IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
     toAppSendPort?.send({'infoMessage': msg});
   }
 
+  static void sendControlMessage(String msg) async {
+    var toAppSendPort =
+        IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
+    toAppSendPort?.send({'controlMessage': msg});
+  }
+
+  void update([ScheduleDataStoreRO dataStoreRO]) {
+    Get.delete<ScheduleDataStoreRO>(force: true);
+    _ds = Get.put(dataStoreRO, permanent: true);
+  }
+
   void enable([ScheduleDataStoreRO dataStoreRO]) {
     if (dataStoreRO != null) {
-      schedDS = dataStoreRO;
+      update(dataStoreRO);
     }
     if (running) {
       disable();
@@ -241,30 +257,28 @@ class Scheduler {
   }
 
   DelegatedScheduler _buildSchedulerDelegate(Scheduler scheduler) {
-    logger.i('Building scheduler delegate: ${schedDS.scheduleTypeStr}');
+    logger.i('Building scheduler delegate: ${_ds.scheduleTypeStr}');
     var scheduleType;
-    if (schedDS.scheduleTypeStr == 'periodic') {
+    if (_ds.scheduleTypeStr == 'periodic') {
       scheduleType = ScheduleType.PERIODIC;
     } else {
       scheduleType = ScheduleType.RANDOM;
     }
     QuietHours quietHours = new QuietHours(
         new TimeOfDay(
-            hour: schedDS.quietHoursStartHour,
-            minute: schedDS.quietHoursStartMinute),
+            hour: _ds.quietHoursStartHour, minute: _ds.quietHoursStartMinute),
         new TimeOfDay(
-            hour: schedDS.quietHoursEndHour,
-            minute: schedDS.quietHoursEndMinute));
+            hour: _ds.quietHoursEndHour, minute: _ds.quietHoursEndMinute));
     var delegate;
     if (scheduleType == ScheduleType.PERIODIC) {
-      delegate = PeriodicScheduler(scheduler, quietHours, schedDS.periodicHours,
-          schedDS.periodicMinutes);
+      delegate = PeriodicScheduler(
+          scheduler, quietHours, _ds.periodicHours, _ds.periodicMinutes);
     } else {
       delegate = RandomScheduler(
           scheduler,
           quietHours,
-          schedDS.randomMinHours * 60 + schedDS.randomMinMinutes,
-          schedDS.randomMaxHours * 60 + schedDS.randomMaxMinutes);
+          _ds.randomMinHours * 60 + _ds.randomMinMinutes,
+          _ds.randomMaxHours * 60 + _ds.randomMaxMinutes);
     }
     return delegate;
   }
@@ -442,7 +456,7 @@ class PeriodicScheduler extends DelegatedScheduler {
 class RandomScheduler extends DelegatedScheduler {
   final int minMinutes;
   final int maxMinutes;
-  static const bool rescheduleAfterQuietHours = false;
+  static const bool rescheduleAfterQuietHours = true;
 
   RandomScheduler(Scheduler scheduler, QuietHours quietHours, this.minMinutes,
       this.maxMinutes)
@@ -472,13 +486,11 @@ class RandomScheduler extends DelegatedScheduler {
       logger.i(
           "Scheduling next random notification, past quiet hours: $nextDate");
       Scheduler.setInfoMessage(
-          "In quiet hours, next reminder at ${nextDate.hour}:${timeNumToString(nextDate.minute)}");
+          "In quiet hours, next reminder at ${formatHHMMSS(nextDate)}");
     } else {
       logger.i("Scheduling next random notification at $nextDate");
-      var timestr = formatHHMMSS(nextDate);
-      // This is temporary (switch to above when solid):
-      timestr += " (${nextMinutes}m/$minMinutes/$maxMinutes)";
-      Scheduler.setInfoMessage("Next notification at $timestr");
+      Scheduler.setInfoMessage(
+          "Next notification at ${formatHHMMSS(nextDate)} (${nextMinutes}");
     }
     await AndroidAlarmManager.oneShotAt(
         nextDate, Scheduler.scheduleAlarmID, Scheduler.scheduleCallback,

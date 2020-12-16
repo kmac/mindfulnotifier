@@ -29,11 +29,11 @@ dependencies:
   cupertino_icons: ^1.0.0
 
   android_alarm_manager: '>=0.4.5+17 <2.0.0'
-  flutter_local_notifications: ^3.0.1+5
+  flutter_local_notifications: ^3.0.2
   device_info: ^0.4.2+4
   rxdart: ^0.24.0
   flutter_native_timezone: ^1.0.4
-  shared_preferences: ^0.5.12+4
+  shared_preferences: '>=0.5.12+4 <2.0.0'
   just_audio: ^0.5.6
   audio_session: ^0.0.9
   # flutter_duration_picker: "^1.0.0"

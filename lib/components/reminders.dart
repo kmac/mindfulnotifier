@@ -51,6 +51,7 @@ class Reminders {
       load();
     } else {
       print("Creating initial default reminders");
+      reminders = defaultReminders.toList();
       persist(defaultReminders);
     }
     shuffledReminders = reminders.toList();
@@ -63,7 +64,7 @@ class Reminders {
 
   void persist([List<String> newReminderList]) async {
     if (newReminderList == null) {
-      newReminderList = reminders;
+      newReminderList = defaultReminders;
     }
     print("Persisting reminders into storage");
     await _prefs.setStringList(reminderKey, newReminderList);

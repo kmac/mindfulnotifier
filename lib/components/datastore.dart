@@ -22,6 +22,7 @@ abstract class ScheduleDataStoreBase {
   int get quietHoursEndMinute;
   String get message;
   String get infoMessage;
+  String get controlMessage;
 }
 
 class ScheduleDataStoreRO implements ScheduleDataStoreBase {
@@ -41,6 +42,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final int _quietHoursEndMinute;
   final String _message;
   final String _infoMessage;
+  final String _heartbeatMessage;
 
   ScheduleDataStoreRO(
       this._enabled,
@@ -58,7 +60,8 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._quietHoursEndHour,
       this._quietHoursEndMinute,
       this._message,
-      this._infoMessage);
+      this._infoMessage,
+      this._heartbeatMessage);
 
   bool get enabled {
     return _enabled;
@@ -123,6 +126,10 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   String get infoMessage {
     return _infoMessage;
   }
+
+  String get controlMessage {
+    return _heartbeatMessage;
+  }
 }
 
 class ScheduleDataStore implements ScheduleDataStoreBase {
@@ -143,6 +150,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String quietHoursEndMinuteKey = 'quietHoursEndMinute';
   static const String messageKey = 'message';
   static const String infoMessageKey = 'infoMessage';
+  static const String controlMessageKey = 'controlMessage';
 
   // defaults
   static const String defaultScheduleTypeStr = 'periodic';
@@ -158,6 +166,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const int defaultQuietHoursEndMinute = 0;
   static const String defaultMessage = 'Not Enabled';
   static const String defaultInfoMessage = 'Uninitialized';
+  static const String defaultControlMessage = '';
 
   static SharedPreferences _prefs;
 
@@ -388,6 +397,18 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _prefs.getString(ScheduleDataStore.infoMessageKey);
   }
 
+  set controlMessage(String value) {
+    _prefs.setString(controlMessageKey, value);
+  }
+
+  @override
+  String get controlMessage {
+    if (!_prefs.containsKey(ScheduleDataStore.controlMessageKey)) {
+      controlMessage = defaultControlMessage;
+    }
+    return _prefs.getString(ScheduleDataStore.controlMessageKey);
+  }
+
   ScheduleDataStoreRO getScheduleDataStoreRO() {
     return ScheduleDataStoreRO(
         enabled,
@@ -405,6 +426,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
         quietHoursEndHour,
         quietHoursEndMinute,
         message,
-        infoMessage);
+        infoMessage,
+        controlMessage);
   }
 }

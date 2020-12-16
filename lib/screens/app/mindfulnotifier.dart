@@ -35,6 +35,7 @@ class MindfulNotifierWidgetController extends GetxController {
   final String title = appName;
   final _message = 'Not Running'.obs;
   final _infoMessage = 'Not Running'.obs;
+  final _controlMessage = ''.obs;
   final _enabled = false.obs;
   final _mute = false.obs;
   final _vibrate = false.obs;
@@ -47,6 +48,9 @@ class MindfulNotifierWidgetController extends GetxController {
     ever(_enabled, handleEnabled);
     ever(_mute, handleMute);
     ever(_vibrate, handleVibrate);
+    ever(_message, handleMessage);
+    ever(_infoMessage, handleInfoMessage);
+    ever(_controlMessage, handleControlMessage);
     init();
     super.onInit();
   }
@@ -70,6 +74,7 @@ class MindfulNotifierWidgetController extends GetxController {
     _vibrate.value = ds.vibrate;
     _message.value = ds.message;
     _infoMessage.value = ds.infoMessage;
+    _controlMessage.value = ds.controlMessage;
     initializeNotifications();
   }
 
@@ -97,6 +102,10 @@ class MindfulNotifierWidgetController extends GetxController {
           break;
         case 'infoMessage':
           _infoMessage.value = value;
+          break;
+        case 'controlMessage':
+          logger.i("Received control message: $value");
+          _controlMessage.value = value;
           break;
         default:
           logger.e("Unexpected key: $key");
@@ -145,14 +154,24 @@ class MindfulNotifierWidgetController extends GetxController {
     IsolateNameServer.removePortNameMapping(toAppSendPortName);
   }
 
-  void setMessage(msg) {
-    _message.value = msg;
-    ds.message = _message.value;
+  void handleMessage(msg) {
+    ds.message = msg;
   }
 
-  void setInfoMessage(msg) {
-    _infoMessage.value = msg;
-    ds.infoMessage = _infoMessage.value;
+  void handleInfoMessage(msg) {
+    ds.infoMessage = msg;
+  }
+
+  void handleControlMessage(msg) {
+    ds.controlMessage = msg;
+    Get.snackbar("Control Message", "Received control message: $msg");
+  }
+
+  void _sendToScheduler(var msg) {
+    logger.d("_sendToScheduler: $msg");
+    toSchedulerSendPort ??=
+        IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
+    toSchedulerSendPort?.send(msg);
   }
 
   void handleEnabled(enabled) {
@@ -163,35 +182,25 @@ class MindfulNotifierWidgetController extends GetxController {
       // }
       // setInfoMessage('Enabled');
       if (_message.value == 'In quiet hours') {
-        setMessage('Enabled. Waiting for notification...');
+        _message.value = 'Enabled. Waiting for notification...';
       }
-      setInfoMessage('Enabled. Waiting for notification.');
-
-      // THIS IS GETTING SENT BEFORE THE SHARED PREF IS COMMITTING??? MUST BE.
-      //
-      //
-      toSchedulerSendPort ??=
-          IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
-      toSchedulerSendPort?.send({'enable': ds.getScheduleDataStoreRO()});
+      _infoMessage.value = 'Enabled. Waiting for notification.';
+      _sendToScheduler({'enable': ds.getScheduleDataStoreRO()});
     } else {
       // setMessage('Disabled');
-      setInfoMessage('Disabled');
-      toSchedulerSendPort ??=
-          IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
-      toSchedulerSendPort?.send({'disable': '1'});
+      _infoMessage.value = 'Disabled';
+      _sendToScheduler({'disable': '1'});
     }
-    // // Send to the alarm_manager isolate
-    // appCallbackSendPort ??=
-    //     IsolateNameServer.lookupPortByName(sendToAppPortName);
-    // appCallbackSendPort?.send({'enable': enabled ? 'true' : 'false'});
   }
 
   void handleMute(bool mute) {
     ds.mute = mute;
+    _sendToScheduler({'update': ds.getScheduleDataStoreRO()});
   }
 
   void handleVibrate(bool vibrate) {
     ds.vibrate = vibrate;
+    _sendToScheduler({'update': ds.getScheduleDataStoreRO()});
   }
 
   // Future<void> _handlePermissions() async {
@@ -204,7 +213,7 @@ class MindfulNotifierWidgetController extends GetxController {
   // }
 
   void setNextNotification(DateTime dateTime) {
-    setInfoMessage("Next notification at ${formatHHMMSS(dateTime)}");
+    _infoMessage.value = "Next notification at ${formatHHMMSS(dateTime)}";
   }
 
   void handleScheduleOnTap() {
@@ -271,7 +280,7 @@ class MindfulNotifierWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
                 Expanded(
-                  flex: 15,
+                  flex: 12,
                   child: Obx(() =>
                       /*Card(
                       shape: RoundedRectangleBorder(
@@ -316,17 +325,17 @@ class MindfulNotifierWidget extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: <Widget>[
-                          Column(
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
+                              Text(controller._enabled.value
+                                  ? 'Enabled'
+                                  : 'Enable'),
                               Switch(
                                 value: controller._enabled.value,
                                 onChanged: (newvalue) =>
                                     controller._enabled.value = newvalue,
                               ),
-                              Text(controller._enabled.value
-                                  ? 'Enabled'
-                                  : 'Enable'),
                             ],
                           ),
                           ToggleButtons(
@@ -365,7 +374,9 @@ class MindfulNotifierWidget extends StatelessWidget {
                     flex: 1,
                     child: Obx(
                       () => Text(
-                        '${controller._infoMessage.value}',
+                        controller._controlMessage.value == ''
+                            ? '${controller._infoMessage.value}'
+                            : '${controller._infoMessage.value} [${controller._controlMessage.value}]',
                         style: TextStyle(color: Colors.black38),
                         overflow: TextOverflow.ellipsis,
                       ),

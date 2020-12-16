@@ -101,14 +101,13 @@ void initializeNotifications() async {
 class Notifier {
   static const int notifId = 0;
   static const bool useOngoing = false;
-  static const String channelName = 'mindfulnotifier_channel';
+  static const String channelName = 'Mindful Notifier';
   static const String channelDescription = 'Notifications for Mindful Notifier';
 
-  static String channelId = 'mindfulnotifier_channel_id';
+  static String channelId = 'Main Channel';
 
   final String notifTitle = constants.appName;
   final String defaultBellAsset = 'media/defaultbell.mp3';
-  ScheduleDataStore ds;
 
   File customSoundFile;
 
@@ -117,9 +116,7 @@ class Notifier {
     this.customSoundFile = customSoundFile;
   }
 
-  void init() async {
-    ds = await ScheduleDataStore.getInstance();
-  }
+  void init() async {}
 
   static void cancelAll() async {
     await flutterLocalNotificationsPlugin.cancelAll();
@@ -127,8 +124,7 @@ class Notifier {
 
   void showNotification(String notifText) async {
     DateTime now = DateTime.now();
-    ds.reload();
-    // WHY IS THIS NOT BEING UPDATED
+    ScheduleDataStoreRO ds = Get.find();
     bool mute = ds.mute;
     bool vibrate = ds.vibrate;
 
@@ -161,7 +157,7 @@ class Notifier {
             sound: notifSound,
             ongoing: useOngoing,
             styleInformation: BigTextStyleInformation(''),
-            ticker: 'ticker');
+            ticker: notifText);
     NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
