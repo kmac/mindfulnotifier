@@ -69,86 +69,124 @@ void main() {
 
   group('Quiet Hours', () {
     test('quiet hours - before quiet', () {
-      var quietHours = QuietHours(
+      var quiet9pm9am = QuietHours(
           TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
       DateTime dt = DateTime.parse("2020-01-01 14:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      expect(quiet9pm9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quiet9pm9am.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0).add(Duration(days: 1)));
+      expect(false, quiet9pm9am.isInQuietHours(dt));
     });
     test('quiet hours - in quiet', () {
-      var quietHours = QuietHours(
+      var quiet9pm9am = QuietHours(
           TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
       DateTime dt = DateTime.parse("2020-01-01 22:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      expect(quiet9pm9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0).add(Duration(days: 1)));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quiet9pm9am.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0).add(Duration(days: 1)));
+      expect(true, quiet9pm9am.isInQuietHours(dt));
 
       dt = DateTime.parse("2020-01-01 08:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      expect(quiet9pm9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quiet9pm9am.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0));
+      expect(true, quiet9pm9am.isInQuietHours(dt));
 
       // edge case
       dt = DateTime.parse("2020-01-01 21:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      expect(quiet9pm9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quiet9pm9am.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0).add(Duration(days: 1)));
+      expect(true, quiet9pm9am.isInQuietHours(dt));
 
-      dt = DateTime.parse("2020-01-01 09:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      dt = DateTime.parse("2020-01-01 08:59:00");
+      expect(quiet9pm9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quiet9pm9am.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0));
+      expect(true, quiet9pm9am.isInQuietHours(dt));
+      dt = DateTime.parse("2020-01-01 09:00:00");
+      expect(quiet9pm9am.getNextQuietStart(current: dt),
+          DateTime(dt.year, dt.month, dt.day, 21, 0));
+      expect(quiet9pm9am.getNextQuietEnd(current: dt),
+          DateTime(dt.year, dt.month, dt.day, 9, 0));
+      expect(false, quiet9pm9am.isInQuietHours(dt));
     });
     test('quiet hours - midnight', () {
       // start @11:55pm
-      var quietHours = QuietHours(
+      var quiet1155pm9am = QuietHours(
           TimeOfDay(hour: 23, minute: 55), TimeOfDay(hour: 9, minute: 0));
       // before quiet:
       DateTime dt = DateTime.parse("2020-01-01 23:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      expect(quiet1155pm9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 23, 55));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quiet1155pm9am.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0).add(Duration(days: 1)));
-      expect(
-          false,
-          quietHours.isInQuietHours(DateTime.parse("2020-01-01 23:00:00"),
-              now: dt));
-      expect(
-          true,
-          quietHours.isInQuietHours(DateTime.parse("2020-01-01 23:57:00"),
-              now: DateTime.parse("2020-01-01 23:57:00")));
-      expect(
-          true,
-          quietHours.isInQuietHours(DateTime.parse("2020-01-02 01:57:00"),
-              now: DateTime.parse("2020-01-01 23:57:00")));
-      // failing:
-      expect(
-          true,
-          quietHours.isInQuietHours(DateTime.parse("2020-01-02 01:58:00"),
-              now: DateTime.parse("2020-01-02 01:57:00")));
+      expect(false, quiet1155pm9am.isInQuietHours(dt));
+      for (dt in [
+        DateTime.parse("2020-01-01 23:57:00"),
+        DateTime.parse("2020-01-02 01:57:00"),
+        DateTime.parse("2020-01-02 01:58:00")
+      ]) {
+        expect(true, quiet1155pm9am.isInQuietHours(dt));
+      }
+      for (dt in [
+        DateTime.parse("2020-01-01 11:00:00"),
+        DateTime.parse("2020-01-02 11:00:00"),
+        DateTime.parse("2020-01-03 11:00:00"),
+        DateTime.parse("2020-01-01 23:00:00"),
+        DateTime.parse("2020-01-02 23:00:00"),
+      ]) {
+        expect(false, quiet1155pm9am.isInQuietHours(dt));
+      }
+      for (dt in [
+        DateTime.parse("2020-01-01 00:00:00"),
+        DateTime.parse("2020-01-02 00:00:00"),
+        DateTime.parse("2020-01-01 23:57:00"),
+        DateTime.parse("2020-01-02 01:00:00"),
+        DateTime.parse("2020-01-02 01:57:00"),
+      ]) {
+        expect(true, quiet1155pm9am.isInQuietHours(dt));
+      }
     });
     test('quiet hours - late start', () {
       // start @1am
-      var quietHours = QuietHours(
+      var quiet1am9am = QuietHours(
           TimeOfDay(hour: 1, minute: 0), TimeOfDay(hour: 9, minute: 0));
       // before quiet:
       DateTime dt = DateTime.parse("2020-01-01 22:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      expect(quiet1am9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 1, 0).add(Duration(days: 1)));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quiet1am9am.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0).add(Duration(days: 1)));
+      for (dt in [
+        DateTime.parse("2020-01-01 01:00:00"),
+        DateTime.parse("2020-01-02 01:00:00"),
+        DateTime.parse("2020-01-01 01:57:00"),
+        DateTime.parse("2020-01-02 01:57:00"),
+        DateTime.parse("2020-01-01 03:30:00"),
+      ]) {
+        expect(true, quiet1am9am.isInQuietHours(dt));
+      }
+      for (dt in [
+        DateTime.parse("2020-01-01 09:01:00"),
+        DateTime.parse("2020-01-01 00:00:00"),
+        DateTime.parse("2020-01-02 00:00:00"),
+        DateTime.parse("2020-01-01 23:57:00"),
+        DateTime.parse("2020-01-02 14:00:00"),
+      ]) {
+        expect(false, quiet1am9am.isInQuietHours(dt));
+      }
 
       // in quiet:
       dt = DateTime.parse("2020-01-02 02:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      expect(quiet1am9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 1, 0).add(Duration(days: 1)));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quiet1am9am.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0));
     });
 
@@ -156,9 +194,9 @@ void main() {
       var quietHours = QuietHours(
           TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
       DateTime dt = DateTime.parse("2020-01-01 10:00:00");
-      expect(quietHours.getNextQuietStart(now: dt),
+      expect(quietHours.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0));
-      expect(quietHours.getNextQuietEnd(now: dt),
+      expect(quietHours.getNextQuietEnd(current: dt),
           DateTime(dt.year, dt.month, dt.day, 9, 0).add(Duration(days: 1)));
     });
   });

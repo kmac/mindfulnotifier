@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 
+import 'package:mindfulnotifier/components/backgroundservice.dart' as bg;
+import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -52,12 +54,16 @@ class MindfulNotifierWidgetController extends GetxController {
     ever(_infoMessage, handleInfoMessage);
     ever(_controlMessage, handleControlMessage);
     init();
+    initializeFromBackgroundService();
     super.onInit();
   }
 
   @override
   void onReady() {
     super.onReady();
+    // if (constants.useForegroundService) {
+    //   Future.delayed(Duration(seconds: 10), initializeFromBackgroundService);
+    // }
   }
 
   @override
@@ -126,6 +132,20 @@ class MindfulNotifierWidgetController extends GetxController {
     assert(result);
   }
 
+  void initializeFromBackgroundService() {
+    bg.getServiceInstance().onDataReceived.listen((event) {
+      String key = event.keys.first;
+      String value = event.values.first;
+      switch (key) {
+        case 'current_date':
+          logger.i("Received current_date=$value from background service");
+          break;
+      }
+    }, onDone: () {
+      logger.w("background service is closed");
+    });
+  }
+
   void triggerSchedulerShutdown() {
     // Send to the alarm isolate
     toSchedulerSendPort ??=
@@ -164,7 +184,7 @@ class MindfulNotifierWidgetController extends GetxController {
 
   void handleControlMessage(msg) {
     ds.controlMessage = msg;
-    Get.snackbar("Control Message", "Received control message: $msg");
+    // Get.snackbar("Control Message", "Received control message: $msg");
   }
 
   void _sendToScheduler(var msg) {
@@ -181,7 +201,8 @@ class MindfulNotifierWidgetController extends GetxController {
       //   setMessage('Enabled. Waiting for notification...');
       // }
       // setInfoMessage('Enabled');
-      if (_message.value == 'In quiet hours') {
+      if (_message.value == 'Not Enabled' ||
+          _message.value == 'In quiet hours') {
         _message.value = 'Enabled. Waiting for notification...';
       }
       _infoMessage.value = 'Enabled. Waiting for notification.';

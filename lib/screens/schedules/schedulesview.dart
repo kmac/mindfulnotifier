@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
@@ -22,22 +23,21 @@ class SchedulesWidgetController extends GetxController {
   final scheduleType = ScheduleType.periodic.obs;
   final periodicHours = 1.obs;
   final periodicMinutes = 0.obs;
-  final randomMinDateTime = DateTime.parse("1970-01-01 00:45:00Z").obs;
-  final randomMaxDateTime = DateTime.parse("1970-01-01 01:30:00Z").obs;
+  // final randomMinDateTime = DateTime.parse("1970-01-01 00:45:00Z").obs;
+  // final randomMaxDateTime = DateTime.parse("1970-01-01 01:30:00Z").obs;
+  final randomMinMinutes = 60.obs;
+  final randomMaxMinutes = 90.obs;
   final scheduleDirty = false.obs;
   final quietHoursStartPicked = TimeOfDay(hour: 1, minute: 0).obs;
   final quietHoursEndPicked = TimeOfDay(hour: 1, minute: 0).obs;
 
+  TextEditingController randomMinMinutesController = TextEditingController();
+  TextEditingController randomMaxMinutesController = TextEditingController();
   TextEditingController quietHoursStartTimeController = TextEditingController();
   TextEditingController quietHoursEndTimeController = TextEditingController();
 
   // UI event handlers, init code, etc goes here
   SchedulesWidgetController();
-
-  DateTime _getDateTime(int hours, int minutes) {
-    return DateTime.parse(
-        "1970-01-01 ${timeNumToString(hours)}:${timeNumToString(minutes)}:00Z");
-  }
 
   @override
   void onInit() {
@@ -64,10 +64,8 @@ class SchedulesWidgetController extends GetxController {
 
     periodicHours.value = ds.periodicHours;
     periodicMinutes.value = ds.periodicMinutes;
-    randomMinDateTime.value =
-        _getDateTime(ds.randomMinHours, ds.randomMinMinutes);
-    randomMaxDateTime.value =
-        _getDateTime(ds.randomMaxHours, ds.randomMaxMinutes);
+    randomMinMinutesController.text = "${ds.randomMinMinutes}";
+    randomMaxMinutesController.text = "${ds.randomMaxMinutes}";
 
     quietHoursStartPicked.value = TimeOfDay(
         hour: ds.quietHoursStartHour, minute: ds.quietHoursStartMinute);
@@ -81,73 +79,95 @@ class SchedulesWidgetController extends GetxController {
     ever(scheduleType, handleScheduleType);
     ever(periodicHours, handlePeriodicHours);
     ever(periodicMinutes, handlePeriodicMinutes);
-    ever(randomMinDateTime, handleRandomMinDateTime);
-    ever(randomMaxDateTime, handleRandomMaxDateTime);
+    ever(randomMinMinutes, handleRandomMinMinutes);
+    ever(randomMaxMinutes, handleRandomMaxMinutes);
     ever(quietHoursStartPicked, handleQuietHoursStartPicked);
     ever(quietHoursEndPicked, handleQuietHoursEndPicked);
   }
 
   void handleScheduleType(ScheduleType t) {
     if (t == ScheduleType.periodic) {
-      ds.scheduleTypeStr = 'periodic';
+      if (ds.scheduleTypeStr != 'periodic') {
+        ds.scheduleTypeStr = 'periodic';
+        scheduleDirty.value = true;
+      }
     } else {
-      ds.scheduleTypeStr = 'random';
+      if (ds.scheduleTypeStr != 'random') {
+        ds.scheduleTypeStr = 'random';
+        scheduleDirty.value = true;
+      }
     }
-    scheduleDirty.value = true;
   }
 
   void handlePeriodicHours(int hours) {
-    ds.periodicHours = hours;
-    if (hours > 0) {
-      periodicMinutes.value = 0;
-    } else if (periodicMinutes.value < 15) {
-      periodicMinutes.value = 15;
+    if (ds.periodicHours != hours) {
+      ds.periodicHours = hours;
+      if (hours > 0) {
+        periodicMinutes.value = 0;
+      } else if (periodicMinutes.value < 15) {
+        periodicMinutes.value = 15;
+      }
+      scheduleDirty.value = true;
     }
-    scheduleDirty.value = true;
   }
 
   void handlePeriodicMinutes(int minutes) {
-    ds.periodicMinutes = minutes;
-    scheduleDirty.value = true;
+    if (ds.periodicMinutes != minutes) {
+      ds.periodicMinutes = minutes;
+      scheduleDirty.value = true;
+    }
   }
 
-  void handleRandomMinDateTime(DateTime time) {
-    ds.randomMinHours = time.hour;
-    ds.randomMinMinutes = time.minute;
-    if (randomMaxDateTime.value.isBefore(time)) {
-      randomMaxDateTime.value = time.add(Duration(minutes: 15));
+  void handleRandomMinMinutes(int minutes) {
+    if (ds.randomMinMinutes != minutes) {
+      ds.randomMinMinutes = minutes;
+      // check for consistency with max value
+      if (randomMaxMinutes.value < minutes) {
+        randomMaxMinutes.value = minutes + 15;
+        randomMaxMinutesController.text = "${randomMaxMinutes.value}";
+      }
+      scheduleDirty.value = true;
     }
-    scheduleDirty.value = true;
   }
 
-  void handleRandomMaxDateTime(DateTime time) {
-    ds.randomMaxHours = time.hour;
-    ds.randomMaxMinutes = time.minute;
-    if (randomMinDateTime.value.isAfter(time)) {
-      randomMinDateTime.value = time.subtract(Duration(minutes: 15));
+  void handleRandomMaxMinutes(int minutes) {
+    if (ds.randomMaxMinutes != minutes) {
+      ds.randomMaxMinutes = minutes;
+      // check for consistency with min value
+      if (randomMinMinutes.value > minutes) {
+        randomMinMinutes.value = minutes;
+        randomMinMinutesController.text = "${randomMinMinutes.value}";
+      }
+      scheduleDirty.value = true;
     }
-    scheduleDirty.value = true;
   }
 
   void handleScheduleDirty() {
     logger.d("handleScheduleDirty");
     Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart();
+    scheduleDirty.value = false;
   }
 
   void handleQuietHoursStartPicked(TimeOfDay time) {
-    ds.quietHoursStartHour = time.hour;
-    ds.quietHoursStartMinute = time.minute;
     quietHoursStartTimeController.text =
         formatHHMM(DateTime(2020, 01, 1, time.hour, time.minute));
-    scheduleDirty.value = true;
+    if (ds.quietHoursStartHour != time.hour ||
+        ds.quietHoursStartMinute != time.minute) {
+      ds.quietHoursStartHour = time.hour;
+      ds.quietHoursStartMinute = time.minute;
+      scheduleDirty.value = true;
+    }
   }
 
   void handleQuietHoursEndPicked(TimeOfDay time) {
     quietHoursEndTimeController.text =
         formatHHMM(DateTime(2020, 01, 1, time.hour, time.minute));
-    ds.quietHoursEndHour = time.hour;
-    ds.quietHoursEndMinute = time.minute;
-    scheduleDirty.value = true;
+    if (ds.quietHoursEndHour != time.hour ||
+        ds.quietHoursEndMinute != time.minute) {
+      ds.quietHoursEndHour = time.hour;
+      ds.quietHoursEndMinute = time.minute;
+      scheduleDirty.value = true;
+    }
   }
 }
 
@@ -176,6 +196,46 @@ class SchedulesWidget extends StatelessWidget {
         );
       })?.toList(),
     );
+  }
+
+  Widget _buildRandomMinutesWidget(
+      var context, String labelText, var textController, var obxVal) {
+    return SizedBox(
+        // height: 80,
+        width: 110,
+        child: Container(
+            decoration: BoxDecoration(color: Colors.grey[200]),
+            padding: EdgeInsets.all(8),
+            // margin: EdgeInsets.only(
+            //     top: 2, left: 2, right: 2, bottom: 2),
+            alignment: Alignment.center,
+            child:
+                // Text('Minimum Delay',
+                //     style: Theme.of(context).textTheme.bodyText1),
+                TextField(
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                  disabledBorder:
+                      UnderlineInputBorder(borderSide: BorderSide.none),
+                  labelText: labelText,
+                  contentPadding: EdgeInsets.all(5)),
+              maxLines: 1,
+              style: Theme.of(context).textTheme.headline5,
+              controller: textController,
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              onSubmitted: (textval) {
+                int newval = int.tryParse(textval);
+                if (newval != null) {
+                  obxVal.value = newval;
+                } else {
+                  // revert it back to the old value
+                  textController.text = "${controller.randomMinMinutes.value}";
+                }
+              },
+            )));
   }
 
   List<Widget> _buildScheduleView(BuildContext context) {
@@ -250,47 +310,40 @@ class SchedulesWidget extends StatelessWidget {
         ),
       );
     } else {
-      widgets.add(new Center(
-        child: new Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            new Container(
-                decoration: BoxDecoration(color: Colors.grey[200]),
-                padding: EdgeInsets.all(8),
-                child: new Column(
-                  children: <Widget>[
-                    Text('Minimum Delay',
-                        style: Theme.of(context).textTheme.bodyText1),
-                    TimePickerSpinner(
-                      isForce2Digits: true,
-                      time: controller.randomMinDateTime.value,
-                      is24HourMode: true,
-                      spacing: 20,
-                      minutesInterval: 5,
-                      onTimeChange: (value) =>
-                          controller.randomMinDateTime.value = value,
-                    ),
-                  ],
-                )),
-            new Container(
-                decoration: BoxDecoration(color: Colors.grey[200]),
-                padding: EdgeInsets.all(8),
-                child: new Column(
-                  children: <Widget>[
-                    Text('Maximum Delay',
-                        style: Theme.of(context).textTheme.bodyText1),
-                    TimePickerSpinner(
-                      isForce2Digits: true,
-                      time: controller.randomMaxDateTime.value,
-                      // spacing: 10,
-                      minutesInterval: 5,
-                      onTimeChange: (value) =>
-                          controller.randomMaxDateTime.value = value,
-                    ),
-                  ],
-                )),
-          ],
-        ),
+      // Random
+      widgets.add(
+          // child: new Row(
+          //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          //     children: <Widget>[
+          new Container(
+        // decoration: BoxDecoration(color: Colors.grey[200]),
+        // padding: EdgeInsets.all(8),
+        child: Column(children: <Widget>[
+          Padding(
+              // padding: EdgeInsets.all(24.0),
+              padding: EdgeInsets.fromLTRB(30, 0, 30, 20),
+              child: Text(
+                  'Enter the minimum and maximum delay between notifications. Values is in minutes.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w300, /*fontSize: 12*/
+                  ),
+                  softWrap: true)),
+          Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                _buildRandomMinutesWidget(
+                    context,
+                    'Minimum',
+                    controller.randomMinMinutesController,
+                    controller.randomMinMinutes),
+                // Text('to'),
+                _buildRandomMinutesWidget(
+                    context,
+                    'Maximum',
+                    controller.randomMaxMinutesController,
+                    controller.randomMaxMinutes),
+              ]),
+        ]),
       ));
     }
     return widgets;

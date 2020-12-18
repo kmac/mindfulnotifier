@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 
-// import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
@@ -59,8 +58,9 @@ void enableHeartbeat() async {
     await AndroidAlarmManager.cancel(controlAlarmId);
     logger.i("Enabling heartbeat");
     if (!await AndroidAlarmManager.periodic(
-        Duration(hours: 1), controlAlarmId, controlCallback,
+        Duration(/*hours: 1*/ minutes: 30), controlAlarmId, controlCallback,
         // startAt: DateTime.now().add(Duration(hours: 1)),
+        // TODO change these to false:
         exact: true,
         wakeup: true,
         rescheduleOnReboot: true)) {
@@ -275,16 +275,14 @@ class Scheduler {
           scheduler, quietHours, _ds.periodicHours, _ds.periodicMinutes);
     } else {
       delegate = RandomScheduler(
-          scheduler,
-          quietHours,
-          _ds.randomMinHours * 60 + _ds.randomMinMinutes,
-          _ds.randomMaxHours * 60 + _ds.randomMaxMinutes);
+          scheduler, quietHours, _ds.randomMinMinutes, _ds.randomMaxMinutes);
     }
     return delegate;
   }
 
   void triggerNotification() {
     if (!running) {
+      logger.i("triggerNotification: not running");
       return;
     }
     // 1) lookup a random reminder
@@ -294,21 +292,24 @@ class Scheduler {
     final DateTime now = DateTime.now();
     logger.i("triggerNotification ${getCurrentIsolate()}");
 
-    if (delegate.quietHours.inQuietHours) {
-      logger.i("In quiet hours... ignoring notification");
-      setInfoMessage("In quiet hours $now");
-      return;
+    try {
+      if (delegate.quietHours.inQuietHours) {
+        logger.i("In quiet hours... ignoring notification");
+        setInfoMessage("In quiet hours ${formatHHMM(now)}");
+        return;
+      }
+      if (delegate.quietHours.isInQuietHours(now)) {
+        // Note: this could happen if enabled in quiet hours:
+        logger.i("In quiet hours (missed alarm)... ignoring notification");
+        setInfoMessage("In quiet hours ${formatHHMM(now)} NA");
+        return;
+      }
+      var reminder = _reminders.randomReminder();
+      _notifier.showNotification(reminder);
+      setMessage(reminder);
+    } finally {
+      delegate.scheduleNext();
     }
-    if (delegate.quietHours.isInQuietHours(now)) {
-      // Note: this could happen if enabled in quiet hours:
-      logger.i("In quiet hours (missed alarm)... ignoring notification");
-      setInfoMessage("In quiet hours $now");
-      return;
-    }
-    var reminder = _reminders.randomReminder();
-    _notifier.showNotification(reminder);
-    setMessage(reminder);
-    delegate.scheduleNext();
   }
 
   static Future<bool> checkInitialized() async {
@@ -456,7 +457,7 @@ class PeriodicScheduler extends DelegatedScheduler {
 class RandomScheduler extends DelegatedScheduler {
   final int minMinutes;
   final int maxMinutes;
-  static const bool rescheduleAfterQuietHours = true;
+  static const bool rescheduleAfterQuietHours = false;
 
   RandomScheduler(Scheduler scheduler, QuietHours quietHours, this.minMinutes,
       this.maxMinutes)
@@ -490,7 +491,7 @@ class RandomScheduler extends DelegatedScheduler {
     } else {
       logger.i("Scheduling next random notification at $nextDate");
       Scheduler.setInfoMessage(
-          "Next notification at ${formatHHMMSS(nextDate)} (${nextMinutes}");
+          "Next notification at ${formatHHMMSS(nextDate)} ($nextMinutes");
     }
     await AndroidAlarmManager.oneShotAt(
         nextDate, Scheduler.scheduleAlarmID, Scheduler.scheduleCallback,
@@ -506,8 +507,8 @@ class RandomScheduler extends DelegatedScheduler {
 }
 
 class QuietHours {
-  static const int quietHoursStartAlarmID = 21;
-  static const int quietHoursEndAlarmID = 22;
+  static const int quietHoursStartAlarmID = 5521;
+  static const int quietHoursEndAlarmID = 5522;
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   bool inQuietHours = false;
@@ -516,48 +517,107 @@ class QuietHours {
   QuietHours.defaultQuietHours()
       : this(TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
 
-  DateTime _convertTimeOfDayToToday(TimeOfDay tod, {DateTime now}) {
+  DateTime _convertTimeOfDayToToday(TimeOfDay tod, {DateTime current}) {
     // now can be overridden for testing
-    now ??= DateTime.now();
-    return DateTime(now.year, now.month, now.day, tod.hour, tod.minute);
+    current ??= DateTime.now();
+    return DateTime(
+        current.year, current.month, current.day, tod.hour, tod.minute);
   }
 
-  DateTime _convertTimeOfDayToTomorrow(TimeOfDay tod, {DateTime now}) {
+  DateTime _convertTimeOfDayToTomorrow(TimeOfDay tod, {DateTime current}) {
     // now can be overridden for testing
-    now ??= DateTime.now();
-    final tomorrow = now.add(Duration(days: 1));
+    current ??= DateTime.now();
+    final tomorrow = current.add(Duration(days: 1));
     return DateTime(
         tomorrow.year, tomorrow.month, tomorrow.day, tod.hour, tod.minute);
   }
 
-  DateTime _convertTimeOfDayToYesterday(TimeOfDay tod, {DateTime now}) {
+  DateTime _convertTimeOfDayToYesterday(TimeOfDay tod, {DateTime current}) {
     // now can be overridden for testing
-    now ??= DateTime.now();
-    final yesterday = now.subtract(Duration(days: 1));
+    current ??= DateTime.now();
+    final yesterday = current.subtract(Duration(days: 1));
     return DateTime(
         yesterday.year, yesterday.month, yesterday.day, tod.hour, tod.minute);
   }
 
-  DateTime getNextQuietStart({DateTime now}) {
-    now ??= DateTime.now();
-    DateTime quietStart = _convertTimeOfDayToToday(startTime, now: now);
-    if (quietStart.isBefore(now)) {
-      quietStart = _convertTimeOfDayToTomorrow(startTime, now: now);
+  DateTime getNextQuietStart({DateTime current}) {
+    current ??= DateTime.now();
+    DateTime quietStart = _convertTimeOfDayToToday(startTime, current: current);
+    if (quietStart.isBefore(current)) {
+      quietStart = _convertTimeOfDayToTomorrow(startTime, current: current);
     }
     return quietStart;
   }
 
-  DateTime getNextQuietEnd({DateTime now}) {
-    now ??= DateTime.now();
-    DateTime quietEnd = _convertTimeOfDayToToday(endTime, now: now);
+  DateTime getNextQuietEnd({DateTime current}) {
+    current ??= DateTime.now();
+    DateTime quietEnd = _convertTimeOfDayToToday(endTime, current: current);
     // if (quietEnd.isAtSameMomentAs(now) || quietEnd.isBefore(now)) {
-    if (quietEnd.isBefore(now)) {
-      quietEnd = _convertTimeOfDayToTomorrow(endTime, now: now);
+    if (quietEnd.isBefore(current)) {
+      quietEnd = _convertTimeOfDayToTomorrow(endTime, current: current);
     }
     return quietEnd;
   }
 
-  bool isInQuietHours(DateTime date, {DateTime now}) {
+  bool isInQuietHours(DateTime givenDate) {
+    // TODO dateToCheck and timeWhenChecking are the same thing!
+    // i.e. it doesn't matter what time it is when checking.
+    // hmm except maybe it does? for today/tomorrow calculations,
+    // no- it's based on the time of the date to be checked
+    // That's the difference- we're now passing in the now: dateToCheck
+    // to the _convertTimeOfDateToToday/Tomorrow
+
+    // Quiet end is always in the future.
+    // Quiet start may be in the past (only when in quiet hours) or future.
+    // So we can start from the end and work our way back.
+
+    // Note: 'today' and 'tomorrow' are all relative to the date we're given.
+    DateTime todayEnd = _convertTimeOfDayToToday(endTime, current: givenDate);
+    DateTime tomorrowEnd =
+        _convertTimeOfDayToTomorrow(endTime, current: givenDate);
+    DateTime todayStart =
+        _convertTimeOfDayToToday(startTime, current: givenDate);
+
+    // Is quiet end today or tomorrow? It is always in the future.
+    DateTime end;
+    if (givenDate.isBefore(todayEnd)) {
+      end = todayEnd;
+    } else {
+      end = tomorrowEnd;
+    }
+    assert(givenDate.isBefore(end)); // always in the future
+
+    // Now we can base things on what we know to be the end
+
+    // adjust today's start if for instance it is just after midnight
+    if (todayStart.add(Duration(days: 1)).isBefore(end)) {
+      todayStart = todayStart.add(Duration(days: 1));
+    }
+
+    if (todayStart.isAfter(end)) {
+      // Today's start is after today's end, but we haven't reached
+      // today's end yet (see above end calculation), which must mean that:
+      // 1) quiet hours started _yesterday_, and
+      // 2) we must be in quiet hours, since we haven't reached today's end yet.
+      DateTime yesterdayStart =
+          _convertTimeOfDayToYesterday(startTime, current: givenDate);
+      assert(givenDate.isAfter(yesterdayStart));
+      assert(givenDate.isBefore(end));
+      assert(givenDate.isBefore(todayStart));
+      return true;
+    }
+
+    // Now we know that we are before 'end' (which is either today or
+    // tomorrow - we don't care, because it is somewhere in the future).
+    // So, if we are before today's start then we're before quiet hours;
+    // otherwise we are in quiet hours.
+    if (givenDate.isBefore(todayStart)) {
+      return false;
+    }
+    return true;
+  }
+
+  bool isInQuietHoursBroken(DateTime dateToCheck, {DateTime timeWhenChecking}) {
     /* 
             ???   today   ???         ???     tomorrow  ???
         ---------------------------------------------------------------
@@ -566,7 +626,7 @@ class QuietHours {
         ----------------|---------------------|-------------
                     quiet start            quiet end
         
-      Is now before today's quiet start AND before today's end?
+      Is dateToCheck before today's quiet start AND before today's end?
           Y -> not in quiet
           N -> Is now after today's quiet start?
               Y -> Is now before today's quiet end or before tomorrow's end?
@@ -574,25 +634,29 @@ class QuietHours {
               N -> Is now before yesterday's start AND before tomorrow's quiet end?
                   Y -> in quiet
      */
-    now ??= DateTime.now();
-    DateTime todayStart = _convertTimeOfDayToToday(startTime, now: now);
-    DateTime todayEnd = _convertTimeOfDayToToday(endTime, now: now);
-    if (now.isBefore(todayStart)) {
-      if (now.isBefore(todayEnd)) {
-        return true;
-      } else {
+    timeWhenChecking ??= DateTime.now(); // only over-ridden for tests
+    DateTime todayStart =
+        _convertTimeOfDayToToday(startTime, current: timeWhenChecking);
+    DateTime todayEnd =
+        _convertTimeOfDayToToday(endTime, current: timeWhenChecking);
+    if (dateToCheck.isBefore(todayStart)) {
+      if (dateToCheck.isBefore(todayEnd)) {
         return false;
+      } else {
+        return true;
       }
     } else {
       // we are after today's start
-      DateTime tomorrowEnd = _convertTimeOfDayToTomorrow(endTime, now: now);
-      if (now.isBefore(todayEnd) || now.isBefore(tomorrowEnd)) {
+      DateTime tomorrowEnd =
+          _convertTimeOfDayToTomorrow(endTime, current: timeWhenChecking);
+      if (dateToCheck.isBefore(todayEnd) || dateToCheck.isBefore(tomorrowEnd)) {
         return true;
       }
     }
     // but what if it started yesterday?
-    DateTime yesterdayStart = _convertTimeOfDayToYesterday(startTime, now: now);
-    if (now.isAfter(yesterdayStart) && now.isBefore(todayEnd)) {
+    DateTime yesterdayStart =
+        _convertTimeOfDayToYesterday(startTime, current: timeWhenChecking);
+    if (dateToCheck.isAfter(yesterdayStart) && dateToCheck.isBefore(todayEnd)) {
       return true;
     }
     return false;
@@ -604,6 +668,8 @@ class QuietHours {
     }
     var nextQuietStart = getNextQuietStart();
     var nextQuietEnd = getNextQuietEnd();
+    await AndroidAlarmManager.cancel(quietHoursStartAlarmID);
+    await AndroidAlarmManager.cancel(quietHoursEndAlarmID);
     logger.i(
         "Initializing quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
     assert(nextQuietStart.isAfter(DateTime.now()));
@@ -629,8 +695,7 @@ class QuietHours {
       logger.e(message);
       throw AssertionError(message);
     }
-    logger.i(
-        "Initialized quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
+    // logger.i("Initialized quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
   }
 
   void cancelTimers() async {
@@ -645,14 +710,14 @@ class QuietHours {
 
   void quietStart() {
     final DateTime now = DateTime.now();
-    logger.i("[$now] Quiet hours start");
+    logger.i("Quiet hours start");
     inQuietHours = true;
     Scheduler.setMessage('In quiet hours');
   }
 
   void quietEnd() {
     final DateTime now = DateTime.now();
-    logger.i("[$now] Quiet hours end");
+    logger.i("Quiet hours end");
     inQuietHours = false;
     Scheduler.setMessage('Quiet Hours have ended.');
   }

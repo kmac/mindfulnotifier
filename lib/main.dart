@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
+import 'package:mindfulnotifier/components/backgroundservice.dart';
 import 'package:mindfulnotifier/components/datastore.dart' as datastore;
 import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/schedule.dart' as schedule;
@@ -22,8 +25,6 @@ Future<void> initServices() async {
   // GetxService schedulerService;
   // await Get.putAsync(schedule.Scheduler()).init();
 
-  // move into class
-  // WILL NEED TO TRIGGER AN ALARM IN ORDER TO INITIALIZE SCHEDULER ON THE ALARM ISOLATE
   await datastore.ScheduleDataStore.getInstance();
   startScheduler();
   print('All services started...');
@@ -50,7 +51,12 @@ void main() async {
   // we just stick the notification in shared prefs and always read from that
   // on the UI side.
 
-  await initServices();
+  if (constants.useForegroundService) {
+    await FlutterBackgroundService.initialize(onStartService,
+        autoStart: true, foreground: true);
+  } else {
+    await initServices();
+  }
 
   runApp(
     // GetMaterialApp(MindfulNotifierApp());

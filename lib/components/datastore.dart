@@ -12,9 +12,7 @@ abstract class ScheduleDataStoreBase {
   String get scheduleTypeStr;
   int get periodicHours;
   int get periodicMinutes;
-  int get randomMinHours;
   int get randomMinMinutes;
-  int get randomMaxHours;
   int get randomMaxMinutes;
   int get quietHoursStartHour;
   int get quietHoursStartMinute;
@@ -32,9 +30,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final String _scheduleTypeStr;
   final int _periodicHours;
   final int _periodicMinutes;
-  final int _randomMinHours;
   final int _randomMinMinutes;
-  final int _randomMaxHours;
   final int _randomMaxMinutes;
   final int _quietHoursStartHour;
   final int _quietHoursStartMinute;
@@ -51,9 +47,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._scheduleTypeStr,
       this._periodicHours,
       this._periodicMinutes,
-      this._randomMinHours,
       this._randomMinMinutes,
-      this._randomMaxHours,
       this._randomMaxMinutes,
       this._quietHoursStartHour,
       this._quietHoursStartMinute,
@@ -87,16 +81,8 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
     return _periodicMinutes;
   }
 
-  int get randomMinHours {
-    return _randomMinHours;
-  }
-
   int get randomMinMinutes {
     return _randomMinMinutes;
-  }
-
-  int get randomMaxHours {
-    return _randomMaxHours;
   }
 
   int get randomMaxMinutes {
@@ -140,9 +126,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String scheduleTypeKey = 'scheduleType';
   static const String periodicHoursKey = 'periodicDurationHours';
   static const String periodicMinutesKey = 'periodicDurationMinutes';
-  static const String randomMinHoursKey = 'randomMinHours';
   static const String randomMinMinutesKey = 'randomMinMinutes';
-  static const String randomMaxHoursKey = 'randomMaxHours';
   static const String randomMaxMinutesKey = 'randomMaxMinutes';
   static const String quietHoursStartHourKey = 'quietHoursStartHour';
   static const String quietHoursStartMinuteKey = 'quietHoursStartMinute';
@@ -156,10 +140,8 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String defaultScheduleTypeStr = 'periodic';
   static const int defaultPeriodicHours = 1;
   static const int defaultPeriodicMinutes = 0;
-  static const int defaultRandomMinHours = 0;
   static const int defaultRandomMinMinutes = 45;
-  static const int defaultRandomMaxHours = 1;
-  static const int defaultRandomMaxMinutes = 15;
+  static const int defaultRandomMaxMinutes = 60;
   static const int defaultQuietHoursStartHour = 21;
   static const int defaultQuietHoursStartMinute = 0;
   static const int defaultQuietHoursEndHour = 9;
@@ -277,18 +259,6 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _prefs.getInt(ScheduleDataStore.periodicMinutesKey);
   }
 
-  set randomMinHours(int value) {
-    _prefs.setInt(randomMinHoursKey, value);
-  }
-
-  @override
-  int get randomMinHours {
-    if (!_prefs.containsKey(ScheduleDataStore.randomMinHoursKey)) {
-      randomMinHours = defaultRandomMinHours;
-    }
-    return _prefs.getInt(ScheduleDataStore.randomMinHoursKey);
-  }
-
   set randomMinMinutes(int value) {
     _prefs.setInt(randomMinMinutesKey, value);
   }
@@ -299,18 +269,6 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
       randomMinMinutes = defaultRandomMinMinutes;
     }
     return _prefs.getInt(ScheduleDataStore.randomMinMinutesKey);
-  }
-
-  set randomMaxHours(int value) {
-    _prefs.setInt(randomMaxHoursKey, value);
-  }
-
-  @override
-  int get randomMaxHours {
-    if (!_prefs.containsKey(ScheduleDataStore.randomMaxHoursKey)) {
-      randomMaxHours = defaultRandomMaxHours;
-    }
-    return _prefs.getInt(ScheduleDataStore.randomMaxHoursKey);
   }
 
   set randomMaxMinutes(int value) {
@@ -417,9 +375,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
         scheduleTypeStr,
         periodicHours,
         periodicMinutes,
-        randomMinHours,
         randomMinMinutes,
-        randomMaxHours,
         randomMaxMinutes,
         quietHoursStartHour,
         quietHoursStartMinute,
