@@ -581,17 +581,19 @@ class QuietHours {
   }
 
   bool isInQuietHours(DateTime givenDate) {
-    // TODO dateToCheck and timeWhenChecking are the same thing!
-    // i.e. it doesn't matter what time it is when checking.
-    // hmm except maybe it does? for today/tomorrow calculations,
-    // no- it's based on the time of the date to be checked
-    // That's the difference- we're now passing in the now: dateToCheck
-    // to the _convertTimeOfDateToToday/Tomorrow
+    /*
+         yesterday ???   today     ???     tomorrow  ???
+        ---------------------------------------------------------------
+              now1              now2                now3 (same as now1)
+               V                 V                   V
+        ----------------|---------------------|-------------
+                    quiet start            quiet end
+                  (past or future)      (ALWAYS IN THE FUTURE)
 
-    // Quiet end is always in the future.
-    // Quiet start may be in the past (only when in quiet hours) or future.
-    // So we can start from the end and work our way back.
-
+      Quiet end is always in the future.
+      Quiet start may be in the past (only when in quiet hours) or future.
+      Therefore, we can start from the end and work our way back.
+    */
     // Note: 'today' and 'tomorrow' are all relative to the date we're given.
     DateTime todayEnd = _convertTimeOfDayToToday(endTime, current: givenDate);
     DateTime tomorrowEnd =
@@ -608,9 +610,8 @@ class QuietHours {
     }
     assert(givenDate.isBefore(end)); // always in the future
 
-    // Now we can base things on what we know to be the end
-
-    // adjust today's start if for instance it is just after midnight
+    // Now we can base quiet start on what we know to be the end
+    // Adjust today's start if necessary (for instance, if it is just after midnight)
     if (todayStart.add(Duration(days: 1)).isBefore(end)) {
       todayStart = todayStart.add(Duration(days: 1));
     }
@@ -636,51 +637,6 @@ class QuietHours {
       return false;
     }
     return true;
-  }
-
-  bool isInQuietHoursBroken(DateTime dateToCheck, {DateTime timeWhenChecking}) {
-    /* 
-            ???   today   ???         ???     tomorrow  ???
-        ---------------------------------------------------------------
-              now1              now2                now3 (same as now1)
-               V                 V                   V
-        ----------------|---------------------|-------------
-                    quiet start            quiet end
-        
-      Is dateToCheck before today's quiet start AND before today's end?
-          Y -> not in quiet
-          N -> Is now after today's quiet start?
-              Y -> Is now before today's quiet end or before tomorrow's end?
-                  Y -> in quiet
-              N -> Is now before yesterday's start AND before tomorrow's quiet end?
-                  Y -> in quiet
-     */
-    timeWhenChecking ??= DateTime.now(); // only over-ridden for tests
-    DateTime todayStart =
-        _convertTimeOfDayToToday(startTime, current: timeWhenChecking);
-    DateTime todayEnd =
-        _convertTimeOfDayToToday(endTime, current: timeWhenChecking);
-    if (dateToCheck.isBefore(todayStart)) {
-      if (dateToCheck.isBefore(todayEnd)) {
-        return false;
-      } else {
-        return true;
-      }
-    } else {
-      // we are after today's start
-      DateTime tomorrowEnd =
-          _convertTimeOfDayToTomorrow(endTime, current: timeWhenChecking);
-      if (dateToCheck.isBefore(todayEnd) || dateToCheck.isBefore(tomorrowEnd)) {
-        return true;
-      }
-    }
-    // but what if it started yesterday?
-    DateTime yesterdayStart =
-        _convertTimeOfDayToYesterday(startTime, current: timeWhenChecking);
-    if (dateToCheck.isAfter(yesterdayStart) && dateToCheck.isBefore(todayEnd)) {
-      return true;
-    }
-    return false;
   }
 
   void initializeTimers() async {

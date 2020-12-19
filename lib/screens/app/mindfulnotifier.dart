@@ -9,8 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 
-import 'package:mindfulnotifier/components/backgroundservice.dart' as bg;
-import 'package:mindfulnotifier/components/constants.dart' as constants;
+// import 'package:mindfulnotifier/components/backgroundservice.dart' as bg;
+// import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -54,7 +54,7 @@ class MindfulNotifierWidgetController extends GetxController {
     ever(_infoMessage, handleInfoMessage);
     ever(_controlMessage, handleControlMessage);
     init();
-    initializeFromBackgroundService();
+    // initializeFromBackgroundService();
     super.onInit();
   }
 
@@ -132,19 +132,19 @@ class MindfulNotifierWidgetController extends GetxController {
     assert(result);
   }
 
-  void initializeFromBackgroundService() {
-    bg.getServiceInstance().onDataReceived.listen((event) {
-      String key = event.keys.first;
-      String value = event.values.first;
-      switch (key) {
-        case 'current_date':
-          logger.i("Received current_date=$value from background service");
-          break;
-      }
-    }, onDone: () {
-      logger.w("background service is closed");
-    });
-  }
+  // void initializeFromBackgroundService() {
+  //   bg.getServiceInstance().onDataReceived.listen((event) {
+  //     String key = event.keys.first;
+  //     String value = event.values.first;
+  //     switch (key) {
+  //       case 'current_date':
+  //         logger.i("Received current_date=$value from background service");
+  //         break;
+  //     }
+  //   }, onDone: () {
+  //     logger.w("background service is closed");
+  //   });
+  // }
 
   void triggerSchedulerShutdown() {
     // Send to the alarm isolate
@@ -197,10 +197,6 @@ class MindfulNotifierWidgetController extends GetxController {
   void handleEnabled(enabled) {
     ds.enabled = enabled;
     if (enabled) {
-      // if (_message.value == 'Disabled') {
-      //   setMessage('Enabled. Waiting for notification...');
-      // }
-      // setInfoMessage('Enabled');
       if (_message.value == 'Not Enabled' ||
           _message.value == 'In quiet hours') {
         _message.value = 'Enabled. Waiting for notification...';
@@ -249,8 +245,8 @@ class MindfulNotifierWidgetController extends GetxController {
     Get.toNamed('/bell');
   }
 
-  void handleAdvancedOnTap() {
-    Get.toNamed('/advanced');
+  void handleGeneralOnTap() {
+    Get.toNamed('/general');
   }
 }
 
@@ -322,8 +318,6 @@ class MindfulNotifierWidget extends StatelessWidget {
                           // style: Theme.of(context).textTheme.headline4,
                           // style: Theme.of(context).textTheme.headline5,
                           style: TextStyle(
-                              // color: Colors.grey[800],
-                              // color: isDark(context)
                               color: Get.isDarkMode
                                   ? Colors.grey[400]
                                   : Colors.grey[800],
@@ -418,15 +412,14 @@ class MindfulNotifierWidget extends StatelessWidget {
               children: <Widget>[
                 DrawerHeader(
                   decoration: BoxDecoration(
-                    //color: Colors.blue,
                     color: Theme.of(context).appBarTheme.color,
-                    // style: Theme.of(context).textTheme.headline5,
                   ),
                   child: Text(
                     'Settings',
                     style: TextStyle(
                       // color: Colors.white,
                       fontSize: 24,
+                      // color: Theme.of(context).,
                     ),
                   ),
                 ),
@@ -450,8 +443,10 @@ class MindfulNotifierWidget extends StatelessWidget {
                 ),
                 ListTile(
                   leading: Icon(Icons.settings),
-                  title: Text('Advanced'),
-                  onTap: controller.handleAdvancedOnTap,
+                  title: Text('General'),
+                  subtitle: Text(
+                      'Configure general application settings: theme, etc.'),
+                  onTap: controller.handleGeneralOnTap,
                 ),
               ],
             ),

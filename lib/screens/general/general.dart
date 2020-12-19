@@ -11,18 +11,20 @@ import 'package:mindfulnotifier/theme/themes.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('reminderview'));
 
-class AdvancedWidgetController extends GetxController {
+class GeneralWidgetController extends GetxController {
   final _useBackgroundService = false.obs;
   final _theme = "Default".obs;
 
   // UI event handlers, init code, etc goes here
-  AdvancedWidgetController() {
+  GeneralWidgetController() {
     // init();
   }
 
   @override
   void onInit() {
     super.onInit();
+    ScheduleDataStore ds = Get.find();
+    _theme.value = ds.theme;
     ever(_useBackgroundService, handleUseBackgroundService);
     ever(_theme, handleTheme);
   }
@@ -38,7 +40,7 @@ class AdvancedWidgetController extends GetxController {
   }
 
   void handleUseBackgroundService(bool value) {
-    // TODO persist, and inform user restart required
+    // todo; persist, and inform user restart required
     ScheduleDataStore ds = Get.find();
     ds.useBackgroundService = true;
   }
@@ -51,9 +53,8 @@ class AdvancedWidgetController extends GetxController {
   }
 }
 
-class AdvancedWidget extends StatelessWidget {
-  final AdvancedWidgetController controller =
-      Get.put(AdvancedWidgetController());
+class GeneralWidget extends StatelessWidget {
+  final GeneralWidgetController controller = Get.put(GeneralWidgetController());
 
   @override
   Widget build(BuildContext context) {
@@ -70,12 +71,12 @@ class AdvancedWidget extends StatelessWidget {
             // crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'Advanced Configuration',
+                'General Configuration',
               ),
-              Text('Subtitle',
-                  style: TextStyle(
-                    fontSize: 12.0,
-                  )),
+              // Text('Subtitle',
+              //     style: TextStyle(
+              //       fontSize: 12.0,
+              //     )),
             ],
           ),
         ),
@@ -83,23 +84,16 @@ class AdvancedWidget extends StatelessWidget {
             child: /*Obx(
           () => */
                 ListView(children: <Widget>[
-          // Row(
-          //   mainAxisAlignment: MainAxisAlignment.start,
-          //   children: [
-          //     Icon(Icons.miscellaneous_services),
-          //     Text('Background Service'),
-          //   ],
+          // ListTile(
+          //   leading: Icon(Icons.miscellaneous_services),
+          //   title: Text('Use Background Service'),
+          //   subtitle: Text('Use this if the app keeps getting killed.'),
+          //   trailing: Checkbox(
+          //     value: controller._useBackgroundService.value,
+          //     onChanged: (value) =>
+          //         controller._useBackgroundService.value = value,
+          //   ),
           // ),
-          ListTile(
-            leading: Icon(Icons.miscellaneous_services),
-            title: Text('Use Background Service'),
-            subtitle: Text('Use this if the app keeps getting killed.'),
-            trailing: Checkbox(
-              value: controller._useBackgroundService.value,
-              onChanged: (value) =>
-                  controller._useBackgroundService.value = value,
-            ),
-          ),
           ListTile(
               leading: Icon(Icons.looks),
               title: Text('Theme'),

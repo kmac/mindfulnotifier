@@ -36,10 +36,6 @@ dependencies:
   shared_preferences: '>=0.5.12+4 <2.0.0'
   just_audio: ^0.5.6
   audio_session: ^0.0.9
-  # flutter_duration_picker: "^1.0.0"
-  # datetime_picker_formfield: ^1.0.0
-  flutter_time_picker_spinner: ^1.0.6+1
-  # time_range: ^0.5.0
   date_format: ^1.0.9
   #permission_handler: ^5.0.1+1
   get: ^3.23.1
@@ -47,7 +43,7 @@ dependencies:
   logger_flutter:
     git: https://github.com/ewertonrp/logger_flutter.git
   # logger_flutter: ^0.7.1
-  flutter_background_service: ^0.0.1+19
+  #flutter_background_service: ^0.0.1+19
   rflutter_alert: ^1.1.0
 
 dev_dependencies:

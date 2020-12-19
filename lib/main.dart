@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
+// import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
-import 'package:mindfulnotifier/components/backgroundservice.dart';
+// import 'package:mindfulnotifier/components/backgroundservice.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/schedule.dart' as schedule;
@@ -42,12 +42,14 @@ void main() async {
   ScheduleDataStore ds = await ScheduleDataStore.getInstance();
   Get.put(ds);
 
-  if (constants.useForegroundService) {
-    await FlutterBackgroundService.initialize(onStartService,
-        autoStart: true, foreground: true);
-  } else {
-    await initServices();
-  }
+  // if (constants.useForegroundService) {
+  //   await FlutterBackgroundService.initialize(onStartService,
+  //       autoStart: true, foreground: true);
+  // } else {
+  //   await initServices();
+  // }
+
+  await initServices();
 
   ThemeData themeData = defaultTheme;
   if (allThemes.containsKey(ds.theme)) {

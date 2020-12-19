@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:logger/logger.dart';
 
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -23,8 +22,6 @@ class SchedulesWidgetController extends GetxController {
   final scheduleType = ScheduleType.periodic.obs;
   final periodicHours = 1.obs;
   final periodicMinutes = 0.obs;
-  // final randomMinDateTime = DateTime.parse("1970-01-01 00:45:00Z").obs;
-  // final randomMaxDateTime = DateTime.parse("1970-01-01 01:30:00Z").obs;
   final randomMinMinutes = 60.obs;
   final randomMaxMinutes = 90.obs;
   final scheduleDirty = false.obs;
@@ -197,7 +194,7 @@ class SchedulesWidget extends StatelessWidget {
       var context, String labelText, var textController, var obxVal) {
     return SizedBox(
         // height: 80,
-        width: 110,
+        width: 120,
         child: Container(
             // decoration: BoxDecoration(color: Colors.grey[200]),
             decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
@@ -386,7 +383,7 @@ class SchedulesWidget extends StatelessWidget {
   Widget _buildQuietHoursWidget(
       var context, String labelText, var textController /*, var obxVal*/) {
     return Container(
-        width: 140,
+        width: 150,
         // height: _height / 9,
         margin: EdgeInsets.only(top: 30),
         alignment: Alignment.center,
@@ -419,24 +416,6 @@ class SchedulesWidget extends StatelessWidget {
               },
               child: _buildQuietHoursWidget(context, 'Start Time',
                   controller.quietHoursStartTimeController)),
-          // child: Container(
-          //     width: 140,
-          //     margin: EdgeInsets.only(top: 30),
-          //     alignment: Alignment.center,
-          //     decoration: // BoxDecoration(color: Colors.grey[200]),
-          //         BoxDecoration(color: Theme.of(context).backgroundColor),
-          //     child: TextFormField(
-          //       style: TextStyle(fontSize: 20),
-          //       textAlign: TextAlign.center,
-          //       enabled: false,
-          //       keyboardType: TextInputType.text,
-          //       controller: controller.quietHoursStartTimeController,
-          //       decoration: InputDecoration(
-          //           disabledBorder:
-          //               UnderlineInputBorder(borderSide: BorderSide.none),
-          //           labelText: 'Start Time',
-          //           contentPadding: EdgeInsets.all(5)),
-          //     ))),
           Text('to: '),
           InkWell(
               onTap: () {
@@ -444,25 +423,6 @@ class SchedulesWidget extends StatelessWidget {
               },
               child: _buildQuietHoursWidget(
                   context, 'End Time', controller.quietHoursEndTimeController)),
-          // child: Container(
-          //     width: 140,
-          //     // height: _height / 9,
-          //     margin: EdgeInsets.only(top: 30),
-          //     alignment: Alignment.center,
-          //     decoration: // BoxDecoration(color: Colors.grey[200]),
-          //         BoxDecoration(color: Theme.of(context).backgroundColor),
-          //     child: TextFormField(
-          //       style: TextStyle(fontSize: 20),
-          //       textAlign: TextAlign.center,
-          //       enabled: false,
-          //       keyboardType: TextInputType.text,
-          //       controller: controller.quietHoursEndTimeController,
-          //       decoration: InputDecoration(
-          //           disabledBorder:
-          //               UnderlineInputBorder(borderSide: BorderSide.none),
-          //           labelText: 'End Time',
-          //           contentPadding: EdgeInsets.all(5)),
-          //     ))),
         ],
       ),
     ];

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 ThemeData indigoTheme = ThemeData(
-  // primarySwatch: Colors.deepOrange,
   primarySwatch: Colors.indigo,
-  brightness: Brightness.dark,
   appBarTheme: AppBarTheme(
     color: Colors.indigo,
     // textTheme: TextTheme(
