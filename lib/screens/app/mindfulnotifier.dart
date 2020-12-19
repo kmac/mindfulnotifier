@@ -322,7 +322,11 @@ class MindfulNotifierWidget extends StatelessWidget {
                           // style: Theme.of(context).textTheme.headline4,
                           // style: Theme.of(context).textTheme.headline5,
                           style: TextStyle(
-                              color: Colors.grey[800],
+                              // color: Colors.grey[800],
+                              // color: isDark(context)
+                              color: Get.isDarkMode
+                                  ? Colors.grey[400]
+                                  : Colors.grey[800],
                               fontWeight: FontWeight.w900,
                               fontStyle: FontStyle.italic,
                               fontFamily: 'Open Sans',
@@ -398,7 +402,10 @@ class MindfulNotifierWidget extends StatelessWidget {
                         controller._controlMessage.value == ''
                             ? '${controller._infoMessage.value}'
                             : '${controller._infoMessage.value} [${controller._controlMessage.value}]',
-                        style: TextStyle(color: Colors.black38),
+                        style: TextStyle(
+                            color: Get.isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.black38),
                         overflow: TextOverflow.ellipsis,
                       ),
                     )),
@@ -418,7 +425,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                   child: Text(
                     'Settings',
                     style: TextStyle(
-                      color: Colors.white,
+                      // color: Colors.white,
                       fontSize: 24,
                     ),
                   ),

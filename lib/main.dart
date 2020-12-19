@@ -5,9 +5,10 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/backgroundservice.dart';
-import 'package:mindfulnotifier/components/datastore.dart' as datastore;
+import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/schedule.dart' as schedule;
+import 'package:mindfulnotifier/theme/themes.dart';
 
 // Issues:
 // https://stackoverflow.com/questions/63068311/run-a-background-task-with-android-alarm-manager-in-flutter
@@ -25,7 +26,6 @@ Future<void> initServices() async {
   // GetxService schedulerService;
   // await Get.putAsync(schedule.Scheduler()).init();
 
-  await datastore.ScheduleDataStore.getInstance();
   startScheduler();
   print('All services started...');
 }
@@ -39,17 +39,8 @@ void main() async {
   // needed if you intend to initialize in the `main` function
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Eventual idea is to turn the Scheduler into an instance that is only accessible
-  // via the alarm callback isolate. It would read all data from shared preferences.
-  // And create the next alarm from that data on the fly.
-  // - complete decoupling of the alarm/notification from the UI
-  // - all data is shared via shared prefs
-  // Alarms for:
-  // - raising a notification
-  // - quiet hours start/end (maybe end not required - just reschedule past next)
-  // The notification raised would either have the reminder in payload, or
-  // we just stick the notification in shared prefs and always read from that
-  // on the UI side.
+  ScheduleDataStore ds = await ScheduleDataStore.getInstance();
+  Get.put(ds);
 
   if (constants.useForegroundService) {
     await FlutterBackgroundService.initialize(onStartService,
@@ -58,30 +49,22 @@ void main() async {
     await initServices();
   }
 
+  ThemeData themeData = defaultTheme;
+  if (allThemes.containsKey(ds.theme)) {
+    themeData = allThemes[ds.theme];
+  }
+
   runApp(
     // GetMaterialApp(MindfulNotifierApp());
     GetMaterialApp(
       title: constants.appName,
       debugShowCheckedModeBanner: true,
       // defaultTransition: Transition.rightToLeft,
-      defaultTransition: Transition.fade,
+      // defaultTransition: Transition.fade,
       getPages: router.Router.route,
       initialRoute: '/',
       smartManagement: SmartManagement.full,
-      theme: ThemeData(
-        // primarySwatch: Colors.deepOrange,
-        primarySwatch: Colors.indigo,
-        appBarTheme: AppBarTheme(
-          // color: Colors.deepOrange,
-          color: Colors.indigo,
-          // textTheme: TextTheme(
-          //   headline6: GoogleFonts.exo2(
-          //     color: Colors.white,
-          //     fontSize: 18,
-          //     fontWeight: FontWeight.bold,
-          //   ),
-        ),
-      ),
+      theme: themeData,
     ),
   );
 }

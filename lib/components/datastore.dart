@@ -7,8 +7,8 @@ var logger = Logger(printer: SimpleLogPrinter('datastore'));
 abstract class ScheduleDataStoreBase {
   bool get enabled;
   bool get mute;
-
   bool get vibrate;
+  bool get useBackgroundService;
   String get scheduleTypeStr;
   int get periodicHours;
   int get periodicMinutes;
@@ -21,12 +21,14 @@ abstract class ScheduleDataStoreBase {
   String get message;
   String get infoMessage;
   String get controlMessage;
+  String get theme;
 }
 
 class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final bool _enabled;
   final bool _mute;
   final bool _vibrate;
+  final bool _useBackgroundService;
   final String _scheduleTypeStr;
   final int _periodicHours;
   final int _periodicMinutes;
@@ -39,11 +41,13 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final String _message;
   final String _infoMessage;
   final String _heartbeatMessage;
+  final String _theme;
 
   ScheduleDataStoreRO(
       this._enabled,
       this._mute,
       this._vibrate,
+      this._useBackgroundService,
       this._scheduleTypeStr,
       this._periodicHours,
       this._periodicMinutes,
@@ -55,7 +59,8 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._quietHoursEndMinute,
       this._message,
       this._infoMessage,
-      this._heartbeatMessage);
+      this._heartbeatMessage,
+      this._theme);
 
   bool get enabled {
     return _enabled;
@@ -67,6 +72,10 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
 
   bool get vibrate {
     return _vibrate;
+  }
+
+  bool get useBackgroundService {
+    return _useBackgroundService;
   }
 
   String get scheduleTypeStr {
@@ -116,12 +125,17 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   String get controlMessage {
     return _heartbeatMessage;
   }
+
+  String get theme {
+    return _theme;
+  }
 }
 
 class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String enabledKey = 'enabled';
   static const String muteKey = 'mute';
   static const String vibrateKey = 'vibrate';
+  static const String useBackgroundServiceKey = 'useBackgroundService';
 
   static const String scheduleTypeKey = 'scheduleType';
   static const String periodicHoursKey = 'periodicDurationHours';
@@ -135,8 +149,10 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String messageKey = 'message';
   static const String infoMessageKey = 'infoMessage';
   static const String controlMessageKey = 'controlMessage';
+  static const String themeKey = 'theme';
 
   // defaults
+  static const bool defaultUseBackgroundService = false;
   static const String defaultScheduleTypeStr = 'periodic';
   static const int defaultPeriodicHours = 1;
   static const int defaultPeriodicMinutes = 0;
@@ -149,6 +165,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String defaultMessage = 'Not Enabled';
   static const String defaultInfoMessage = 'Uninitialized';
   static const String defaultControlMessage = '';
+  static const String defaultTheme = 'Default';
 
   static SharedPreferences _prefs;
 
@@ -221,6 +238,18 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
       vibrate = false;
     }
     return _prefs.getBool(ScheduleDataStore.vibrateKey);
+  }
+
+  set useBackgroundService(bool value) {
+    _prefs.setBool(ScheduleDataStore.useBackgroundServiceKey, value);
+  }
+
+  @override
+  bool get useBackgroundService {
+    if (!_prefs.containsKey(ScheduleDataStore.useBackgroundServiceKey)) {
+      useBackgroundService = false;
+    }
+    return _prefs.getBool(ScheduleDataStore.useBackgroundServiceKey);
   }
 
   set scheduleTypeStr(String value) {
@@ -367,11 +396,24 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _prefs.getString(ScheduleDataStore.controlMessageKey);
   }
 
+  set theme(String value) {
+    _prefs.setString(themeKey, value);
+  }
+
+  @override
+  String get theme {
+    if (!_prefs.containsKey(ScheduleDataStore.themeKey)) {
+      theme = defaultTheme;
+    }
+    return _prefs.getString(ScheduleDataStore.themeKey);
+  }
+
   ScheduleDataStoreRO getScheduleDataStoreRO() {
     return ScheduleDataStoreRO(
         enabled,
         mute,
         vibrate,
+        useBackgroundService,
         scheduleTypeStr,
         periodicHours,
         periodicMinutes,
@@ -383,6 +425,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
         quietHoursEndMinute,
         message,
         infoMessage,
-        controlMessage);
+        controlMessage,
+        theme);
   }
 }

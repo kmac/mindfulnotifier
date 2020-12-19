@@ -29,6 +29,17 @@ const bool rescheduleOnReboot = useHeartbeat;
 const int controlAlarmId = 5;
 bool androidAlarmManagerInitialized = false;
 
+// The Scheduler instance is only accessible
+// via the alarm callback isolate. It reads all data from shared preferences.
+// It creates the next alarm from that data on the fly.
+// - complete decoupling of the alarm/notification from the UI
+// - all data is shared via shared prefs
+// Alarms for:
+// - raising a notification
+// - quiet hours start/end (maybe end not required - just reschedule past next)
+// We also put the notification info in shared prefs and always read from that
+// on the UI side.
+
 Future<void> initializeScheduler() async {
   // THIS IS ON THE 'MAIN' ISOLATE
   // Nothing else in this file should be on the main isolate.
@@ -290,15 +301,25 @@ class Scheduler {
     //    https://pub.dev/packages/flutter_local_notifications
 
     final DateTime now = DateTime.now();
-    logger.i("triggerNotification ${getCurrentIsolate()}");
+    bool isQuiet = delegate.quietHours.inQuietHours;
+    bool isQuietChecked = delegate.quietHours.isInQuietHours(now);
+    logger.i(
+        "triggerNotification quiet=$isQuiet, quietChecked=$isQuietChecked ${getCurrentIsolate()}");
 
     try {
-      if (delegate.quietHours.inQuietHours) {
-        logger.i("In quiet hours... ignoring notification");
-        setInfoMessage("In quiet hours ${formatHHMM(now)}");
-        return;
+      if (isQuiet) {
+        if (!isQuietChecked) {
+          logger.i("In quiet hours... ignoring notification");
+          setInfoMessage("In quiet hours ${formatHHMM(now)}");
+          return;
+        } else {
+          logger.e(
+              "Checked quiet hours disagrees with value. Cancelling quiet hours");
+          setInfoMessage("Cancelling quiet hours ${formatHHMM(now)}");
+          delegate.quietHours.inQuietHours = false;
+        }
       }
-      if (delegate.quietHours.isInQuietHours(now)) {
+      if (isQuietChecked) {
         // Note: this could happen if enabled in quiet hours:
         logger.i("In quiet hours (missed alarm)... ignoring notification");
         setInfoMessage("In quiet hours ${formatHHMM(now)} NA");

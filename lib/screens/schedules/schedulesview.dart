@@ -175,19 +175,14 @@ class SchedulesWidget extends StatelessWidget {
   final SchedulesWidgetController controller =
       Get.put(SchedulesWidgetController());
 
-  DropdownButton<int> _buildDropDown(
-      int dropdownValue, List<int> allowedValues, Function onChangedFunc,
+  DropdownButton<int> _buildDropDown(var context, int dropdownValue,
+      List<int> allowedValues, Function onChangedFunc,
       [bool useTwoDigits = false]) {
     return DropdownButton<int>(
       value: dropdownValue,
-      // icon: Icon(Icons.arrow_downward),
-      // iconSize: 24,
       elevation: 16,
-      // style: TextStyle(color: Colors.deepPurple, fontSize: 20),
-      style: TextStyle(color: Colors.black54, fontSize: 30),
-      underline: Container(height: 2, color: Colors.black54
-          // color: Colors.deepPurpleAccent,
-          ),
+      style: Theme.of(context).textTheme.headline5,
+      // underline: Container(height: 2, color: Colors.black54),
       onChanged: onChangedFunc,
       items: allowedValues.map<DropdownMenuItem<int>>((int value) {
         return DropdownMenuItem<int>(
@@ -204,7 +199,8 @@ class SchedulesWidget extends StatelessWidget {
         // height: 80,
         width: 110,
         child: Container(
-            decoration: BoxDecoration(color: Colors.grey[200]),
+            // decoration: BoxDecoration(color: Colors.grey[200]),
+            decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
             padding: EdgeInsets.all(8),
             // margin: EdgeInsets.only(
             //     top: 2, left: 2, right: 2, bottom: 2),
@@ -274,7 +270,9 @@ class SchedulesWidget extends StatelessWidget {
                     ),
                     softWrap: true)),
             new Container(
-                decoration: BoxDecoration(color: Colors.grey[200]),
+                // decoration: BoxDecoration(color: Colors.grey[200]),
+                decoration:
+                    BoxDecoration(color: Theme.of(context).backgroundColor),
                 padding: EdgeInsets.all(8),
                 width: 200,
                 child: new Row(
@@ -282,8 +280,12 @@ class SchedulesWidget extends StatelessWidget {
                   children: [
                     new Column(
                       children: [
-                        Text('Hours'),
+                        Text(
+                          'Hours',
+                          style: Theme.of(context).textTheme.subtitle1,
+                        ),
                         _buildDropDown(
+                            context,
                             controller.periodicHours.value,
                             [0, 1, 2, 3, 4, 8, 12],
                             (value) => controller.periodicHours.value = value,
@@ -293,8 +295,12 @@ class SchedulesWidget extends StatelessWidget {
                     Text(' : '),
                     new Column(
                       children: [
-                        Text('Minutes'),
+                        Text(
+                          'Minutes',
+                          style: Theme.of(context).textTheme.subtitle1,
+                        ),
                         _buildDropDown(
+                            context,
                             controller.periodicMinutes.value,
                             // controller.periodicMinutes.value == 0 &&
                             controller.periodicHours.value > 0
@@ -377,6 +383,30 @@ class SchedulesWidget extends StatelessWidget {
     }
   }
 
+  Widget _buildQuietHoursWidget(
+      var context, String labelText, var textController /*, var obxVal*/) {
+    return Container(
+        width: 140,
+        // height: _height / 9,
+        margin: EdgeInsets.only(top: 30),
+        alignment: Alignment.center,
+        decoration: // BoxDecoration(color: Colors.grey[200]),
+            BoxDecoration(color: Theme.of(context).backgroundColor),
+        child: TextFormField(
+          // style: TextStyle(fontSize: 20),
+          style: Theme.of(context).textTheme.headline5,
+          textAlign: TextAlign.center,
+          enabled: false,
+          keyboardType: TextInputType.text,
+          controller: textController,
+          decoration: InputDecoration(
+              disabledBorder: UnderlineInputBorder(borderSide: BorderSide.none),
+              labelText: labelText,
+              labelStyle: Theme.of(context).textTheme.headline6,
+              contentPadding: EdgeInsets.all(15)),
+        ));
+  }
+
   List<Widget> _buildQuietHoursView(BuildContext context) {
     List<Widget> widgets = [
       Text('Quiet Hours', style: Theme.of(context).textTheme.headline5),
@@ -387,46 +417,52 @@ class SchedulesWidget extends StatelessWidget {
               onTap: () {
                 _selectQuietHoursStartTime(context);
               },
-              child: Container(
-                  width: 140,
-                  margin: EdgeInsets.only(top: 30),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: Colors.grey[200]),
-                  child: TextFormField(
-                    style: TextStyle(fontSize: 20),
-                    textAlign: TextAlign.center,
-                    enabled: false,
-                    keyboardType: TextInputType.text,
-                    controller: controller.quietHoursStartTimeController,
-                    decoration: InputDecoration(
-                        disabledBorder:
-                            UnderlineInputBorder(borderSide: BorderSide.none),
-                        labelText: 'Start Time',
-                        contentPadding: EdgeInsets.all(5)),
-                  ))),
+              child: _buildQuietHoursWidget(context, 'Start Time',
+                  controller.quietHoursStartTimeController)),
+          // child: Container(
+          //     width: 140,
+          //     margin: EdgeInsets.only(top: 30),
+          //     alignment: Alignment.center,
+          //     decoration: // BoxDecoration(color: Colors.grey[200]),
+          //         BoxDecoration(color: Theme.of(context).backgroundColor),
+          //     child: TextFormField(
+          //       style: TextStyle(fontSize: 20),
+          //       textAlign: TextAlign.center,
+          //       enabled: false,
+          //       keyboardType: TextInputType.text,
+          //       controller: controller.quietHoursStartTimeController,
+          //       decoration: InputDecoration(
+          //           disabledBorder:
+          //               UnderlineInputBorder(borderSide: BorderSide.none),
+          //           labelText: 'Start Time',
+          //           contentPadding: EdgeInsets.all(5)),
+          //     ))),
           Text('to: '),
           InkWell(
               onTap: () {
                 _selectQuietHoursEndTime(context);
               },
-              child: Container(
-                  width: 140,
-                  // height: _height / 9,
-                  margin: EdgeInsets.only(top: 30),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: Colors.grey[200]),
-                  child: TextFormField(
-                    style: TextStyle(fontSize: 20),
-                    textAlign: TextAlign.center,
-                    enabled: false,
-                    keyboardType: TextInputType.text,
-                    controller: controller.quietHoursEndTimeController,
-                    decoration: InputDecoration(
-                        disabledBorder:
-                            UnderlineInputBorder(borderSide: BorderSide.none),
-                        labelText: 'End Time',
-                        contentPadding: EdgeInsets.all(5)),
-                  ))),
+              child: _buildQuietHoursWidget(
+                  context, 'End Time', controller.quietHoursEndTimeController)),
+          // child: Container(
+          //     width: 140,
+          //     // height: _height / 9,
+          //     margin: EdgeInsets.only(top: 30),
+          //     alignment: Alignment.center,
+          //     decoration: // BoxDecoration(color: Colors.grey[200]),
+          //         BoxDecoration(color: Theme.of(context).backgroundColor),
+          //     child: TextFormField(
+          //       style: TextStyle(fontSize: 20),
+          //       textAlign: TextAlign.center,
+          //       enabled: false,
+          //       keyboardType: TextInputType.text,
+          //       controller: controller.quietHoursEndTimeController,
+          //       decoration: InputDecoration(
+          //           disabledBorder:
+          //               UnderlineInputBorder(borderSide: BorderSide.none),
+          //           labelText: 'End Time',
+          //           contentPadding: EdgeInsets.all(5)),
+          //     ))),
         ],
       ),
     ];
