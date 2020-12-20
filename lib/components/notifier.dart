@@ -6,22 +6,19 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:audio_session/audio_session.dart';
 
+import 'package:mindfulnotifier/components/audio.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('notifier'));
 
-const bool useSeparateAudio = false;
-
-// const MethodChannel platform = MethodChannel('kmsd.ca/mindfulnotifier');
+const bool useSeparateAudio = true;
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -89,13 +86,6 @@ void initializeNotifications() async {
     }
     selectNotificationSubject.add(payload);
   });
-
-  // audio
-  if (useSeparateAudio) {
-    final session = await AudioSession.instance;
-    // await session.configure(AudioSessionConfiguration.music());
-    await session.configure(AudioSessionConfiguration.speech());
-  }
 }
 
 class Notifier {
@@ -110,16 +100,36 @@ class Notifier {
   final String defaultBellAsset = 'media/defaultbell.mp3';
 
   File customSoundFile;
+  NotifyAudioPlayer audioPlayer;
 
   Notifier();
   Notifier.withCustomSound(File customSoundFile) {
     this.customSoundFile = customSoundFile;
   }
 
-  void init() async {}
+  void start() async {
+    _startAudioService();
+  }
+
+  void shutdown() {
+    _stopAudioService();
+  }
 
   static void cancelAll() async {
     await flutterLocalNotificationsPlugin.cancelAll();
+  }
+
+  void _startAudioService() {
+    if (useSeparateAudio) {
+      audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
+    }
+  }
+
+  void _stopAudioService() {
+    if (useSeparateAudio) {
+      audioPlayer?.dispose();
+      audioPlayer = null;
+    }
   }
 
   void showNotification(String notifText) async {
@@ -169,18 +179,7 @@ class Notifier {
         payload: notifText);
 
     if (useSeparateAudio && !mute) {
-      final player = AudioPlayer();
-      if (customSoundFile == null) {
-        await player.setAsset(defaultBellAsset);
-      } else {
-        await player.setFilePath(customSoundFile.path);
-      }
-      logger.d('player.play');
-      await player.play();
-      logger.d('player.play done');
-      await player.stop();
-      await player.dispose();
-      logger.d('player.play done');
+      audioPlayer.play();
     }
   }
 }
