@@ -45,6 +45,7 @@ dependencies:
   # logger_flutter: ^0.7.1
   #flutter_background_service: ^0.0.1+19
   rflutter_alert: ^1.1.0
+  flutter_html: ^1.1.1
 
 dev_dependencies:
   flutter_test:

@@ -15,6 +15,7 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/utils.dart';
+import 'package:mindfulnotifier/screens/about/about.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('mindfulnotifier'));
 
@@ -429,18 +430,21 @@ class MindfulNotifierWidget extends StatelessWidget {
                   subtitle: Text('Configure reminder frequency'),
                   onTap: controller.handleScheduleOnTap,
                 ),
+                Divider(),
                 ListTile(
                   leading: Icon(Icons.list),
                   title: Text('Reminders'),
                   subtitle: Text('Configure reminder contents'),
                   onTap: controller.handleRemindersOnTap,
                 ),
+                Divider(),
                 ListTile(
                   leading: Icon(Icons.notifications),
                   title: Text('Bell'),
                   subtitle: Text('Configure bell'),
                   onTap: controller.handleBellOnTap,
                 ),
+                Divider(),
                 ListTile(
                   leading: Icon(Icons.settings),
                   title: Text('General'),
@@ -448,6 +452,8 @@ class MindfulNotifierWidget extends StatelessWidget {
                       'Configure general application settings: theme, etc.'),
                   onTap: controller.handleGeneralOnTap,
                 ),
+                Divider(),
+                AppAboutListTile(),
               ],
             ),
           ),

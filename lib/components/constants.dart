@@ -1,4 +1,5 @@
 const String appName = 'Mindful Notifier';
+const String appVersion = '0.0.1';
 
 const bool useForegroundService = false;
 

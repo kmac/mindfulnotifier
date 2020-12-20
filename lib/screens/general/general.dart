@@ -95,23 +95,23 @@ class GeneralWidget extends StatelessWidget {
           //   ),
           // ),
           ListTile(
-              leading: Icon(Icons.looks),
+              leading: Icon(Icons.app_settings_alt),
               title: Text('Theme'),
               trailing: Container(
-                  padding: EdgeInsets.all(20.0),
+                  // padding: EdgeInsets.all(2.0),
                   child: DropdownButton(
-                    value: controller._theme.value,
-                    onChanged: (value) {
-                      controller._theme.value = value;
-                    },
-                    items: allThemes.keys
-                        .map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                  )))
+                value: controller._theme.value,
+                onChanged: (value) {
+                  controller._theme.value = value;
+                },
+                items: allThemes.keys
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              )))
         ])));
   }
 }
