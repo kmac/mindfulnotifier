@@ -29,29 +29,28 @@ const bool rescheduleOnReboot = useHeartbeat;
 const int controlAlarmId = 5;
 bool androidAlarmManagerInitialized = false;
 
-// The Scheduler instance is only accessible
-// via the alarm callback isolate. It reads all data from shared preferences.
-// It creates the next alarm from that data on the fly.
-// - complete decoupling of the alarm/notification from the UI
-// - all data is shared via shared prefs
-// Alarms for:
-// - raising a notification
-// - quiet hours start/end (maybe end not required - just reschedule past next)
-// We also put the notification info in shared prefs and always read from that
-// on the UI side.
-
+/// The Scheduler instance is only accessible
+/// via the alarm callback isolate. It reads all data from shared preferences.
+/// It creates the next alarm from that data on the fly.
+/// - complete decoupling of the alarm/notification from the UI
+/// - all data is shared via shared prefs
+/// Alarms for:
+/// - raising a notification
+/// - quiet hours start/end (maybe end not required - just reschedule past next)
+/// We also put the notification info in shared prefs and always read from that
+/// on the UI side.
 Future<void> initializeScheduler() async {
+  // !!!
   // THIS IS ON THE 'MAIN' ISOLATE
   // Nothing else in this file should be on the main isolate.
-
+  // !!!
   if (!androidAlarmManagerInitialized) {
     logger.i("Initializing AndroidAlarmManager ${getCurrentIsolate()}");
     await AndroidAlarmManager.initialize();
     androidAlarmManagerInitialized = true;
   }
-
-  // Send ourselves a bootstrap message which will come back in on the
-  // alarm manager isolate (which we're also calling the scheduler isolate)
+  // Send ourselves a bootstrap message. The 'controlCallback' will be
+  // invoked on the alarm manager isolate (also called the scheduler isolate)
   if (!await AndroidAlarmManager.oneShot(
       Duration(seconds: 1), controlAlarmId, controlCallback,
       exact: true, wakeup: true, rescheduleOnReboot: false)) {
@@ -105,6 +104,7 @@ void controlCallback() async {
   }
 }
 
+/// The main class for scheduling notifications
 class Scheduler {
   static const int scheduleAlarmID = 10;
 
@@ -129,10 +129,9 @@ class Scheduler {
   Future<void> init() async {
     logger.i(
         "Initializing scheduler, initialized=$initialized ${getCurrentIsolate()}");
-    // schedDS = await ScheduleDataStore.getInstance();
     initializeFromAppIsolateReceivePort();
     _notifier = Notifier();
-    _notifier.init();
+    _notifier.start();
     _reminders = await Reminders.create();
     initialized = true;
     // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
@@ -149,6 +148,7 @@ class Scheduler {
     logger.i("shutdown");
     disable();
     shutdownReceivePort();
+    _notifier.shutdown();
     initialized = false;
   }
 
