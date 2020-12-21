@@ -22,6 +22,8 @@ abstract class ScheduleDataStoreBase {
   String get infoMessage;
   String get controlMessage;
   String get theme;
+  String get bellId;
+  String get customBellPath;
 }
 
 class ScheduleDataStoreRO implements ScheduleDataStoreBase {
@@ -42,6 +44,8 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final String _infoMessage;
   final String _heartbeatMessage;
   final String _theme;
+  final String _bellId;
+  final String _customBellPath;
 
   ScheduleDataStoreRO(
       this._enabled,
@@ -60,7 +64,9 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._message,
       this._infoMessage,
       this._heartbeatMessage,
-      this._theme);
+      this._theme,
+      this._bellId,
+      this._customBellPath);
 
   bool get enabled {
     return _enabled;
@@ -129,6 +135,14 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   String get theme {
     return _theme;
   }
+
+  String get bellId {
+    return _bellId;
+  }
+
+  String get customBellPath {
+    return _customBellPath;
+  }
 }
 
 class ScheduleDataStore implements ScheduleDataStoreBase {
@@ -150,6 +164,8 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String infoMessageKey = 'infoMessage';
   static const String controlMessageKey = 'controlMessage';
   static const String themeKey = 'theme';
+  static const String bellIdKey = 'bellId';
+  static const String customBellPathKey = 'customBellPath';
 
   // defaults
   static const bool defaultUseBackgroundService = false;
@@ -166,20 +182,18 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String defaultInfoMessage = 'Uninitialized';
   static const String defaultControlMessage = '';
   static const String defaultTheme = 'Default';
+  static const String defaultBellId = 'defaultBell';
+  static const String defaultCustomBellPath = '';
 
   static SharedPreferences _prefs;
-
   static ScheduleDataStore _instance;
 
   /// Public factory
   static Future<ScheduleDataStore> getInstance() async {
     if (_instance == null) {
-      // Call the private constructor
       _instance = ScheduleDataStore._create();
-      // ...initialization that requires async...
       await _instance._init();
     }
-    // Return the fully initialized object
     return _instance;
   }
 
@@ -204,8 +218,28 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     }
   }
 
+  Future<void> setSync(String key, dynamic val) async {
+    switch (val.runtimeType) {
+      case bool:
+        await _prefs.setBool(key, val);
+        break;
+      case int:
+        await _prefs.setInt(key, val);
+        break;
+      case double:
+        await _prefs.setDouble(key, val);
+        break;
+      case String:
+        await _prefs.setString(key, val);
+        break;
+      case List:
+        await _prefs.setStringList(key, val);
+        break;
+    }
+  }
+
   set enabled(bool value) {
-    _prefs.setBool(ScheduleDataStore.enabledKey, value);
+    setSync(ScheduleDataStore.enabledKey, value);
   }
 
   @override
@@ -217,7 +251,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set mute(bool value) {
-    _prefs.setBool(ScheduleDataStore.muteKey, value);
+    setSync(ScheduleDataStore.muteKey, value);
   }
 
   @override
@@ -229,7 +263,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set vibrate(bool value) {
-    _prefs.setBool(ScheduleDataStore.vibrateKey, value);
+    setSync(ScheduleDataStore.vibrateKey, value);
   }
 
   @override
@@ -241,7 +275,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set useBackgroundService(bool value) {
-    _prefs.setBool(ScheduleDataStore.useBackgroundServiceKey, value);
+    setSync(ScheduleDataStore.useBackgroundServiceKey, value);
   }
 
   @override
@@ -253,7 +287,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set scheduleTypeStr(String value) {
-    _prefs.setString(ScheduleDataStore.scheduleTypeKey, value);
+    setSync(ScheduleDataStore.scheduleTypeKey, value);
   }
 
   @override
@@ -265,7 +299,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set periodicHours(int value) {
-    _prefs.setInt(periodicHoursKey, value);
+    setSync(periodicHoursKey, value);
   }
 
   @override
@@ -277,7 +311,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set periodicMinutes(int value) {
-    _prefs.setInt(periodicMinutesKey, value);
+    setSync(periodicMinutesKey, value);
   }
 
   @override
@@ -289,7 +323,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set randomMinMinutes(int value) {
-    _prefs.setInt(randomMinMinutesKey, value);
+    setSync(randomMinMinutesKey, value);
   }
 
   @override
@@ -301,7 +335,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set randomMaxMinutes(int value) {
-    _prefs.setInt(randomMaxMinutesKey, value);
+    setSync(randomMaxMinutesKey, value);
   }
 
   @override
@@ -313,7 +347,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set quietHoursStartHour(int value) {
-    _prefs.setInt(quietHoursStartHourKey, value);
+    setSync(quietHoursStartHourKey, value);
   }
 
   @override
@@ -325,7 +359,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set quietHoursStartMinute(int value) {
-    _prefs.setInt(quietHoursStartMinuteKey, value);
+    setSync(quietHoursStartMinuteKey, value);
   }
 
   @override
@@ -337,7 +371,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set quietHoursEndHour(int value) {
-    _prefs.setInt(quietHoursEndHourKey, value);
+    setSync(quietHoursEndHourKey, value);
   }
 
   @override
@@ -349,7 +383,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set quietHoursEndMinute(int value) {
-    _prefs.setInt(quietHoursEndMinuteKey, value);
+    setSync(quietHoursEndMinuteKey, value);
   }
 
   @override
@@ -361,7 +395,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set message(String value) {
-    _prefs.setString(messageKey, value);
+    setSync(messageKey, value);
   }
 
   @override
@@ -373,7 +407,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set infoMessage(String value) {
-    _prefs.setString(infoMessageKey, value);
+    setSync(infoMessageKey, value);
   }
 
   @override
@@ -385,7 +419,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set controlMessage(String value) {
-    _prefs.setString(controlMessageKey, value);
+    setSync(controlMessageKey, value);
   }
 
   @override
@@ -397,7 +431,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   set theme(String value) {
-    _prefs.setString(themeKey, value);
+    setSync(themeKey, value);
   }
 
   @override
@@ -406,6 +440,30 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
       theme = defaultTheme;
     }
     return _prefs.getString(ScheduleDataStore.themeKey);
+  }
+
+  set bellId(String value) {
+    setSync(bellIdKey, value);
+  }
+
+  @override
+  String get bellId {
+    if (!_prefs.containsKey(ScheduleDataStore.bellIdKey)) {
+      bellId = defaultBellId;
+    }
+    return _prefs.getString(ScheduleDataStore.bellIdKey);
+  }
+
+  set customBellPath(String value) {
+    setSync(customBellPathKey, value);
+  }
+
+  @override
+  String get customBellPath {
+    if (!_prefs.containsKey(ScheduleDataStore.customBellPathKey)) {
+      customBellPath = defaultCustomBellPath;
+    }
+    return _prefs.getString(ScheduleDataStore.customBellPathKey);
   }
 
   ScheduleDataStoreRO getScheduleDataStoreRO() {
@@ -426,6 +484,8 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
         message,
         infoMessage,
         controlMessage,
-        theme);
+        theme,
+        bellId,
+        customBellPath);
   }
 }

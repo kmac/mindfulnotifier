@@ -1,15 +1,12 @@
-import 'dart:ui';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:get/get.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/components/constants.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('reminderview'));
+var logger = Logger(printer: SimpleLogPrinter('about'));
 
 const htmlData = """
 <h3>About this app</h3>
@@ -30,10 +27,15 @@ as you like.</p>
 <h4>Project Information and Source Code</h4>
 <p>The source code is available at <a href="https://github.com/kmac5">https://github.com/kmac5</a>.
 Please see this link for additional help, or to report any issues.
-<p>The default bell is taken from user 'steaq' at 
+<h5>Bells</h5>
+<ul>Default Bell: taken from user 'steaq' from 
 <a href="https://freesound.org/s/346328/">https://freesound.org/s/346328/</a>
 and is licensed under the 'Creative Commons 0 License'.
-See the link for more information.
+<li>Singing bowl gong: taken from user 'zambolino' from 
+<a href="https://freesound.org/people/zambolino/sounds/439233/">
+https://freesound.org/people/zambolino/sounds/439233/'</a>
+and is licensed under the 'Creative Commons 0 License'.
+</ul>
 
 <h4>Privacy Policy</h4>
 <p>This application completely respects your privacy. It collects no data, other
@@ -42,6 +44,8 @@ The app doesn't have access to the Internet, and it doesn't know or collect
 anything about you, or about your reminders.
 </p>
 
+<h4>License</h4>
+<p>This application is licensed under ...</p>
 <h4>Terms of service:</h4>
 <p>This application is provided free of charge, with no warranty whatsoever.
 </p>

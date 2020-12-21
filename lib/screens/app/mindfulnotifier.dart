@@ -188,7 +188,7 @@ class MindfulNotifierWidgetController extends GetxController {
     // Get.snackbar("Control Message", "Received control message: $msg");
   }
 
-  void _sendToScheduler(var msg) {
+  void sendToScheduler(Map<String, dynamic> msg) {
     logger.d("_sendToScheduler: $msg");
     toSchedulerSendPort ??=
         IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
@@ -203,22 +203,22 @@ class MindfulNotifierWidgetController extends GetxController {
         _message.value = 'Enabled. Waiting for notification...';
       }
       _infoMessage.value = 'Enabled. Waiting for notification.';
-      _sendToScheduler({'enable': ds.getScheduleDataStoreRO()});
+      sendToScheduler({'enable': ds.getScheduleDataStoreRO()});
     } else {
       // setMessage('Disabled');
       _infoMessage.value = 'Disabled';
-      _sendToScheduler({'disable': '1'});
+      sendToScheduler({'disable': '1'});
     }
   }
 
   void handleMute(bool mute) {
     ds.mute = mute;
-    _sendToScheduler({'update': ds.getScheduleDataStoreRO()});
+    sendToScheduler({'update': ds.getScheduleDataStoreRO()});
   }
 
   void handleVibrate(bool vibrate) {
     ds.vibrate = vibrate;
-    _sendToScheduler({'update': ds.getScheduleDataStoreRO()});
+    sendToScheduler({'update': ds.getScheduleDataStoreRO()});
   }
 
   // Future<void> _handlePermissions() async {

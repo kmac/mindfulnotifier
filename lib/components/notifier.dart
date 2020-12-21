@@ -97,7 +97,6 @@ class Notifier {
   static String channelId = 'Main Channel';
 
   final String notifTitle = constants.appName;
-  final String defaultBellAsset = 'media/defaultbell.mp3';
 
   File customSoundFile;
   NotifyAudioPlayer audioPlayer;
@@ -141,7 +140,7 @@ class Notifier {
     AndroidNotificationSound notifSound;
     if (!useSeparateAudio) {
       if (customSoundFile == null) {
-        channelId = 'defaultbell';
+        channelId = 'tibetan_bell_ding_b';
         notifSound = RawResourceAndroidNotificationSound(channelId);
       } else {
         // TODO this will have to be shortened to the file name no extension:
@@ -179,7 +178,7 @@ class Notifier {
         payload: notifText);
 
     if (useSeparateAudio && !mute) {
-      audioPlayer.play();
+      audioPlayer.play(bellId: ds.bellId);
     }
   }
 }

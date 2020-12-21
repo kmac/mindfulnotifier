@@ -189,6 +189,10 @@ class Scheduler {
         case 'shutdown':
           scheduler.shutdown();
           break;
+        case 'playSound':
+          dynamic file = map.values.first;
+          scheduler._notifier.audioPlayer.play(file: file);
+          break;
       }
     }, onDone: () {
       logger.w("fromAppIsolateReceivePort is closed ${getCurrentIsolate()}");

@@ -6,8 +6,9 @@ import 'package:audio_session/audio_session.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
+import 'package:mindfulnotifier/screens/bell.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('notifier'));
+var logger = Logger(printer: SimpleLogPrinter('audio'));
 
 const Map<String, AndroidAudioUsage> audioChannelForNotification = {
   'notification': AndroidAudioUsage.notificationEvent,
@@ -16,7 +17,7 @@ const Map<String, AndroidAudioUsage> audioChannelForNotification = {
 };
 
 class NotifyAudioPlayer {
-  static const String defaultBellAsset = 'media/defaultbell.mp3';
+  static const String defaultBellAsset = 'media/tibetan_bell_ding_b.mp3';
   static File customSoundFile;
   final bool disposeOnPlayStop = true;
 
@@ -79,18 +80,37 @@ class NotifyAudioPlayer {
     await session.configure(sessionConfiguration);
   }
 
-  // Implement callbacks here. e.g. onStart, onStop, onPlay, onPause
-
-  Future<void> play() async {
+  Future<void> play({dynamic file, String bellId}) async {
+    String asset;
+    File customFile;
     _player ??= AudioPlayer();
-    if (customSoundFile == null) {
-      logger.i(
-          "Playing asset=$defaultBellAsset on $_audioChannelSelection channel");
-      await _player.setAsset(defaultBellAsset);
+    if (_player.playing) {
+      await _player.stop();
+    }
+    if (file != null) {
+      if (file is String) {
+        // this is an asset
+        asset = file;
+      } else if (file is File) {
+        // this is a custom file
+        customFile = file;
+      }
+    } else if (bellId != null) {
+      if (bellId == 'custombell') {
+        customFile = File(bellDefinitions[bellId]['path']);
+      } else {
+        asset = bellDefinitions[bellId]['path'];
+      }
+    }
+    customFile ??= customSoundFile;
+    asset ??= defaultBellAsset;
+    if (customFile == null) {
+      logger.i("Playing asset=$asset on $_audioChannelSelection channel");
+      await _player.setAsset(asset);
     } else {
       logger.i(
-          "Playing file=${customSoundFile.path} on $_audioChannelSelection channel");
-      await _player.setFilePath(customSoundFile.path);
+          "Playing file=${customFile.path} on $_audioChannelSelection channel");
+      await _player.setFilePath(customFile.path);
     }
     await _player.play(); // waits until finished playing
     if (disposeOnPlayStop) {
@@ -103,6 +123,7 @@ class NotifyAudioPlayer {
   }
 
   void dispose() async {
+    logger.d("AudioPlayer dispose");
     await _player?.stop();
     await session
         ?.setActive(false); // required to allow other players to regain focus

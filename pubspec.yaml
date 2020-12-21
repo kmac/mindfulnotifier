@@ -46,6 +46,9 @@ dependencies:
   audio_session: ^0.0.9
   #audio_service: ^0.15.3
 
+  file_picker: ^2.1.4
+  #file_picker: ^2.0.8+1
+
   #permission_handler: ^5.0.1+1
   #flutter_background_service: ^0.0.1+19
   rflutter_alert: ^1.1.0
