@@ -1,5 +1,15 @@
-const String appName = 'Mindful Notifier';
-const String appVersion = '0.0.1';
+import 'package:package_info/package_info.dart';
+import 'package:get/get.dart';
+
+String get appName {
+  PackageInfo info = Get.find();
+  return info.appName;
+}
+
+String get appVersion {
+  PackageInfo info = Get.find();
+  return "${info.version}:${info.buildNumber}";
+}
 
 const bool useForegroundService = false;
 

@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:just_audio/just_audio.dart';
+import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 import 'package:audio_session/audio_session.dart';
 
-import 'package:mindfulnotifier/components/constants.dart' as constants;
+import 'package:mindfulnotifier/screens/bell.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
-import 'package:mindfulnotifier/screens/bell.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('audio'));
 
@@ -18,11 +18,10 @@ const Map<String, AndroidAudioUsage> audioChannelForNotification = {
 
 class NotifyAudioPlayer {
   static const String defaultBellAsset = 'media/tibetan_bell_ding_b.mp3';
-  static File customSoundFile;
   final bool disposeOnPlayStop = true;
 
   var _player = AudioPlayer();
-  AudioSession session;
+  AudioSession _session;
 
   String _audioChannelSelection;
   NotifyAudioPlayer(this._audioChannelSelection);
@@ -30,20 +29,20 @@ class NotifyAudioPlayer {
   NotifyAudioPlayer.useMediaChannel() : this('media');
   NotifyAudioPlayer.useAlarmChannel() : this('alarm');
 
-  AudioSessionConfiguration sessionConfiguration;
+  AudioSessionConfiguration _sessionConfiguration;
 
   void selectAudioChannel(String channel) async {
     if (audioChannelForNotification.containsKey(channel)) {
       _audioChannelSelection = channel;
 
-      sessionConfiguration = sessionConfiguration.copyWith(
+      _sessionConfiguration = _sessionConfiguration.copyWith(
           androidAudioAttributes: AndroidAudioAttributes(
         // TODO copy this:
         contentType: AndroidAudioContentType.music,
         flags: AndroidAudioFlags.none,
         usage: audioChannelForNotification[_audioChannelSelection],
       ));
-      await session.configure(sessionConfiguration);
+      await _session.configure(_sessionConfiguration);
     } else {
       throw Exception('Unknown audio channel: $channel');
     }
@@ -56,9 +55,9 @@ class NotifyAudioPlayer {
   Future<void> init() async {
     logger.i("Initializing AudioSession");
 
-    session ??= await AudioSession.instance;
+    _session ??= await AudioSession.instance;
 
-    sessionConfiguration = AudioSessionConfiguration(
+    _sessionConfiguration = AudioSessionConfiguration(
       // avAudioSessionCategory: AVAudioSessionCategory.playback,
       // avAudioSessionCategoryOptions:
       //     AVAudioSessionCategoryOptions.allowBluetooth,
@@ -77,47 +76,54 @@ class NotifyAudioPlayer {
       androidWillPauseWhenDucked: false,
     );
 
-    await session.configure(sessionConfiguration);
+    await _session.configure(_sessionConfiguration);
   }
 
-  Future<void> play({dynamic file, String bellId}) async {
-    String asset;
-    File customFile;
+  Future<void> playBell() async {
+    ScheduleDataStoreRO ds = Get.find();
+    String bellId = ds.bellId;
+    logger.i("playBellId: $bellId");
+    if (bellId == 'customBell') {
+      play(File(ds.customBellPath));
+    } else {
+      play(bellDefinitions[bellId]['path']);
+    }
+  }
+
+  Future<void> play(dynamic fileOrPath) async {
+    String assetToPlay;
+    File fileToPlay;
     _player ??= AudioPlayer();
     if (_player.playing) {
       await _player.stop();
     }
-    if (file != null) {
-      if (file is String) {
+    if (fileOrPath != null) {
+      if (fileOrPath is String) {
         // this is an asset
-        asset = file;
-      } else if (file is File) {
+        assetToPlay = fileOrPath;
+      } else if (fileOrPath is File) {
         // this is a custom file
-        customFile = file;
-      }
-    } else if (bellId != null) {
-      if (bellId == 'custombell') {
-        customFile = File(bellDefinitions[bellId]['path']);
-      } else {
-        asset = bellDefinitions[bellId]['path'];
+        fileToPlay = fileOrPath;
       }
     }
-    customFile ??= customSoundFile;
-    asset ??= defaultBellAsset;
-    if (customFile == null) {
-      logger.i("Playing asset=$asset on $_audioChannelSelection channel");
-      await _player.setAsset(asset);
+    if (fileToPlay == null) {
+      if (assetToPlay == null || assetToPlay == '') {
+        logger.d("play: defaulting to default: $defaultBellAsset");
+        assetToPlay = defaultBellAsset;
+      }
+      logger.i("Playing asset=$assetToPlay on $_audioChannelSelection channel");
+      await _player.setAsset(assetToPlay);
     } else {
       logger.i(
-          "Playing file=${customFile.path} on $_audioChannelSelection channel");
-      await _player.setFilePath(customFile.path);
+          "Playing file=${fileToPlay.path} on $_audioChannelSelection channel");
+      await _player.setFilePath(fileToPlay.path);
     }
     await _player.play(); // waits until finished playing
     if (disposeOnPlayStop) {
       dispose();
     } else {
       await _player.stop(); // required to turn off _player.playing
-      session
+      _session
           .setActive(false); // required to allow other players to regain focus
     }
   }
@@ -125,7 +131,7 @@ class NotifyAudioPlayer {
   void dispose() async {
     logger.d("AudioPlayer dispose");
     await _player?.stop();
-    await session
+    await _session
         ?.setActive(false); // required to allow other players to regain focus
     await _player?.dispose();
     _player = null;

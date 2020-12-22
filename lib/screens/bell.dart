@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -15,6 +16,7 @@ var logger = Logger(printer: SimpleLogPrinter('bell'));
 
 const String customBellUndefined = 'Not defined';
 
+// TODO move into constants and rename constants to globals
 Map<String, Map<String, String>> bellDefinitions = {
   'defaultBell': {
     'name': 'Default Bell',
@@ -33,14 +35,14 @@ Map<String, Map<String, String>> bellDefinitions = {
   // Custom Bell is last
   'customBell': {
     'name': 'Custom Bell',
-    'path': '',
+    'path': '', // also tracked in _customBell for UI update purposes
     'extendedInfo': 'Select a custom bell from your local file system.',
   },
 };
 
 class BellWidgetController extends GetxController {
-  final _bellId = "defaultBell".obs;
-  final _customBellPath = "".obs;
+  final _bellId = 'defaultBell'.obs;
+  final _customBellPath = ''.obs;
   ScheduleDataStore ds = Get.find();
   var _selectedBellId;
 
@@ -53,7 +55,9 @@ class BellWidgetController extends GetxController {
     ScheduleDataStore ds = Get.find();
     _bellId.value = ds.bellId;
     _selectedBellId = _bellId.value;
-    _customBellPath.value = ds.customBellPath;
+    _customBellPath.value = ds
+        .customBellPath; // tracks the value of bellDefinitions['customBell']['path']
+    bellDefinitions['customBell']['path'] = _customBellPath.value;
     ever(_bellId, handleBellId);
     ever(_customBellPath, handleCustomBellPath);
   }
@@ -68,10 +72,13 @@ class BellWidgetController extends GetxController {
     ScheduleDataStore ds = Get.find();
     ds.bellId = value;
     _selectedBellId = value;
+    // update the alarm isolate:
+    MindfulNotifierWidgetController mainUiController = Get.find();
+    mainUiController.forceSchedulerUpdate();
   }
 }
 
-void handleCustomBellPath(String value) {
+void handleCustomBellPath(String value) async {
   logger.d("Change custom bell: $value");
   ScheduleDataStore ds = Get.find();
   ds.customBellPath = value;
@@ -85,11 +92,28 @@ class BellWidget extends StatelessWidget {
         await FilePicker.platform.pickFiles(type: FileType.audio);
     //allowedExtensions: ['wav','mp3','mp4', 'm4a', 'flac', '3gp']);
     if (result != null) {
-      bellDefinitions[bellId]['path'] = result.files.single.path;
-      controller._customBellPath.value = result.files.single.path;
+      // The file_picker copies the picked file into a temp cache. We have
+      // to copy it over to our application documents directory.
+      Directory appDocDir = await getApplicationDocumentsDirectory();
+      File cachedBellPath = File(result.files.single.path);
+      String newCustomBellFileName =
+          result.names.single; // the file name only - no path
+      String newCustomBellPath =
+          appDocDir.path + Platform.pathSeparator + newCustomBellFileName;
+      logger.i("Copying $cachedBellPath to $newCustomBellPath");
+      cachedBellPath.copySync(newCustomBellPath);
+
+      // remove the old custom bell from our app directory
+      if (controller._customBellPath.value != newCustomBellPath) {
+        File previousCustomBell = File(controller._customBellPath.value);
+        logger.i(
+            "Removing previous custom bell ${controller._customBellPath.value}");
+        previousCustomBell.delete();
+      }
+      // and finally, update our two paths:
+      bellDefinitions[bellId]['path'] = newCustomBellPath;
+      controller._customBellPath.value = newCustomBellPath;
     }
-    // TODO HOW TO FORCE A UI REBUILD HERE? Test - do I need to?
-    // controller.update()
   }
 
   void _showNoCustomSoundAlert(BuildContext context, String alertText) {
@@ -176,7 +200,7 @@ class BellWidget extends StatelessWidget {
           value: bellId,
           groupValue: controller._selectedBellId,
           title: Text(bellDefinitions[bellId]['name']),
-          subtitle: Text(bellDefinitions[bellId]['path']),
+          subtitle: Text(controller._customBellPath.value.split('/').last),
           onChanged: (val) {
             controller._bellId.value = val;
           },
@@ -196,12 +220,14 @@ class BellWidget extends StatelessWidget {
                     MindfulNotifierWidgetController mainUiController =
                         Get.find();
                     if (bellDefinitions[bellId]['path'] != '') {
-                      if (File(bellDefinitions[bellId]['path']).existsSync()) {
-                        mainUiController.sendToScheduler(
-                            {'playSound': bellDefinitions[bellId]['path']});
+                      File customsoundfile =
+                          File(bellDefinitions[bellId]['path']);
+                      if (customsoundfile.existsSync()) {
+                        mainUiController
+                            .sendToScheduler({'playSound': customsoundfile});
                       } else {
                         _showNoCustomSoundAlert(context,
-                            "The custom sound path '${bellDefinitions[bellId]['path']}' is no longer valid.");
+                            "The custom sound path '${bellDefinitions[bellId]['path']}' is not found.");
                       }
                     } else {
                       _showNoCustomSoundAlert(

@@ -8,6 +8,7 @@ import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
+import 'package:package_info/package_info.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -94,6 +95,7 @@ void controlCallback() async {
   // WE ARE IN THE ALARM MANAGER ISOLATE
   // Create and initialize the Scheduler singleton
   // This is only available in the alarm manager isolate
+
   bool wasInit = await Scheduler.checkInitialized();
   if (useHeartbeat) {
     Scheduler.sendControlMessage(
@@ -129,6 +131,8 @@ class Scheduler {
   Future<void> init() async {
     logger.i(
         "Initializing scheduler, initialized=$initialized ${getCurrentIsolate()}");
+    PackageInfo info = await PackageInfo.fromPlatform();
+    Get.put(info);
     initializeFromAppIsolateReceivePort();
     _notifier = Notifier();
     _notifier.start();
@@ -172,12 +176,10 @@ class Scheduler {
         case 'update':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
           scheduler.update(dataStoreRO);
-          // scheduler.reenable();
           break;
         case 'enable':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
           scheduler.enable(dataStoreRO);
-          // scheduler.reenable();
           break;
         case 'disable':
           scheduler.disable();
@@ -190,8 +192,9 @@ class Scheduler {
           scheduler.shutdown();
           break;
         case 'playSound':
-          dynamic file = map.values.first;
-          scheduler._notifier.audioPlayer.play(file: file);
+          // the map value is either a File or a path to file
+          dynamic fileOrPath = map.values.first;
+          scheduler._notifier.audioPlayer.play(fileOrPath);
           break;
       }
     }, onDone: () {
@@ -462,10 +465,9 @@ class PeriodicScheduler extends DelegatedScheduler {
     DateTime startTime = getInitialStart();
     logger.d("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
     var firstNotifDate = formatHHMM(startTime);
-    //controller.setMessage("First notification scheduled for $firstNotifDate");
     Scheduler.setInfoMessage(
         "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}," +
-            " beginning at $firstNotifDate");
+            " beginning: $firstNotifDate");
     await AndroidAlarmManager.periodic(
         Duration(hours: durationHours, minutes: durationMinutes),
         Scheduler.scheduleAlarmID,
@@ -509,14 +511,12 @@ class RandomScheduler extends DelegatedScheduler {
         (quietHours.inQuietHours || quietHours.isInQuietHours(nextDate))) {
       nextDate =
           quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
-      logger.i(
-          "Scheduling next random notification, past quiet hours: $nextDate");
+      logger.i("Scheduling next reminder, past quiet hours: $nextDate");
       Scheduler.setInfoMessage(
           "In quiet hours, next reminder at ${formatHHMMSS(nextDate)}");
     } else {
-      logger.i("Scheduling next random notification at $nextDate");
-      Scheduler.setInfoMessage(
-          "Next notification at ${formatHHMMSS(nextDate)} ($nextMinutes");
+      logger.i("Scheduling next reminder at $nextDate");
+      Scheduler.setInfoMessage("Next reminder at ${formatHHMMSS(nextDate)}");
     }
     await AndroidAlarmManager.oneShotAt(
         nextDate, Scheduler.scheduleAlarmID, Scheduler.scheduleCallback,
@@ -676,7 +676,6 @@ class QuietHours {
       logger.e(message);
       throw AssertionError(message);
     }
-    // logger.i("Initialized quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
   }
 
   void cancelTimers() async {
@@ -690,14 +689,12 @@ class QuietHours {
   }
 
   void quietStart() {
-    final DateTime now = DateTime.now();
     logger.i("Quiet hours start");
     inQuietHours = true;
     Scheduler.setMessage('In quiet hours');
   }
 
   void quietEnd() {
-    final DateTime now = DateTime.now();
     logger.i("Quiet hours end");
     inQuietHours = false;
     Scheduler.setMessage('Quiet Hours have ended.');

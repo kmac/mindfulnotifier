@@ -178,7 +178,7 @@ class Notifier {
         payload: notifText);
 
     if (useSeparateAudio && !mute) {
-      audioPlayer.play(bellId: ds.bellId);
+      audioPlayer.playBell();
     }
   }
 }

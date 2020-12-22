@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
+import 'package:package_info/package_info.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 // import 'package:mindfulnotifier/components/backgroundservice.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -42,6 +43,9 @@ void main() async {
   ScheduleDataStore ds = await ScheduleDataStore.getInstance();
   Get.put(ds);
 
+  PackageInfo info = await PackageInfo.fromPlatform();
+  Get.put(info);
+
   // if (constants.useForegroundService) {
   //   await FlutterBackgroundService.initialize(onStartService,
   //       autoStart: true, foreground: true);
@@ -57,7 +61,6 @@ void main() async {
   }
 
   runApp(
-    // GetMaterialApp(MindfulNotifierApp());
     GetMaterialApp(
       title: constants.appName,
       debugShowCheckedModeBanner: true,

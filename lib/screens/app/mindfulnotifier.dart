@@ -75,6 +75,7 @@ class MindfulNotifierWidgetController extends GetxController {
 
   void init() async {
     ds = await ScheduleDataStore.getInstance();
+    ds.dumpToLog();
     initializeFromSchedulerReceivePort();
     _enabled.value = ds.enabled;
     _mute.value = ds.mute;
@@ -213,12 +214,19 @@ class MindfulNotifierWidgetController extends GetxController {
 
   void handleMute(bool mute) {
     ds.mute = mute;
-    sendToScheduler({'update': ds.getScheduleDataStoreRO()});
+    forceSchedulerUpdate();
   }
 
   void handleVibrate(bool vibrate) {
     ds.vibrate = vibrate;
-    sendToScheduler({'update': ds.getScheduleDataStoreRO()});
+    forceSchedulerUpdate();
+  }
+
+  void forceSchedulerUpdate() {
+    if (_enabled.value) {
+      logger.i("Forcing scheduler update");
+      sendToScheduler({'update': ds.getScheduleDataStoreRO()});
+    }
   }
 
   // Future<void> _handlePermissions() async {
