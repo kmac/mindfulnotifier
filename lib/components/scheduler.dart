@@ -206,6 +206,14 @@ class Scheduler {
       fromAppIsolateReceivePort.sendPort,
       constants.toSchedulerSendPortName,
     );
+    if (!result) {
+      IsolateNameServer.removePortNameMapping(
+          constants.toSchedulerSendPortName);
+      result = IsolateNameServer.registerPortWithName(
+        fromAppIsolateReceivePort.sendPort,
+        constants.toSchedulerSendPortName,
+      );
+    }
     logger.d(
         "registerPortWithName: ${constants.toSchedulerSendPortName}, result=$result ${getCurrentIsolate()}");
     assert(result);

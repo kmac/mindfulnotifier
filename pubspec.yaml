@@ -53,7 +53,9 @@ dependencies:
   #permission_handler: ^5.0.1+1
   #flutter_background_service: ^0.0.1+19
   rflutter_alert: ^1.1.0
-  flutter_html: ^1.1.1
+  #flutter_html: ^1.1.1
+  flutter_markdown: ^0.5.1
+  url_launcher: ^5.7.10
 
 dev_dependencies:
   flutter_test:
