@@ -52,8 +52,7 @@ class Reminders {
       load();
     } else {
       print("Creating initial default reminders");
-      reminders = defaultReminders.toList();
-      persist(defaultReminders);
+      persist();
     }
     shuffledReminders = reminders.toList();
   }
@@ -63,12 +62,12 @@ class Reminders {
     return shuffledReminders.first;
   }
 
-  void persist([List<String> newReminderList]) async {
-    if (newReminderList == null) {
-      newReminderList = defaultReminders;
+  void persist() async {
+    if (reminders == null) {
+      reminders = defaultReminders.toList();
     }
     print("Persisting reminders into storage");
-    await _prefs.setStringList(reminderKey, newReminderList);
+    await _prefs.setStringList(reminderKey, reminders);
     await _prefs.setBool(reminderInitializedKey, true);
   }
 
