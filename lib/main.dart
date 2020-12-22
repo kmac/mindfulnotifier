@@ -11,16 +11,6 @@ import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/scheduler.dart' as schedule;
 import 'package:mindfulnotifier/theme/themes.dart';
 
-// Issues:
-// https://stackoverflow.com/questions/63068311/run-a-background-task-with-android-alarm-manager-in-flutter
-
-// MAYBE THE SOLUTION IS TO COORDINATE ALL OF THE NOTIFICATION INFO THROUGH THE SHARED PREFERENCES,
-// this is how it's done in the android_alarm_manager example
-// the only problem then is the alarm manager initialization issue.
-// maybe that needs to be handled via this MethodChannel to interface with the plugin to see if it's already initialized or something
-//  --> surely someone has run into this???
-//
-
 Future<void> initServices() async {
   print('starting services ...');
   // await Get.putAsync(() => ds.ScheduleDataStore.create());

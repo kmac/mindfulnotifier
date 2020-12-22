@@ -182,7 +182,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String defaultInfoMessage = 'Uninitialized';
   static const String defaultControlMessage = '';
   static const String defaultTheme = 'Default';
-  static const String defaultBellId = 'defaultBell';
+  static const String defaultBellId = 'bell1';
   static const String defaultCustomBellPath = '';
 
   static SharedPreferences _prefs;

@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:get/get.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -18,19 +18,37 @@ const String customBellUndefined = 'Not defined';
 
 // TODO move into constants and rename constants to globals
 Map<String, Map<String, String>> bellDefinitions = {
-  'defaultBell': {
-    'name': 'Default Bell',
-    'path': 'media/tibetan_bell_ding_b.mp3',
-    'description': 'The default bell.',
-    'extendedInfo': 'A Tibetan bell sounding the note B. ' +
-        'From https://freesound.org/people/steaq/sounds/346328/',
-  },
   'bell1': {
-    'name': 'Singing bowl gong',
-    'path': 'media/singing_bowl_gong.mp3',
-    'description': 'A singing bowl gong',
+    'name': 'Bell 1',
+    'path': 'media/tibetan_bell_ding_b.mp3',
+    'description': 'The default bell. A Tibetan bell sounding the note B.',
+    'extendedInfo': 'From https://freesound.org/people/steaq/sounds/346328/',
+  },
+  'bell2': {
+    'name': 'Bell 2',
+    'path': 'media/bell_inside.mp3',
+    'description': 'A deep bell',
     'extendedInfo':
-        'From https://freesound.org/people/zambolino/sounds/439233/',
+        'From https://freesound.org/people/itsallhappening/sounds/48795/',
+  },
+  'bell3': {
+    'name': 'Bell 3',
+    'path': 'media/bowl_struck.mp3',
+    'description': 'A medium bell',
+    'extendedInfo':
+        'From https://freesound.org/people/suburban%20grilla/sounds/2166/',
+  },
+  'bell4': {
+    'name': 'Bell 4',
+    'path': 'media/zenbell_1.mp3',
+    'description': 'A light bell',
+    'extendedInfo': 'From https://freesound.org/people/kerri/sounds/27421/',
+  },
+  'bell5': {
+    'name': 'Bell 5',
+    'path': 'media/ding_soft.mp3',
+    'description': 'A softly hit tibetan bowl',
+    'extendedInfo': 'From https://freesound.org/people/dobroide/sounds/436976/',
   },
   // Custom Bell is last
   'customBell': {
@@ -41,7 +59,7 @@ Map<String, Map<String, String>> bellDefinitions = {
 };
 
 class BellWidgetController extends GetxController {
-  final _bellId = 'defaultBell'.obs;
+  final _bellId = 'bell1'.obs;
   final _customBellPath = ''.obs;
   ScheduleDataStore ds = Get.find();
   var _selectedBellId;
@@ -94,7 +112,8 @@ class BellWidget extends StatelessWidget {
     if (result != null) {
       // The file_picker copies the picked file into a temp cache. We have
       // to copy it over to our application documents directory.
-      Directory appDocDir = await getApplicationDocumentsDirectory();
+      Directory appDocDir =
+          await path_provider.getApplicationDocumentsDirectory();
       File cachedBellPath = File(result.files.single.path);
       String newCustomBellFileName =
           result.names.single; // the file name only - no path
