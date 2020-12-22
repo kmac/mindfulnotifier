@@ -8,7 +8,7 @@ import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:logger/logger.dart';
-import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
+import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 

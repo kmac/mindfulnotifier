@@ -15,7 +15,7 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/utils.dart';
-import 'package:mindfulnotifier/screens/about/about.dart';
+import 'package:mindfulnotifier/screens/about.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('mindfulnotifier'));
 

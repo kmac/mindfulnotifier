@@ -11,7 +11,7 @@ import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/components/logging.dart';
-import 'package:mindfulnotifier/screens/app/mindfulnotifier.dart';
+import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('schedulesview'));
 
