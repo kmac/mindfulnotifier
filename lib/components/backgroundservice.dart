@@ -5,7 +5,7 @@
 // import 'package:get/get.dart';
 // import 'package:mindfulnotifier/components/datastore.dart';
 // import 'package:mindfulnotifier/components/constants.dart' as constants;
-// import 'package:mindfulnotifier/components/schedule.dart' as schedule;
+// import 'package:mindfulnotifier/components/scheduler.dart' as schedule;
 // import 'package:mindfulnotifier/components/utils.dart';
 
 // void startScheduler() async {

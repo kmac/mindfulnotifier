@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:flutter/material.dart';
-import 'package:mindfulnotifier/components/schedule.dart';
+import 'package:mindfulnotifier/components/scheduler.dart';
 
 void main() {
   Scheduler scheduler;

@@ -8,7 +8,7 @@ import 'package:mindfulnotifier/components/constants.dart' as constants;
 // import 'package:mindfulnotifier/components/backgroundservice.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
-import 'package:mindfulnotifier/components/schedule.dart' as schedule;
+import 'package:mindfulnotifier/components/scheduler.dart' as schedule;
 import 'package:mindfulnotifier/theme/themes.dart';
 
 // Issues:
@@ -63,7 +63,7 @@ void main() async {
   runApp(
     GetMaterialApp(
       title: constants.appName,
-      debugShowCheckedModeBanner: true,
+      debugShowCheckedModeBanner: false,
       // defaultTransition: Transition.rightToLeft,
       // defaultTransition: Transition.fade,
       getPages: router.Router.route,
