@@ -52,8 +52,9 @@ void initializeNotifications() async {
   final String currentTimeZone = await FlutterNativeTimezone.getLocalTimezone();
   tz.setLocalLocation(tz.getLocation(currentTimeZone));
 
-  final NotificationAppLaunchDetails notificationAppLaunchDetails =
-      await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+  // Use this if ever need to get access to the notication launched details:
+  // final NotificationAppLaunchDetails notificationAppLaunchDetails =
+  //     await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
 
   /// Note: permissions aren't requested here just to demonstrate that can be
   /// done later
@@ -90,13 +91,7 @@ void initializeNotifications() async {
 
 class Notifier {
   static const int notifId = 0;
-  static const bool useOngoing = false;
-  static const String channelName = 'Mindful Notifier';
-  static const String channelDescription = 'Notifications for Mindful Notifier';
-
-  static String channelId = 'Main Channel';
-
-  final String notifTitle = constants.appName;
+  static const bool useAutoCancel = false;
 
   File customSoundFile;
   NotifyAudioPlayer audioPlayer;
@@ -132,6 +127,18 @@ class Notifier {
   }
 
   void showNotification(String notifText) async {
+    // Some reference links:
+    // https://developer.android.com/training/notify-user/channels
+    // https://itnext.io/android-notification-channel-as-deep-as-possible-1a5b08538c87
+    //
+    // channelId cannot be changed after channel is submitted to notification manager;
+    String channelId = constants.appName;
+    // channelName can be changed after channel is submitted to notification manager;
+    // NOTE: we will use channelId for channelName
+    // channelDescription can be changed after channel is submitted to notification manager;
+    String channelDescription = 'Notifications for ' + constants.appName;
+
+    final String notifTitle = constants.appName;
     DateTime now = DateTime.now();
     ScheduleDataStoreRO ds = Get.find();
     bool mute = ds.mute;
@@ -140,37 +147,43 @@ class Notifier {
     AndroidNotificationSound notifSound;
     if (!useSeparateAudio) {
       if (customSoundFile == null) {
-        channelId = 'tibetan_bell_ding_b';
+        channelId += '-tibetan_bell_ding_b';
         notifSound = RawResourceAndroidNotificationSound(channelId);
       } else {
-        // TODO this will have to be shortened to the file name no extension:
-        channelId = customSoundFile.path;
+        // todo this will have to be shortened to the file name no extension:
+        channelId += '-' + customSoundFile.path;
         notifSound = UriAndroidNotificationSound(customSoundFile.path);
       }
+      // Use another channelId if mute is enabled (because of android):
       if (mute) {
-        channelId += '-mute';
-      }
-      if (vibrate) {
-        channelId += '-vibrate';
+        channelId += '-muted';
+        channelDescription += '/muted';
       }
     }
+    // Use another channelId if vibrate is enabled (because of android):
+    if (vibrate) {
+      channelId += '-vibration';
+      channelDescription += '/with vibration';
+    }
     logger.i(
-        "[$now] showNotification [channelId=$channelId]: title=$notifTitle text=$notifText mute=$mute");
+        "[$now] showNotification [channelId=$channelId]: title=$notifTitle " +
+            "text=$notifText mute=$mute vibrate=$vibrate");
 
     AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(channelId, channelName, channelDescription,
+        AndroidNotificationDetails(channelId, channelId, channelDescription,
             importance: Importance.max,
             priority: Priority.high,
             enableVibration: vibrate,
             playSound: !useSeparateAudio && !mute,
             sound: notifSound,
-            ongoing: useOngoing,
+            ongoing: false,
+            autoCancel: useAutoCancel,
             styleInformation: BigTextStyleInformation(''),
             ticker: notifText);
     NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    if (useOngoing) {
+    if (useAutoCancel) {
       await flutterLocalNotificationsPlugin.cancel(notifId);
     }
     await flutterLocalNotificationsPlugin.show(

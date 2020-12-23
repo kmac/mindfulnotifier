@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -15,10 +13,7 @@ class GeneralWidgetController extends GetxController {
   final _useBackgroundService = false.obs;
   final _theme = "Default".obs;
 
-  // UI event handlers, init code, etc goes here
-  GeneralWidgetController() {
-    // init();
-  }
+  GeneralWidgetController();
 
   @override
   void onInit() {
@@ -58,17 +53,11 @@ class GeneralWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // if (_needToScroll.value) {
-    //   WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
-    //   _needToScroll.value = false;
-    // }
     return Scaffold(
         appBar: AppBar(
           centerTitle: true,
           // title: Text('Configure Reminders'),
           title: Column(
-            // mainAxisAlignment: MainAxisAlignment.center,
-            // crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
                 'General Configuration',

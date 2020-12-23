@@ -12,7 +12,8 @@ class Reminders {
   static const List<String> defaultReminders = [
     "Are you aware?",
     "Breathe deeply. There is only the present moment.",
-    "Be present in this moment.",
+    "Take a moment if you can, to pause, and come back to the present.",
+    "Bring awareness into this moment.",
     "Let go of greed, aversion, and delusion.",
     // "Trust the universe.",
     "Respond, not react.",
