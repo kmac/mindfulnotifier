@@ -3,10 +3,12 @@
 ## About this app
 
 This app is a simple mindfulness-based timer which displays a 
-notification/reminder at user-defined intervals. Reminders are, taken 
-from a configurable list. Reminders can be configured
-for either periodic (down to 15 minute intervals) or random intervals.
-Some default notifications are provided as simple examples. 
+notification/reminder at user-defined intervals. Reminders are taken 
+from a configurable list, and can be configured
+either for periodic or random intervals.
+
+Some default reminders are provided as examples. 
+
 You can add and remove from the notifications defaults as you like.
 There are 5 bells included, and you can also configure a custom bell
 from your phone's local storage.
@@ -19,17 +21,23 @@ It currently only runs on Android.
 ### Features:
 
 * Configure either a periodic or random reminder interval.
-    - e.g. hourly, or every 15 minutes, or randomly between 30 minues and an hour
+    - e.g. hourly, or every 15 minutes, or randomly between 30 minutes and an hour
+    - periodic intervals are aligned from the top of the hour
 * Edit or add your own reminder messages.
-* Choose from a set of default bells, or provide your own.
-* Separate controls for mute and vibrate.
-* Define a range of time for quiet hours.
+    - Choose from a set of default bells, or provide your own.
+* Separate controls for 'mute' and 'vibrate'.
+* Define a time range for daily quiet hours.
 
+### Notes on Application Settings in Android
 
-## Project Information and Source Code
+#### Battery Optimization
 
-The source code is available on github at [mindfulnotifier](https://github.com/kmac5/mindfulnotifier)
-Please see this link for additional help, or to report any issues.
+Some phones will kill apps when running in the background after a relatively short period of time.
+Unfortunately, if your phone is killing the app then you will stop getting notifications.
+If this is happening, you must disable any 'battery optimization' settings for this app. This
+varies from phone-to-phone - generally you must go into the settings for the app on your phone and turn off
+any battery optimization. See https://dontkillmyapp.com/ for your phone type and android version for
+more information.
 
 
 ### Bells
