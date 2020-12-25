@@ -3,18 +3,22 @@
 ## About this app
 
 This app is a simple mindfulness-based timer which displays a 
-notification/reminder at user-defined intervals. Reminders are taken 
-from a configurable list, and can be configured
+notification/reminder at user-defined intervals. It is another
+take on a 'Mindfulness Bell', with some accompanying text.
+Reminders are taken from a configurable list, and can be configured
 either for periodic or random intervals.
 
-Some default reminders are provided as examples. 
+Some default reminders are provided as examples. You can add,
+edit, or remove these default reminders as you like.
 
-You can add and remove from the notifications defaults as you like.
 There are 5 bells included, and you can also configure a custom bell
 from your phone's local storage.
 
-The app is built using [Flutter](https://flutter.dev/).
+This app works very well in conjunction with a smartwatch. In
+this mode you can also mute the bell to have silent mindfulness
+prompts throughout your day.
 
+The app is built using [Flutter](https://flutter.dev/).
 It currently only runs on Android.
 
 

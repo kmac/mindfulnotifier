@@ -6,12 +6,13 @@ import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/theme/themes.dart';
+import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
 
 var logger = Logger(printer: SimpleLogPrinter('reminderview'));
 
 class GeneralWidgetController extends GetxController {
   final _useBackgroundService = false.obs;
-  final _theme = "Default".obs;
+  final _theme = 'Default'.obs;
 
   GeneralWidgetController();
 
@@ -50,6 +51,7 @@ class GeneralWidgetController extends GetxController {
 
 class GeneralWidget extends StatelessWidget {
   final GeneralWidgetController controller = Get.put(GeneralWidgetController());
+  final MindfulNotifierWidgetController mainUiController = Get.find();
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +86,18 @@ class GeneralWidget extends StatelessWidget {
           //   ),
           // ),
           ListTile(
+            leading: Icon(Icons.wysiwyg),
+            title: Text('Include debug information'),
+            subtitle: Text(
+                'Includes some extra runtime information in the bottom status panel. Usually not needed.'),
+            trailing: Obx(() => Checkbox(
+                  value: mainUiController.showControlMessages.value,
+                  onChanged: (value) =>
+                      mainUiController.showControlMessages.value = value,
+                )),
+          ),
+          Divider(),
+          ListTile(
               leading: Icon(Icons.app_settings_alt),
               title: Text('Theme'),
               trailing: Container(
@@ -100,7 +114,7 @@ class GeneralWidget extends StatelessWidget {
                     child: Text(value),
                   );
                 }).toList(),
-              )))
+              ))),
         ])));
   }
 }

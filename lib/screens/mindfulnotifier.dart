@@ -5,7 +5,6 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-// import 'package:permission_handler/permission_handler.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 
@@ -20,8 +19,6 @@ import 'package:mindfulnotifier/screens/about.dart';
 var logger = Logger(printer: SimpleLogPrinter('mindfulnotifier'));
 
 const String appName = 'Mindful Notifier';
-
-const bool testing = false;
 
 String getCurrentIsolate() {
   return "I:${Isolate.current.hashCode}";
@@ -42,6 +39,7 @@ class MindfulNotifierWidgetController extends GetxController {
   final _enabled = false.obs;
   final _mute = false.obs;
   final _vibrate = false.obs;
+  final showControlMessages = false.obs;
   ScheduleDataStore ds;
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
@@ -83,6 +81,7 @@ class MindfulNotifierWidgetController extends GetxController {
     _message.value = ds.message;
     _infoMessage.value = ds.infoMessage;
     _controlMessage.value = ds.controlMessage;
+    showControlMessages.value = ds.includeDebugInfo;
     initializeNotifications();
   }
 
@@ -229,15 +228,6 @@ class MindfulNotifierWidgetController extends GetxController {
     }
   }
 
-  // Future<void> _handlePermissions() async {
-  //   // TODO change this to take the user to the settings in UI
-  //   Map<Permission, PermissionStatus> statuses = await [
-  //     // Permission.ignoreBatteryOptimizations,
-  //     Permission.notification,
-  //   ].request();
-  //   print(statuses[Permission.location]);
-  // }
-
   void setNextNotification(DateTime dateTime) {
     _infoMessage.value = "Next notification at ${formatHHMMSS(dateTime)}";
   }
@@ -265,7 +255,9 @@ class MindfulNotifierWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO PROBABLY DON'T NEED THIS - the UI CAN SHUT DOWN NOW! ??????
+    // We almost don't need this, since the scheduler will keep going even
+    // if the app shuts down. However, the problem then is that when the
+    // UI comes back, we reschedule everything...
     return WillPopScope(
         onWillPop: () => showDialog<bool>(
             context: context,
@@ -402,9 +394,10 @@ class MindfulNotifierWidget extends StatelessWidget {
                     flex: 1,
                     child: Obx(
                       () => Text(
-                        controller._controlMessage.value == ''
-                            ? '${controller._infoMessage.value}'
-                            : '${controller._infoMessage.value} [${controller._controlMessage.value}]',
+                        controller._controlMessage.value != '' &&
+                                controller.showControlMessages.value
+                            ? '${controller._infoMessage.value} [${controller._controlMessage.value}]'
+                            : '${controller._infoMessage.value}',
                         style: TextStyle(
                             color: Get.isDarkMode
                                 ? Colors.grey[400]

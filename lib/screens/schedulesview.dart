@@ -196,8 +196,9 @@ class SchedulesWidget extends StatelessWidget {
         // height: 80,
         width: 120,
         child: Container(
-            // decoration: BoxDecoration(color: Colors.grey[200]),
-            decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
+            decoration: Get.isDarkMode
+                ? BoxDecoration(color: Theme.of(context).backgroundColor)
+                : BoxDecoration(color: Colors.grey[200]),
             padding: EdgeInsets.all(8),
             // margin: EdgeInsets.only(
             //     top: 2, left: 2, right: 2, bottom: 2),
@@ -267,9 +268,9 @@ class SchedulesWidget extends StatelessWidget {
                     ),
                     softWrap: true)),
             new Container(
-                // decoration: BoxDecoration(color: Colors.grey[200]),
-                decoration:
-                    BoxDecoration(color: Theme.of(context).backgroundColor),
+                decoration: Get.isDarkMode
+                    ? BoxDecoration(color: Theme.of(context).backgroundColor)
+                    : BoxDecoration(color: Colors.grey[200]),
                 padding: EdgeInsets.all(8),
                 width: 200,
                 child: new Row(
@@ -387,8 +388,9 @@ class SchedulesWidget extends StatelessWidget {
         // height: _height / 9,
         margin: EdgeInsets.only(top: 30),
         alignment: Alignment.center,
-        decoration: // BoxDecoration(color: Colors.grey[200]),
-            BoxDecoration(color: Theme.of(context).backgroundColor),
+        decoration: Get.isDarkMode
+            ? BoxDecoration(color: Theme.of(context).backgroundColor)
+            : BoxDecoration(color: Colors.grey[200]),
         child: TextFormField(
           // style: TextStyle(fontSize: 20),
           style: Theme.of(context).textTheme.headline5,

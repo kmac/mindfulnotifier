@@ -63,18 +63,14 @@ Future<void> initializeScheduler() async {
 }
 
 void enableHeartbeat() async {
-  // Heartbeat is a last-ditch alarm triggered hourly. This is just in case
-  // we miss the scheduler alarm on a reboot.
+  // Heartbeat is a last-ditch alarm triggered at a regular interval.
+  //  This is just in case we miss the scheduler alarm on a reboot.
   if (useHeartbeat) {
     await AndroidAlarmManager.cancel(controlAlarmId);
     logger.i("Enabling heartbeat");
     if (!await AndroidAlarmManager.periodic(
-        Duration(/*hours: 1*/ minutes: 30), controlAlarmId, controlCallback,
-        // startAt: DateTime.now().add(Duration(hours: 1)),
-        // TODO change these to false:
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: true)) {
+        Duration(minutes: 30), controlAlarmId, controlCallback,
+        exact: true, wakeup: true, rescheduleOnReboot: true)) {
       var errmsg =
           "Scheduling periodic control alarm failed on timer id: $controlAlarmId";
       logger.e(errmsg);
@@ -93,9 +89,8 @@ void disableHeartbeat() async {
 void controlCallback() async {
   logger.i("controlCallback ${getCurrentIsolate()}");
   // WE ARE IN THE ALARM MANAGER ISOLATE
-  // Create and initialize the Scheduler singleton
   // This is only available in the alarm manager isolate
-
+  // Create and initialize the Scheduler singleton
   bool wasInit = await Scheduler.checkInitialized();
   if (useHeartbeat) {
     Scheduler.sendControlMessage(

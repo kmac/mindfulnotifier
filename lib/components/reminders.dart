@@ -11,23 +11,19 @@ class Reminders {
   // This is the initial list of reminders. It will only be used until the reminders are persisted...
   static const List<String> defaultReminders = [
     "Are you aware?",
-    "Breathe deeply. There is only the present moment.",
-    "Take a moment if you can, to pause, and come back to the present.",
+    "Breathe deeply. This is the present moment.",
+    "Take a moment, if you can, to pause, and come back to the present.",
     "Bring awareness into this moment.",
     "Let go of greed, aversion, and delusion.",
-    // "Trust the universe.",
     "Respond, not react.",
     "All of this is impermanent.",
-    // "Connect, then correct.",
     "Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.",
-    // "Remember RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion",
-    "Note any feeling tones in this moment: Pleasant / Unpleasant / Neutral.",
+    // "RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion",
+    "Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.",
     "What is the attitude in the mind right now?",
-    // "May you be safe and free from harm. May you be healthy and free from suffering. May you be happy. May you be peaceful and live with ease.",
     "May you be happy. May you be healthy. May you be safe. May you be peaceful.",
     "Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.",
     "Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself. -- Bashō",
-    // "If this fear is with me the rest of my life, that is okay.",
   ];
   static SharedPreferences _prefs;
 

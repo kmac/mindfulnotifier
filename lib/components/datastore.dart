@@ -9,6 +9,7 @@ abstract class ScheduleDataStoreBase {
   bool get mute;
   bool get vibrate;
   bool get useBackgroundService;
+  bool get includeDebugInfo;
   String get scheduleTypeStr;
   int get periodicHours;
   int get periodicMinutes;
@@ -31,6 +32,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final bool _mute;
   final bool _vibrate;
   final bool _useBackgroundService;
+  final bool _includeDebugInfo;
   final String _scheduleTypeStr;
   final int _periodicHours;
   final int _periodicMinutes;
@@ -52,6 +54,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._mute,
       this._vibrate,
       this._useBackgroundService,
+      this._includeDebugInfo,
       this._scheduleTypeStr,
       this._periodicHours,
       this._periodicMinutes,
@@ -82,6 +85,10 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
 
   bool get useBackgroundService {
     return _useBackgroundService;
+  }
+
+  bool get includeDebugInfo {
+    return _includeDebugInfo;
   }
 
   String get scheduleTypeStr {
@@ -150,7 +157,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String muteKey = 'mute';
   static const String vibrateKey = 'vibrate';
   static const String useBackgroundServiceKey = 'useBackgroundService';
-
+  static const String includeDebugInfoKey = 'includeDebugInfoKey';
   static const String scheduleTypeKey = 'scheduleType';
   static const String periodicHoursKey = 'periodicDurationHours';
   static const String periodicMinutesKey = 'periodicDurationMinutes';
@@ -284,6 +291,18 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
       useBackgroundService = false;
     }
     return _prefs.getBool(ScheduleDataStore.useBackgroundServiceKey);
+  }
+
+  set includeDebugInfo(bool value) {
+    setSync(ScheduleDataStore.includeDebugInfoKey, value);
+  }
+
+  @override
+  bool get includeDebugInfo {
+    if (!_prefs.containsKey(ScheduleDataStore.includeDebugInfoKey)) {
+      includeDebugInfo = false;
+    }
+    return _prefs.getBool(ScheduleDataStore.includeDebugInfoKey);
   }
 
   set scheduleTypeStr(String value) {
@@ -472,6 +491,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
         mute,
         vibrate,
         useBackgroundService,
+        includeDebugInfo,
         scheduleTypeStr,
         periodicHours,
         periodicMinutes,
