@@ -448,9 +448,8 @@ class MindfulNotifierWidget extends StatelessWidget {
                 Divider(),
                 ListTile(
                   leading: Icon(Icons.settings),
-                  title: Text('General'),
-                  subtitle: Text(
-                      'Configure general application settings: theme, etc.'),
+                  title: Text('Preferences'),
+                  subtitle: Text('Configure application settings: theme, etc.'),
                   onTap: controller.handleGeneralOnTap,
                 ),
                 Divider(),

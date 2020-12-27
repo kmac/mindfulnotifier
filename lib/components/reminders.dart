@@ -12,7 +12,7 @@ class Reminders {
   static const List<String> defaultReminders = [
     "Are you aware?",
     "Breathe deeply. This is the present moment.",
-    "Take a moment, if you can, to pause, and come back to the present.",
+    "Take a moment to pause, and come back to the present.",
     "Bring awareness into this moment.",
     "Let go of greed, aversion, and delusion.",
     "Respond, not react.",
@@ -21,7 +21,7 @@ class Reminders {
     // "RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion",
     "Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.",
     "What is the attitude in the mind right now?",
-    "May you be happy. May you be healthy. May you be safe. May you be peaceful.",
+    "May you be happy. May you be healthy. May you be free from harm. May you be peaceful.",
     "Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.",
     "Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself. -- Bashō",
   ];

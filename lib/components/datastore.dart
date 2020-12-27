@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -218,6 +221,34 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     await _prefs.reload();
   }
 
+  void backup(File backupFile) {
+    var jsonData = _toJson();
+    logger.d('backup, tofile:${backupFile.path}: $jsonData');
+    backupFile.writeAsStringSync(_toJson(), flush: true);
+  }
+
+  void restore(File backupFile) {
+    String jsonData = backupFile.readAsStringSync();
+    logger.d('restore, file=${backupFile.path}: $jsonData');
+    Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
+    _initFromJson(jsonMap);
+  }
+
+  String _toJson() {
+    Map<String, dynamic> toMap = Map();
+    for (var key in _prefs.getKeys()) {
+      toMap[key] = _prefs.get(key);
+    }
+    return json.encoder.convert(toMap);
+  }
+
+  void _initFromJson(Map<String, dynamic> jsonMap) async {
+    //json.decoder.convert(input)
+    for (var key in jsonMap.keys) {
+      setSync(key, jsonMap[key]);
+    }
+  }
+
   void dumpToLog() {
     logger.d("ScheduleDataStore:");
     for (String key in _prefs.getKeys()) {
@@ -226,22 +257,28 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   Future<void> setSync(String key, dynamic val) async {
-    switch (val.runtimeType) {
-      case bool:
-        await _prefs.setBool(key, val);
-        break;
-      case int:
-        await _prefs.setInt(key, val);
-        break;
-      case double:
-        await _prefs.setDouble(key, val);
-        break;
-      case String:
-        await _prefs.setString(key, val);
-        break;
-      case List:
+    if (val is bool) {
+      await _prefs.setBool(key, val);
+    } else if (val is int) {
+      await _prefs.setInt(key, val);
+    } else if (val is double) {
+      await _prefs.setDouble(key, val);
+    } else if (val is String) {
+      await _prefs.setString(key, val);
+    } else if (val is List) {
+      // For restore:
+      if (val is List<dynamic>) {
+        List<String> newlist = List();
+        for (dynamic newval in val) {
+          newlist.add("$newval");
+        }
+        await _prefs.setStringList(key, newlist);
+      } else {
         await _prefs.setStringList(key, val);
-        break;
+      }
+    } else {
+      logger.e(
+          "Unsupported runtimeType: key=$key, value=$val, val.runtimeType=${val.runtimeType}");
     }
   }
 

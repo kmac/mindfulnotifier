@@ -160,31 +160,6 @@ class BellWidget extends StatelessWidget {
         ]).show();
   }
 
-  void _showInfoAlert(BuildContext context, String alertText) {
-    Alert(
-        context: context,
-        title: "Additional Information",
-        content: Column(
-          children: <Widget>[
-            Text(alertText,
-                style: TextStyle(
-                  fontSize: 16.0,
-                )),
-          ],
-        ),
-        buttons: [
-          DialogButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(
-              "Close",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ]).show();
-  }
-
   List<RadioListTile> _buildRadioListTiles(context) {
     List<RadioListTile> tiles = [];
     for (String bellId in bellDefinitions.keys) {
