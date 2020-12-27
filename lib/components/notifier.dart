@@ -89,6 +89,20 @@ void initializeNotifications() async {
   });
 }
 
+Future<ScheduleDataStoreRO> findScheduleDataStoreRO(
+    [bool errorNotFound = true]) async {
+  try {
+    return Get.find<ScheduleDataStoreRO>();
+  } catch (e) {
+    if (errorNotFound) {
+      logger.e("Could not get ScheduleDataStoreRO, e=$e");
+    }
+  }
+  // rebuild using ScheduleDataStore
+  ScheduleDataStore dataStore = await ScheduleDataStore.getInstance();
+  return dataStore.getScheduleDataStoreRO();
+}
+
 class Notifier {
   static const int notifId = 0;
   static const bool useAutoCancel = false;
@@ -126,7 +140,30 @@ class Notifier {
     }
   }
 
-  void showNotification(String notifText) async {
+  void showQuietHoursNotification(bool start) async {
+    final String notifText =
+        start ? 'In Quiet Hours' : 'Quiet Hours have ended';
+    showNotification(notifText, mute: true, vibrate: false);
+  }
+
+  void showInfoNotification(String notifText) async {
+    showNotification(notifText, mute: true, vibrate: false);
+  }
+
+  void showReminderNotification(String notifText) async {
+    bool mute = false;
+    bool vibrate = false;
+    try {
+      ScheduleDataStoreRO ds = await findScheduleDataStoreRO();
+      mute = ds.mute;
+      vibrate = ds.vibrate;
+    } catch (e) {
+      logger.e("Could not get ScheduleDataStoreRO, e=$e");
+    }
+    showNotification(notifText, mute: mute, vibrate: vibrate);
+  }
+
+  void showNotification(String notifText, {bool mute, bool vibrate}) async {
     // Some reference links:
     // https://developer.android.com/training/notify-user/channels
     // https://itnext.io/android-notification-channel-as-deep-as-possible-1a5b08538c87
@@ -140,9 +177,6 @@ class Notifier {
 
     final String notifTitle = constants.appName;
     DateTime now = DateTime.now();
-    ScheduleDataStoreRO ds = Get.find();
-    bool mute = ds.mute;
-    bool vibrate = ds.vibrate;
 
     AndroidNotificationSound notifSound;
     if (!useSeparateAudio) {
@@ -183,7 +217,7 @@ class Notifier {
     NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    if (useAutoCancel) {
+    if (!useAutoCancel) {
       await flutterLocalNotificationsPlugin.cancel(notifId);
     }
     await flutterLocalNotificationsPlugin.show(

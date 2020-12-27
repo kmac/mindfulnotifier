@@ -99,6 +99,14 @@ void controlCallback() async {
     Scheduler.sendControlMessage(
         "CO:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
   }
+  // if (!wasInit) {
+  //   final ds = await findScheduleDataStoreRO();
+  //   if (ds.enabled) {
+  //     Scheduler()
+  //         .notifier
+  //         .showInfoNotification('${constants.appName} is running');
+  //   }
+  // }
 }
 
 /// The main class for scheduling notifications
@@ -110,7 +118,7 @@ class Scheduler {
 
   static ScheduleDataStoreRO _ds;
   bool alarmManagerInitialized = false;
-  Notifier _notifier;
+  Notifier notifier;
   static Reminders _reminders;
   DelegatedScheduler delegate;
   StreamSubscription fromAppIsolateStreamSubscription;
@@ -129,13 +137,13 @@ class Scheduler {
     PackageInfo info = await PackageInfo.fromPlatform();
     Get.put(info);
     initializeFromAppIsolateReceivePort();
-    _notifier = Notifier();
-    _notifier.start();
+    notifier = Notifier();
+    notifier.start();
     _reminders = await Reminders.create();
     initialized = true;
     // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
     if (_ds == null) {
-      update((await ScheduleDataStore.getInstance()).getScheduleDataStoreRO());
+      update(await findScheduleDataStoreRO(false));
     }
     if (_ds.enabled) {
       logger.i("Re-enabling on init!");
@@ -147,7 +155,7 @@ class Scheduler {
     logger.i("shutdown");
     disable();
     shutdownReceivePort();
-    _notifier.shutdown();
+    notifier.shutdown();
     initialized = false;
   }
 
@@ -189,7 +197,7 @@ class Scheduler {
         case 'playSound':
           // the map value is either a File or a path to file
           dynamic fileOrPath = map.values.first;
-          scheduler._notifier.audioPlayer.play(fileOrPath);
+          scheduler.notifier.audioPlayer.play(fileOrPath);
           break;
       }
     }, onDone: () {
@@ -257,6 +265,8 @@ class Scheduler {
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
     delegate.scheduleNext();
+    notifier.showInfoNotification('${constants.appName} is enabled' +
+        '\n\nNext notification at ${formatHHMM(delegate.queryNext())}');
   }
 
   void disable() async {
@@ -336,7 +346,7 @@ class Scheduler {
         return;
       }
       var reminder = _reminders.randomReminder();
-      _notifier.showNotification(reminder);
+      notifier.showReminderNotification(reminder);
       setMessage(reminder);
     } finally {
       delegate.scheduleNext();
@@ -386,6 +396,8 @@ abstract class DelegatedScheduler {
     quietHours.cancelTimers();
     await AndroidAlarmManager.cancel(Scheduler.scheduleAlarmID);
   }
+
+  DateTime queryNext();
 
   void scheduleNext() {
     logger.d(
@@ -454,6 +466,11 @@ class PeriodicScheduler extends DelegatedScheduler {
     return startTime;
   }
 
+  @override
+  DateTime queryNext() {
+    return getInitialStart();
+  }
+
   void scheduleNext() async {
     super.scheduleNext();
     if (Scheduler.running) {
@@ -485,12 +502,13 @@ class PeriodicScheduler extends DelegatedScheduler {
 }
 
 class RandomScheduler extends DelegatedScheduler {
-  final int minMinutes;
-  final int maxMinutes;
+  final int _minMinutes;
+  final int _maxMinutes;
+  DateTime _nextDate;
   static const bool rescheduleAfterQuietHours = false;
 
-  RandomScheduler(Scheduler scheduler, QuietHours quietHours, this.minMinutes,
-      this.maxMinutes)
+  RandomScheduler(Scheduler scheduler, QuietHours quietHours, this._minMinutes,
+      this._maxMinutes)
       : super(ScheduleType.RANDOM, scheduler, quietHours);
 
   void initialScheduleComplete() {
@@ -498,31 +516,36 @@ class RandomScheduler extends DelegatedScheduler {
     scheduled = true;
   }
 
+  @override
+  DateTime queryNext() {
+    return _nextDate;
+  }
+
   void scheduleNext() async {
     super.scheduleNext();
     int nextMinutes;
-    if ((maxMinutes == minMinutes) || (minMinutes > maxMinutes)) {
-      nextMinutes = maxMinutes;
+    if ((_maxMinutes == _minMinutes) || (_minMinutes > _maxMinutes)) {
+      nextMinutes = _maxMinutes;
     } else {
-      nextMinutes = minMinutes + Random().nextInt(maxMinutes - minMinutes);
+      nextMinutes = _minMinutes + Random().nextInt(_maxMinutes - _minMinutes);
     }
     if (nextMinutes <= 1) {
       nextMinutes = 2;
     }
-    DateTime nextDate = DateTime.now().add(Duration(minutes: nextMinutes));
+    _nextDate = DateTime.now().add(Duration(minutes: nextMinutes));
     if (rescheduleAfterQuietHours &&
-        (quietHours.inQuietHours || quietHours.isInQuietHours(nextDate))) {
-      nextDate =
+        (quietHours.inQuietHours || quietHours.isInQuietHours(_nextDate))) {
+      _nextDate =
           quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
-      logger.i("Scheduling next reminder, past quiet hours: $nextDate");
+      logger.i("Scheduling next reminder, past quiet hours: $_nextDate");
       Scheduler.setInfoMessage(
-          "In quiet hours, next reminder at ${formatHHMMSS(nextDate)}");
+          "In quiet hours, next reminder at ${formatHHMMSS(_nextDate)}");
     } else {
-      logger.i("Scheduling next reminder at $nextDate");
-      Scheduler.setInfoMessage("Next reminder at ${formatHHMMSS(nextDate)}");
+      logger.i("Scheduling next reminder at $_nextDate");
+      Scheduler.setInfoMessage("Next reminder at ${formatHHMMSS(_nextDate)}");
     }
     await AndroidAlarmManager.oneShotAt(
-        nextDate, Scheduler.scheduleAlarmID, Scheduler.scheduleCallback,
+        _nextDate, Scheduler.scheduleAlarmID, Scheduler.scheduleCallback,
         exact: true,
         wakeup: true,
         allowWhileIdle: true,
@@ -695,11 +718,13 @@ class QuietHours {
     logger.i("Quiet hours start");
     inQuietHours = true;
     Scheduler.setMessage('In quiet hours');
+    Scheduler().notifier.showQuietHoursNotification(true);
   }
 
   void quietEnd() {
     logger.i("Quiet hours end");
     inQuietHours = false;
     Scheduler.setMessage('Quiet Hours have ended.');
+    Scheduler().notifier.showQuietHoursNotification(false);
   }
 }
