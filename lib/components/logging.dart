@@ -1,31 +1,79 @@
 import 'package:logger/logger.dart';
 
-// class SimpleLogPrinter extends PrettyPrinter {
-//   // final String className;
-//   // SimpleLogPrinter(this.className) {
-//   SimpleLogPrinter()
-//       : super(
-//           methodCount: 0,
-//           errorMethodCount: 8,
-//           lineLength: 120,
-//           colors: true,
-//           printEmojis: false,
-//           printTime: true,
-//         );
+// import 'dart:io';
+// import 'package:logger/src/outputs/file_output.dart';
+// import 'package:mindfulnotifier/components/constants.dart' as constants;
+//
+// bool useFileLogging = false;
+// Directory baseDir;
+//
+// void initializeLogging(Directory outputDir) {
+//   baseDir = outputDir;
+//   if (baseDir != null) {
+//     useFileLogging = true;
+//   }
+// }
+
+Logger createLogger(String className) {
+  // if (useFileLogging) {
+  //   return createLoggerMulti(className);
+  // }
+  return Logger(
+    printer: SimpleLogPrinter(className),
+    filter: ProductionFilter(),
+    output: ConsoleOutput(),
+  );
+}
+
+// Logger createLoggerMulti(String className) {
+//   return Logger(
+//       printer: SimpleLogPrinter(className),
+//       filter: ProductionFilter(),
+//       output: MultiOutput([
+//         ConsoleOutput(),
+//         FileOutput(file: File('$baseDir/${constants.appName}.log'))
+//       ]));
 // }
 
 class SimpleLogPrinter extends LogPrinter {
-  PrettyPrinter p;
   final String className;
   SimpleLogPrinter(this.className);
 
   @override
   List<String> log(LogEvent event) {
-    // void log(Level level, message, error, StackTrace stackTrace) {
     var color = PrettyPrinter.levelColors[event.level];
     // var emoji = PrettyPrinter.levelEmojis[event.level];
-    // return ([color('$emoji $className - ${event.message}')]);
-    return ([color('${getTime()}: $className - ${event.message}')]);
+    List<String> logmsg = [
+      color(
+          '${getTime()} ${getLevel(event.level)} $className: ${event.message}')
+    ];
+    if (event.error != null) {
+      logmsg.add(color('error=${event.error}'));
+    }
+    if (event.stackTrace != null) {
+      logmsg.add(color('stacktrace=${event.stackTrace}'));
+    }
+    return logmsg;
+  }
+
+  String getLevel(Level level) {
+    switch (level) {
+      case Level.verbose:
+        return "VERBOSE:";
+      case Level.debug:
+        return "DEBUG:";
+      case Level.info:
+        return "INFO:";
+      case Level.warning:
+        return "WARN:";
+      case Level.error:
+        return "ERROR:";
+      case Level.wtf:
+        return "WTF:";
+      case Level.nothing:
+        return "n/a:";
+    }
+    return 'UNKNOWN:';
   }
 
   String getTime() {

@@ -1,14 +1,13 @@
 import 'dart:io';
 import 'package:just_audio/just_audio.dart';
 import 'package:get/get.dart';
-import 'package:logger/logger.dart';
 import 'package:audio_session/audio_session.dart';
 
 import 'package:mindfulnotifier/screens/bell.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('audio'));
+var logger = createLogger('audio');
 
 const Map<String, AndroidAudioUsage> audioChannelForNotification = {
   'notification': AndroidAudioUsage.notificationEvent,

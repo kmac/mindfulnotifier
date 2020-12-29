@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:logger/logger.dart';
 
 // import 'package:mindfulnotifier/components/backgroundservice.dart' as bg;
 // import 'package:mindfulnotifier/components/constants.dart' as constants;
@@ -16,7 +15,7 @@ import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/screens/about.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('mindfulnotifier'));
+var logger = createLogger('mindfulnotifier');
 
 const String appName = 'Mindful Notifier';
 

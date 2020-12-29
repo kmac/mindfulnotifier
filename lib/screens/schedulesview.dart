@@ -6,14 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:logger/logger.dart';
 
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('schedulesview'));
+var logger = createLogger('schedulesview');
 
 enum ScheduleType { periodic, random }
 

@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:logger/logger.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -17,7 +16,7 @@ import 'package:mindfulnotifier/theme/themes.dart';
 import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
 import 'package:mindfulnotifier/screens/schedulesview.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('reminderview'));
+var logger = createLogger('reminderview');
 
 bool includeBackgroundService = false;
 

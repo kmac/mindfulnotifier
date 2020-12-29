@@ -1,8 +1,7 @@
-import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('reminders'));
+var logger = createLogger('reminders');
 
 class Reminders {
   static const String reminderKey = 'reminders';

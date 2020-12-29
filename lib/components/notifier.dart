@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 import 'package:get/get.dart';
-import 'package:logger/logger.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -16,7 +15,7 @@ import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('notifier'));
+var logger = createLogger('notifier');
 
 const bool useSeparateAudio = true;
 
@@ -95,7 +94,7 @@ Future<ScheduleDataStoreRO> findScheduleDataStoreRO(
     return Get.find<ScheduleDataStoreRO>();
   } catch (e) {
     if (errorNotFound) {
-      logger.e("Could not get ScheduleDataStoreRO, e=$e");
+      logger.e("Could not get ScheduleDataStoreRO, e=$e", 'not found', e);
     }
   }
   // rebuild using ScheduleDataStore

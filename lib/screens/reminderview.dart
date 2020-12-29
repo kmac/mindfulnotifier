@@ -4,14 +4,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:logger/logger.dart';
 
 import 'package:rflutter_alert/rflutter_alert.dart';
 
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/reminders.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('reminderview'));
+var logger = createLogger('reminderview');
 
 class ReminderWidgetController extends GetxController {
   Reminders _reminders;

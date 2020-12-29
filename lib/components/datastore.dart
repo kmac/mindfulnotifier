@@ -2,10 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:logger/logger.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('datastore'));
+var logger = createLogger('datastore');
 
 abstract class ScheduleDataStoreBase {
   bool get enabled;

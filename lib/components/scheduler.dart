@@ -7,7 +7,6 @@ import 'dart:io';
 import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:logger/logger.dart';
 import 'package:package_info/package_info.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
@@ -17,7 +16,7 @@ import 'package:mindfulnotifier/components/reminders.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
-var logger = Logger(printer: SimpleLogPrinter('schedule'));
+var logger = createLogger('scheduler');
 
 String getCurrentIsolate() {
   return "I:${Isolate.current.hashCode}";
