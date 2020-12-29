@@ -6,8 +6,8 @@ import 'package:flutter/widgets.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:get/get.dart';
-import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
+import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 
@@ -15,7 +15,6 @@ var logger = createLogger('bell');
 
 const String customBellUndefined = 'Not defined';
 
-// TODO move into constants and rename constants to globals
 Map<String, Map<String, String>> bellDefinitions = {
   'bell1': {
     'name': 'Bell 1',
@@ -112,7 +111,7 @@ class BellWidget extends StatelessWidget {
       // The file_picker copies the picked file into a temp cache. We have
       // to copy it over to our application documents directory.
       Directory appDocDir =
-          await path_provider.getApplicationDocumentsDirectory();
+          Get.find(tag: constants.tagApplicationDocumentsDirectory);
       File cachedBellPath = File(result.files.single.path);
       String newCustomBellFileName =
           result.names.single; // the file name only - no path

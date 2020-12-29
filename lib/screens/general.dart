@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
@@ -14,18 +13,20 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/utils.dart' as utils;
 import 'package:mindfulnotifier/theme/themes.dart';
 import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
-import 'package:mindfulnotifier/screens/schedulesview.dart';
 
 var logger = createLogger('reminderview');
 
 bool includeBackgroundService = false;
 
-Future<void> _handlePermissions() async {
-  // TODO change this to take the user to the settings in UI
+Future<bool> _handlePermissions() async {
   Map<Permission, PermissionStatus> statuses = await [
-    // Permission.ignoreBatteryOptimizations,
     Permission.storage,
   ].request();
+  if (!statuses[Permission.storage].isGranted) {
+    // May want to show a dialog here...
+    return false;
+  }
+  return true;
 }
 
 class GeneralWidgetController extends GetxController {
@@ -66,7 +67,7 @@ class GeneralWidgetController extends GetxController {
   void handleIncludeDebugInfo(bool value) {
     // todo; persist, and inform user restart required
     ScheduleDataStore ds = Get.find();
-    ds.includeDebugInfo = value;
+    ds?.includeDebugInfo = value;
     MindfulNotifierWidgetController mainUiController = Get.find();
     mainUiController?.showControlMessages?.value = value;
   }
@@ -83,7 +84,9 @@ class GeneralWidget extends StatelessWidget {
   final GeneralWidgetController controller = Get.put(GeneralWidgetController());
 
   void _doBackup() async {
-    await _handlePermissions();
+    if (!await _handlePermissions()) {
+      return;
+    }
     String saveToDir = await FilePicker.platform.getDirectoryPath();
     if (saveToDir != null) {
       File backupFile = File(
@@ -102,7 +105,9 @@ class GeneralWidget extends StatelessWidget {
   }
 
   void _doRestore() async {
-    await _handlePermissions();
+    if (!await _handlePermissions()) {
+      return;
+    }
     FilePickerResult result =
         await FilePicker.platform.pickFiles(allowedExtensions: [
       'json',

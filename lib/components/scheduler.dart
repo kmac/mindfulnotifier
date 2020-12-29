@@ -98,14 +98,6 @@ void controlCallback() async {
     Scheduler.sendControlMessage(
         "CO:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
   }
-  // if (!wasInit) {
-  //   final ds = await findScheduleDataStoreRO();
-  //   if (ds.enabled) {
-  //     Scheduler()
-  //         .notifier
-  //         .showInfoNotification('${constants.appName} is running');
-  //   }
-  // }
 }
 
 /// The main class for scheduling notifications
@@ -133,19 +125,30 @@ class Scheduler {
   Future<void> init() async {
     logger.i(
         "Initializing scheduler, initialized=$initialized ${getCurrentIsolate()}");
+
     PackageInfo info = await PackageInfo.fromPlatform();
     Get.put(info);
-    initializeFromAppIsolateReceivePort();
+
+    try {
+      initializeFromAppIsolateReceivePort();
+    } catch (e) {
+      logger.e("initializeFromAppIsolateReceivePort failed with: $e", null, e);
+    }
+
     notifier = Notifier();
-    notifier.start();
+    await notifier.start();
     _reminders = await Reminders.create();
-    initialized = true;
+
     // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
     if (_ds == null) {
       update(await findScheduleDataStoreRO(false));
     }
+
+    initialized = true;
+
+    // if (_ds.enabled && !running) {
     if (_ds.enabled) {
-      logger.i("Re-enabling on init!");
+      logger.i("Not running - re-enabling on init");
       enable();
     }
   }
@@ -184,6 +187,8 @@ class Scheduler {
           scheduler.enable(dataStoreRO);
           break;
         case 'disable':
+          ScheduleDataStoreRO dataStoreRO = map.values.first;
+          scheduler.update(dataStoreRO);
           scheduler.disable();
           break;
         case 'restart':
@@ -202,20 +207,23 @@ class Scheduler {
     }, onDone: () {
       logger.w("fromAppIsolateReceivePort is closed ${getCurrentIsolate()}");
     });
-
+    // if (IsolateNameServer.lookupPortByName(constants.toSchedulerSendPortName) !=
+    //     null) {
+    IsolateNameServer.removePortNameMapping(constants.toSchedulerSendPortName);
+    // }
     // Register our SendPort for the app to be able to send to our ReceivePort
     bool result = IsolateNameServer.registerPortWithName(
       fromAppIsolateReceivePort.sendPort,
       constants.toSchedulerSendPortName,
     );
-    if (!result) {
-      IsolateNameServer.removePortNameMapping(
-          constants.toSchedulerSendPortName);
-      result = IsolateNameServer.registerPortWithName(
-        fromAppIsolateReceivePort.sendPort,
-        constants.toSchedulerSendPortName,
-      );
-    }
+    // if (!result) {
+    //   IsolateNameServer.removePortNameMapping(
+    //       constants.toSchedulerSendPortName);
+    //   result = IsolateNameServer.registerPortWithName(
+    //     fromAppIsolateReceivePort.sendPort,
+    //     constants.toSchedulerSendPortName,
+    //   );
+    // }
     logger.d(
         "registerPortWithName: ${constants.toSchedulerSendPortName}, result=$result ${getCurrentIsolate()}");
     assert(result);
@@ -248,6 +256,7 @@ class Scheduler {
   }
 
   void update([ScheduleDataStoreRO dataStoreRO]) {
+    logger.d("update, datastoreRO=$dataStoreRO");
     Get.delete<ScheduleDataStoreRO>(force: true);
     _ds = Get.put(dataStoreRO, permanent: true);
   }
@@ -311,10 +320,11 @@ class Scheduler {
   }
 
   void triggerNotification() {
-    if (!running) {
-      logger.i("triggerNotification: not running");
-      return;
-    }
+    // if (!running)  {
+    //   logger.i("triggerNotification: not running");
+    //   return;
+    // }
+
     // 1) lookup a random reminder
     // 2) trigger a notification based on
     //    https://pub.dev/packages/flutter_local_notifications
@@ -361,23 +371,23 @@ class Scheduler {
     return true;
   }
 
-  static void scheduleCallback() {
+  static void scheduleCallback() async {
     logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
-    checkInitialized();
+    await checkInitialized();
     Scheduler().triggerNotification();
   }
 
-  static void quietHoursStartCallback() {
+  static void quietHoursStartCallback() async {
     logger.i(
         "[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
-    checkInitialized();
+    await checkInitialized();
     Scheduler().delegate.quietHours.quietStart();
   }
 
-  static void quietHoursEndCallback() {
+  static void quietHoursEndCallback() async {
     logger
         .i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
-    checkInitialized();
+    await checkInitialized();
     Scheduler().delegate.quietHours.quietEnd();
   }
 }

@@ -34,10 +34,10 @@ class MindfulNotifierWidgetController extends GetxController {
   final String title = appName;
   final _message = 'Not Running'.obs;
   final _infoMessage = 'Not Running'.obs;
-  final _controlMessage = ''.obs;
   final _enabled = false.obs;
   final _mute = false.obs;
   final _vibrate = false.obs;
+  final controlMessage = ''.obs;
   final showControlMessages = false.obs;
   ScheduleDataStore ds;
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
@@ -45,12 +45,6 @@ class MindfulNotifierWidgetController extends GetxController {
 
   @override
   void onInit() {
-    ever(_enabled, handleEnabled);
-    ever(_mute, handleMute);
-    ever(_vibrate, handleVibrate);
-    ever(_message, handleMessage);
-    ever(_infoMessage, handleInfoMessage);
-    ever(_controlMessage, handleControlMessage);
     init();
     // initializeFromBackgroundService();
     super.onInit();
@@ -59,6 +53,12 @@ class MindfulNotifierWidgetController extends GetxController {
   @override
   void onReady() {
     super.onReady();
+    ever(_enabled, handleEnabled);
+    ever(_mute, handleMute);
+    ever(_vibrate, handleVibrate);
+    ever(_message, handleMessage);
+    ever(_infoMessage, handleInfoMessage);
+    ever(controlMessage, handleControlMessage);
     // if (constants.useForegroundService) {
     //   Future.delayed(Duration(seconds: 10), initializeFromBackgroundService);
     // }
@@ -79,7 +79,7 @@ class MindfulNotifierWidgetController extends GetxController {
     _vibrate.value = ds.vibrate;
     _message.value = ds.message;
     _infoMessage.value = ds.infoMessage;
-    _controlMessage.value = ds.controlMessage;
+    controlMessage.value = ds.controlMessage;
     showControlMessages.value = ds.includeDebugInfo;
     initializeNotifications();
   }
@@ -111,7 +111,7 @@ class MindfulNotifierWidgetController extends GetxController {
           break;
         case 'controlMessage':
           logger.i("Received control message: $value");
-          _controlMessage.value = value;
+          controlMessage.value = value;
           break;
         default:
           logger.e("Unexpected key: $key");
@@ -188,7 +188,7 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void sendToScheduler(Map<String, dynamic> msg) {
-    logger.d("_sendToScheduler: $msg");
+    logger.d("sendToScheduler: $msg");
     toSchedulerSendPort ??=
         IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
     toSchedulerSendPort?.send(msg);
@@ -206,7 +206,7 @@ class MindfulNotifierWidgetController extends GetxController {
     } else {
       // setMessage('Disabled');
       _infoMessage.value = 'Disabled';
-      sendToScheduler({'disable': '1'});
+      sendToScheduler({'disable': ds.getScheduleDataStoreRO()});
     }
   }
 
@@ -393,9 +393,9 @@ class MindfulNotifierWidget extends StatelessWidget {
                     flex: 1,
                     child: Obx(
                       () => Text(
-                        controller._controlMessage.value != '' &&
+                        controller.controlMessage.value != '' &&
                                 controller.showControlMessages.value
-                            ? '${controller._infoMessage.value} [${controller._controlMessage.value}]'
+                            ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
                             : '${controller._infoMessage.value}',
                         style: TextStyle(
                             color: Get.isDarkMode

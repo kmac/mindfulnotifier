@@ -16,3 +16,6 @@ const bool useForegroundService = false;
 // The name associated with the background isolate's [SendPort].
 const String toAppSendPortName = 'toAppIsolate';
 const String toSchedulerSendPortName = 'toSchedulerIsolate';
+
+// 'Get' tags
+const String tagApplicationDocumentsDirectory = 'ApplicationDocumentsDirectory';

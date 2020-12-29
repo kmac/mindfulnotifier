@@ -42,4 +42,5 @@ app.*.map.json
 
 mindfulnotifier.code-workspace
 build.sh
+adb-logcat.sh
 /keystore

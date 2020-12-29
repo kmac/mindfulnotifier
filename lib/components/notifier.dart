@@ -114,7 +114,7 @@ class Notifier {
     this.customSoundFile = customSoundFile;
   }
 
-  void start() async {
+  Future<void> start() async {
     _startAudioService();
   }
 
