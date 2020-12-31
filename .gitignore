@@ -44,3 +44,4 @@ mindfulnotifier.code-workspace
 build.sh
 adb-logcat.sh
 /keystore
+/issues

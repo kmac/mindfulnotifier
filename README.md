@@ -1,12 +1,16 @@
 # mindfulnotifier
 
+A mindfulness bell with configurable text notifications, schedules, and sound.
+
 ## About this app
 
 This app is a simple mindfulness-based timer which displays a 
 notification/reminder at user-defined intervals. It is another
-take on a 'Mindfulness Bell', with some accompanying text.
-Reminders are taken from a configurable list, and can be configured
-either for periodic or random intervals.
+take on a 'Mindfulness Bell', with the addition of accompanying text.
+The reminders are taken from a configurable list, and are chosen
+at random at a selected interval. The reminder interval can either
+be periodic (in intervals down to a 15 minute granularity) or random
+(between a selected range of minutes).
 
 Some default reminders are provided as examples. You can add,
 edit, or remove these default reminders as you like.
