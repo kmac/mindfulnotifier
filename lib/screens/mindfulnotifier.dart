@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
 import 'dart:isolate';
-import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -277,7 +276,7 @@ class MindfulNotifierWidget extends StatelessWidget {
     // We almost don't need this, since the scheduler will keep going even
     // if the app shuts down. However, the problem then is that when the
     // UI comes back, we reschedule everything...
-    return WillPopScope(
+    return /* WillPopScope(
         onWillPop: () => showDialog<bool>(
             context: context,
             builder: (ctxt) => AlertDialog(
@@ -304,22 +303,23 @@ class MindfulNotifierWidget extends StatelessWidget {
                   ],
                 )),
         // Widget tree
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(controller.title),
-          ),
-          body: Center(
-            child: Column(
-              // Invoke "debug painting" (press "p" in the console, choose the
-              // "Toggle Debug Paint" action from the Flutter Inspector in Android
-              // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-              // to see the wireframe for each widget.
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                Expanded(
-                  flex: 12,
-                  child: Obx(() =>
-                      /*Card(
+        child: */
+        Scaffold(
+      appBar: AppBar(
+        title: Text(controller.title),
+      ),
+      body: Center(
+        child: Column(
+          // Invoke "debug painting" (press "p" in the console, choose the
+          // "Toggle Debug Paint" action from the Flutter Inspector in Android
+          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
+          // to see the wireframe for each widget.
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            Expanded(
+              flex: 12,
+              child: Obx(() =>
+                  /*Card(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15.0),
                       ),
@@ -328,154 +328,152 @@ class MindfulNotifierWidget extends StatelessWidget {
                           top: 15, left: 15, right: 15, bottom: 0),
                       elevation: 5,
                       child: */
-                      Container(
-                        margin: EdgeInsets.only(
-                            top: 30, left: 30, right: 30, bottom: 30),
-                        alignment: Alignment.center,
-                        // decoration: BoxDecoration(color: Colors.grey[100]),
-                        child: Text(
-                          '${controller._reminderMessage}',
-                          // style: Theme.of(context).textTheme.headline4,
-                          // style: Theme.of(context).textTheme.headline5,
-                          style: TextStyle(
-                              color: Get.isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[800],
-                              fontWeight: FontWeight.w900,
-                              fontStyle: FontStyle.italic,
-                              fontFamily: 'Open Sans',
-                              fontSize: 30),
-                          // textAlign: TextAlign.left,
-                          textAlign: TextAlign.center,
-                          softWrap: true,
-                        ),
-                      )) /*)*/,
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Obx(() => Card(
-                      // shape: RoundedRectangleBorder(
-                      //   borderRadius: BorderRadius.circular(15.0),
-                      // ),
-                      color: Theme.of(context).cardColor,
-                      margin: EdgeInsets.only(
-                          top: 15, left: 15, right: 15, bottom: 15),
-                      elevation: 4,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  Container(
+                    margin: EdgeInsets.only(
+                        top: 30, left: 30, right: 30, bottom: 30),
+                    alignment: Alignment.center,
+                    // decoration: BoxDecoration(color: Colors.grey[100]),
+                    child: Text(
+                      '${controller._reminderMessage}',
+                      // style: Theme.of(context).textTheme.headline4,
+                      // style: Theme.of(context).textTheme.headline5,
+                      style: TextStyle(
+                          color: Get.isDarkMode
+                              ? Colors.grey[400]
+                              : Colors.grey[800],
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                          fontFamily: 'Open Sans',
+                          fontSize: 30),
+                      // textAlign: TextAlign.left,
+                      textAlign: TextAlign.center,
+                      softWrap: true,
+                    ),
+                  )) /*)*/,
+            ),
+            Expanded(
+              flex: 3,
+              child: Obx(() => Card(
+                  // shape: RoundedRectangleBorder(
+                  //   borderRadius: BorderRadius.circular(15.0),
+                  // ),
+                  color: Theme.of(context).cardColor,
+                  margin:
+                      EdgeInsets.only(top: 15, left: 15, right: 15, bottom: 15),
+                  elevation: 4,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: <Widget>[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Text(controller._enabled.value
-                                  ? 'Enabled'
-                                  : 'Enable'),
-                              Switch(
-                                value: controller._enabled.value,
-                                onChanged: (newvalue) =>
-                                    controller._enabled.value = newvalue,
-                              ),
-                            ],
-                          ),
-                          ToggleButtons(
-                            isSelected: [
-                              controller._mute.value,
-                              controller._vibrate.value
-                            ],
-                            onPressed: (index) {
-                              switch (index) {
-                                case 0:
-                                  controller._mute.value =
-                                      !controller._mute.value;
-                                  break;
-                                case 1:
-                                  controller._vibrate.value =
-                                      !controller._vibrate.value;
-                                  break;
-                              }
-                            },
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                                child: Text(
-                                    controller._mute.value ? 'Muted' : 'Mute'),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                                child: Text('Vibrate'),
-                              ),
-                            ],
+                          Text(
+                              controller._enabled.value ? 'Enabled' : 'Enable'),
+                          Switch(
+                            value: controller._enabled.value,
+                            onChanged: (newvalue) =>
+                                controller._enabled.value = newvalue,
                           ),
                         ],
-                      ))),
-                ),
-                Expanded(
-                    flex: 1,
-                    child: Obx(
-                      () => Text(
-                        controller.controlMessage.value != '' &&
-                                controller.showControlMessages.value
-                            ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
-                            : '${controller._infoMessage.value}',
-                        style: TextStyle(
-                            color: Get.isDarkMode
-                                ? Colors.grey[400]
-                                : Colors.black38),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    )),
-              ],
+                      ToggleButtons(
+                        isSelected: [
+                          controller._mute.value,
+                          controller._vibrate.value
+                        ],
+                        onPressed: (index) {
+                          switch (index) {
+                            case 0:
+                              controller._mute.value = !controller._mute.value;
+                              break;
+                            case 1:
+                              controller._vibrate.value =
+                                  !controller._vibrate.value;
+                              break;
+                          }
+                        },
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.0),
+                            child:
+                                Text(controller._mute.value ? 'Muted' : 'Mute'),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text('Vibrate'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ))),
             ),
-          ),
-          drawer: Drawer(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: <Widget>[
-                DrawerHeader(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).appBarTheme.color,
-                  ),
-                  child: Text(
-                    'Settings',
+            Expanded(
+                flex: 1,
+                child: Obx(
+                  () => Text(
+                    controller.controlMessage.value != '' &&
+                            controller.showControlMessages.value
+                        ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
+                        : '${controller._infoMessage.value}',
                     style: TextStyle(
-                      // color: Colors.white,
-                      fontSize: 24,
-                      // color: Theme.of(context).,
-                    ),
+                        color:
+                            Get.isDarkMode ? Colors.grey[400] : Colors.black38),
+                    overflow: TextOverflow.ellipsis,
                   ),
+                )),
+          ],
+        ),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).appBarTheme.color,
+              ),
+              child: Text(
+                'Settings',
+                style: TextStyle(
+                  // color: Colors.white,
+                  fontSize: 24,
+                  // color: Theme.of(context).,
                 ),
-                ListTile(
-                  leading: Icon(Icons.schedule),
-                  title: Text('Schedule'),
-                  subtitle: Text('Configure reminder frequency'),
-                  onTap: controller.handleScheduleOnTap,
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.list),
-                  title: Text('Reminders'),
-                  subtitle: Text('Configure reminder contents'),
-                  onTap: controller.handleRemindersOnTap,
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.notifications),
-                  title: Text('Bell'),
-                  subtitle: Text('Configure bell'),
-                  onTap: controller.handleBellOnTap,
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('Preferences'),
-                  subtitle: Text('Configure application settings: theme, etc.'),
-                  onTap: controller.handleGeneralOnTap,
-                ),
-                Divider(),
-                AppAboutListTile(),
-              ],
+              ),
             ),
-          ),
-        ));
+            ListTile(
+              leading: Icon(Icons.schedule),
+              title: Text('Schedule'),
+              subtitle: Text('Configure reminder frequency'),
+              onTap: controller.handleScheduleOnTap,
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.list),
+              title: Text('Reminders'),
+              subtitle: Text('Configure reminder contents'),
+              onTap: controller.handleRemindersOnTap,
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.notifications),
+              title: Text('Bell'),
+              subtitle: Text('Configure bell'),
+              onTap: controller.handleBellOnTap,
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Preferences'),
+              subtitle: Text('Configure application settings: theme, etc.'),
+              onTap: controller.handleGeneralOnTap,
+            ),
+            Divider(),
+            AppAboutListTile(),
+          ],
+        ),
+      ),
+      /* ) */
+    );
   }
 }
