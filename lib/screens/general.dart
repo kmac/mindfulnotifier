@@ -6,6 +6,8 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:rflutter_alert/rflutter_alert.dart';
+import 'package:device_info/device_info.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/logging.dart';
@@ -13,6 +15,7 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/utils.dart' as utils;
 import 'package:mindfulnotifier/theme/themes.dart';
 import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
+import 'package:battery_optimization/battery_optimization.dart';
 
 var logger = createLogger('reminderview');
 
@@ -32,36 +35,52 @@ Future<bool> _handlePermissions() async {
 class GeneralWidgetController extends GetxController {
   final _useBackgroundService = false.obs;
   final _includeDebugInfo = false.obs;
+  final _useStickyNotification = true.obs;
   final _theme = 'Default'.obs;
+  final scheduleDirty = false.obs;
+  bool includeBatteryOptimizationCheck = true;
 
   GeneralWidgetController();
 
   @override
   void onInit() {
     super.onInit();
+    AndroidBuildVersion buildVersion = Get.find();
+    if (buildVersion.sdkInt < 23) {
+      includeBatteryOptimizationCheck = false;
+    }
     ScheduleDataStore ds = Get.find();
     _theme.value = ds.theme;
     _includeDebugInfo.value = ds.includeDebugInfo;
+    _useStickyNotification.value = ds.useStickyNotification;
     _useBackgroundService.value = ds.useBackgroundService;
     ever(_useBackgroundService, handleUseBackgroundService);
+    ever(_useStickyNotification, handleUseStickyNotification);
     ever(_includeDebugInfo, handleIncludeDebugInfo);
     ever(_theme, handleTheme);
   }
 
   @override
   void onReady() {
-    init();
     super.onReady();
-  }
-
-  void init() async {
-    logger.d("init");
   }
 
   void handleUseBackgroundService(bool value) {
     // todo; persist, and inform user restart required
     ScheduleDataStore ds = Get.find();
     ds.useBackgroundService = value;
+  }
+
+  void handleUseStickyNotification(bool value) {
+    ScheduleDataStore ds = Get.find();
+    ds.useStickyNotification = value;
+    scheduleDirty.value = true;
+  }
+
+  void handleScheduleDirty() {
+    logger.d("handleScheduleDirty");
+    Get.find<MindfulNotifierWidgetController>().forceSchedulerUpdate();
+    scheduleDirty.value = false;
   }
 
   void handleIncludeDebugInfo(bool value) {
@@ -135,28 +154,69 @@ class GeneralWidget extends StatelessWidget {
     }
   }
 
+  void _checkBatteryOptimization(var context) {
+    BatteryOptimization.isIgnoringBatteryOptimizations().then((onValue) {
+      if (onValue) {
+        // Igonring Battery Optimization
+        utils.showInfoAlert(
+            context,
+            'Battery Optimization Ignored',
+            'Battery optimization is already ignored. ' +
+                'The app should run properly in the background.');
+      } else {
+        Alert(
+            context: context,
+            title: 'Battery Optimization Is Active',
+            desc: "Battery optimization is active. The next screen will take you to the " +
+                "battery optimization settings.\nYou'll need to find the '${constants.appName}' " +
+                "app and turn off battery optimizations.",
+            type: AlertType.warning,
+            buttons: [
+              DialogButton(
+                onPressed: () {
+                  BatteryOptimization.openBatteryOptimizationSettings();
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  "Close",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ]).show();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          centerTitle: true,
-          // title: Text('Configure Reminders'),
-          title: Column(
-            children: <Widget>[
-              Text(
-                'Preferences',
+    return WillPopScope(
+        onWillPop: () async {
+          if (controller.scheduleDirty.value) {
+            logger.d("schedule is dirty");
+            controller.handleScheduleDirty();
+          }
+          return true;
+        },
+        child: Scaffold(
+            appBar: AppBar(
+              centerTitle: true,
+              // title: Text('Configure Reminders'),
+              title: Column(
+                children: <Widget>[
+                  Text(
+                    'Preferences',
+                  ),
+                  // Text('Subtitle',
+                  //     style: TextStyle(
+                  //       fontSize: 12.0,
+                  //     )),
+                ],
               ),
-              // Text('Subtitle',
-              //     style: TextStyle(
-              //       fontSize: 12.0,
-              //     )),
-            ],
-          ),
-        ),
-        body: Center(
-            child: Obx(() => ListView(children: <Widget>[
-                  includeBackgroundService
-                      ? ListTile(
+            ),
+            body: Center(
+                child: Obx(() => ListView(children: <Widget>[
+                      if (includeBackgroundService)
+                        ListTile(
                           leading: Icon(Icons.miscellaneous_services),
                           title: Text('Use Background Service'),
                           subtitle:
@@ -166,67 +226,93 @@ class GeneralWidget extends StatelessWidget {
                             onChanged: (value) =>
                                 controller._useBackgroundService.value = value,
                           ),
-                        )
-                      : Divider(),
-                  ListTile(
-                      leading: Icon(Icons.wysiwyg),
-                      title: Text('Include debug information'),
-                      subtitle: Text(
-                          'Includes some extra runtime information in the bottom status panel. Usually not needed.'),
-                      trailing: Checkbox(
-                        value: controller._includeDebugInfo.value,
-                        onChanged: (value) =>
-                            controller._includeDebugInfo.value = value,
-                      )),
-                  Divider(),
-                  ListTile(
-                      leading: Icon(Icons.app_settings_alt),
-                      title: Text('Theme'),
-                      trailing: Container(
-                          // padding: EdgeInsets.all(2.0),
-                          child: DropdownButton(
-                        value: controller._theme.value,
-                        onChanged: (value) {
-                          controller._theme.value = value;
-                        },
-                        items: allThemes.keys
-                            .map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                      ))),
-                  Divider(),
-                  ListTile(
-                      leading: Icon(Icons.backup),
-                      title: Text('Backup'),
-                      subtitle: Text('Backup settings to file'),
-                      trailing: Container(
-                        // padding: EdgeInsets.all(2.0),
-                        child: OutlineButton(
-                          visualDensity: VisualDensity.compact,
-                          child: Text("Save..."),
-                          onPressed: () {
-                            _doBackup();
-                          },
                         ),
-                      )),
-                  Divider(),
-                  ListTile(
-                      leading: Icon(Icons.restore_page),
-                      title: Text('Restore'),
-                      subtitle: Text('Restore settings from file'),
-                      trailing: Container(
-                        // padding: EdgeInsets.all(2.0),
-                        child: OutlineButton(
-                          visualDensity: VisualDensity.compact,
-                          child: Text("Load..."),
-                          onPressed: () {
-                            _doRestore();
-                          },
+                      if (includeBackgroundService) Divider(),
+                      ListTile(
+                          leading: Icon(Icons.wysiwyg),
+                          title: Text('Include debug information'),
+                          subtitle: Text(
+                              'Includes some extra runtime information in the bottom status panel. Usually not needed.'),
+                          trailing: Checkbox(
+                            value: controller._includeDebugInfo.value,
+                            onChanged: (value) =>
+                                controller._includeDebugInfo.value = value,
+                          )),
+                      Divider(),
+                      ListTile(
+                          leading: Icon(Icons.notifications),
+                          title: Text('Use sticky notification'),
+                          subtitle: Text(controller._useStickyNotification.value
+                              ? 'The reminder notification must be swiped to dismiss.'
+                              : 'The notification is dismissed when selected.'),
+                          trailing: Checkbox(
+                            value: controller._useStickyNotification.value,
+                            onChanged: (value) =>
+                                controller._useStickyNotification.value = value,
+                          )),
+                      Divider(),
+                      ListTile(
+                          leading: Icon(Icons.app_settings_alt),
+                          title: Text('Theme'),
+                          trailing: Container(
+                              // padding: EdgeInsets.all(2.0),
+                              child: DropdownButton(
+                            value: controller._theme.value,
+                            onChanged: (value) {
+                              controller._theme.value = value;
+                            },
+                            items: allThemes.keys
+                                .map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ))),
+                      Divider(),
+                      ListTile(
+                          leading: Icon(Icons.backup),
+                          title: Text('Backup'),
+                          subtitle: Text('Backup settings to file'),
+                          trailing: Container(
+                            // padding: EdgeInsets.all(2.0),
+                            child: OutlineButton(
+                              visualDensity: VisualDensity.compact,
+                              child: Text("Save..."),
+                              onPressed: () {
+                                _doBackup();
+                              },
+                            ),
+                          )),
+                      Divider(),
+                      ListTile(
+                          leading: Icon(Icons.restore_page),
+                          title: Text('Restore'),
+                          subtitle: Text('Restore settings from file'),
+                          trailing: Container(
+                            // padding: EdgeInsets.all(2.0),
+                            child: OutlineButton(
+                              visualDensity: VisualDensity.compact,
+                              child: Text("Load..."),
+                              onPressed: () {
+                                _doRestore();
+                              },
+                            ),
+                          )),
+                      if (controller.includeBatteryOptimizationCheck) Divider(),
+                      if (controller.includeBatteryOptimizationCheck)
+                        ListTile(
+                          leading: Icon(Icons.wysiwyg),
+                          title: Text('Check battery optimization settings'),
+                          subtitle: Text('If battery optimization is enabled for this app it ' +
+                              'can be shutdown when running in background . ' +
+                              'This button checks the battery optimization setting, ' +
+                              'and leads you to the proper settings to disable, if required.'),
+                          trailing: OutlineButton(
+                            child: Text('Check'),
+                            onPressed: () => _checkBatteryOptimization(context),
+                          ),
                         ),
-                      )),
-                ]))));
+                    ])))));
   }
 }

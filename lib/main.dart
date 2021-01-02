@@ -13,6 +13,7 @@ import 'package:mindfulnotifier/components/scheduler.dart';
 import 'package:mindfulnotifier/theme/themes.dart';
 import 'package:package_info/package_info.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
+import 'package:device_info/device_info.dart';
 
 Future<void> initServices() async {
   print('starting services ...');
@@ -37,6 +38,11 @@ void main() async {
   Directory outputDir = await path_provider.getApplicationDocumentsDirectory();
   Get.put(outputDir,
       permanent: true, tag: constants.tagApplicationDocumentsDirectory);
+
+  DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+  AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+  AndroidBuildVersion buildVersion = androidInfo.version;
+  Get.put(buildVersion, permanent: true);
 
   // if (constants.useForegroundService) {
   //   await FlutterBackgroundService.initialize(onStartService,

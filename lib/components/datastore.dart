@@ -11,6 +11,7 @@ abstract class ScheduleDataStoreBase {
   bool get mute;
   bool get vibrate;
   bool get useBackgroundService;
+  bool get useStickyNotification;
   bool get includeDebugInfo;
   String get scheduleTypeStr;
   int get periodicHours;
@@ -34,6 +35,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final bool _mute;
   final bool _vibrate;
   final bool _useBackgroundService;
+  final bool _useStickyNotification;
   final bool _includeDebugInfo;
   final String _scheduleTypeStr;
   final int _periodicHours;
@@ -56,6 +58,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._mute,
       this._vibrate,
       this._useBackgroundService,
+      this._useStickyNotification,
       this._includeDebugInfo,
       this._scheduleTypeStr,
       this._periodicHours,
@@ -87,6 +90,10 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
 
   bool get useBackgroundService {
     return _useBackgroundService;
+  }
+
+  bool get useStickyNotification {
+    return _useStickyNotification;
   }
 
   bool get includeDebugInfo {
@@ -159,6 +166,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String muteKey = 'mute';
   static const String vibrateKey = 'vibrate';
   static const String useBackgroundServiceKey = 'useBackgroundService';
+  static const String useStickyNotificationKey = 'useStickyNotification';
   static const String includeDebugInfoKey = 'includeDebugInfoKey';
   static const String scheduleTypeKey = 'scheduleType';
   static const String periodicHoursKey = 'periodicDurationHours';
@@ -331,6 +339,18 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
 
   set includeDebugInfo(bool value) {
     setSync(ScheduleDataStore.includeDebugInfoKey, value);
+  }
+
+  @override
+  bool get useStickyNotification {
+    if (!_prefs.containsKey(ScheduleDataStore.useStickyNotificationKey)) {
+      useStickyNotification = true;
+    }
+    return _prefs.getBool(ScheduleDataStore.useStickyNotificationKey);
+  }
+
+  set useStickyNotification(bool value) {
+    setSync(ScheduleDataStore.useStickyNotificationKey, value);
   }
 
   @override
@@ -527,6 +547,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
         mute,
         vibrate,
         useBackgroundService,
+        useStickyNotification,
         includeDebugInfo,
         scheduleTypeStr,
         periodicHours,

@@ -58,6 +58,7 @@ dependencies:
   flutter_markdown: ^0.5.1
   url_launcher: ^5.7.10
   # synchronized: ^2.2.0+2
+  battery_optimization: ^0.1.0
 
 dev_dependencies:
   flutter_test:

@@ -55,6 +55,35 @@ void showInfoAlert(BuildContext context, String title, String alertText,
       ]).show();
 }
 
+void showWarnAlert(BuildContext context, String title, String alertText,
+    {String desc}) {
+  Alert(
+      context: context,
+      title: title,
+      desc: desc,
+      type: AlertType.warning,
+      content: Column(
+        children: <Widget>[
+          Text(alertText,
+              style: TextStyle(
+                fontSize: 16.0,
+                color: Theme.of(context).errorColor,
+              )),
+        ],
+      ),
+      buttons: [
+        DialogButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: Text(
+            "Close",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ]).show();
+}
+
 void showErrorAlert(BuildContext context, String title, String alertText,
     {String desc}) {
   Alert(

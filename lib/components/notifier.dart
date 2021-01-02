@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:device_info/device_info.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -12,6 +13,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'package:mindfulnotifier/components/audio.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
+import 'package:mindfulnotifier/components/utils.dart' as utils;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
@@ -104,7 +106,6 @@ Future<ScheduleDataStoreRO> findScheduleDataStoreRO(
 
 class Notifier {
   static const int notifId = 0;
-  static const bool useAutoCancel = false;
 
   File customSoundFile;
   NotifyAudioPlayer audioPlayer;
@@ -152,6 +153,7 @@ class Notifier {
   void showReminderNotification(String notifText) async {
     bool mute = false;
     bool vibrate = false;
+    bool sticky = true;
     try {
       ScheduleDataStoreRO ds = await findScheduleDataStoreRO();
       mute = ds.mute;
@@ -202,6 +204,20 @@ class Notifier {
         "[$now] showNotification [channelId=$channelId]: title=$notifTitle " +
             "text=$notifText mute=$mute vibrate=$vibrate");
 
+    var styleInfo = BigTextStyleInformation('');
+    AndroidBuildVersion buildVersion = Get.find();
+    if (buildVersion.sdkInt <= 23) {
+      styleInfo = null;
+    }
+
+    bool sticky = true;
+    try {
+      ScheduleDataStoreRO ds = await findScheduleDataStoreRO();
+      sticky = ds.useStickyNotification;
+    } catch (e) {
+      logger.e("Could not get ScheduleDataStoreRO, e=$e");
+    }
+
     AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(channelId, channelId, channelDescription,
             importance: Importance.max,
@@ -210,13 +226,13 @@ class Notifier {
             playSound: !useSeparateAudio && !mute,
             sound: notifSound,
             ongoing: false,
-            autoCancel: useAutoCancel,
-            styleInformation: BigTextStyleInformation(''),
+            autoCancel: !sticky,
+            styleInformation: styleInfo,
             ticker: notifText);
     NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    if (!useAutoCancel) {
+    if (sticky) {
       await flutterLocalNotificationsPlugin.cancel(notifId);
     }
     await flutterLocalNotificationsPlugin.show(

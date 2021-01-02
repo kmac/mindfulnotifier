@@ -8,6 +8,7 @@ import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info/package_info.dart';
+import 'package:device_info/device_info.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -134,7 +135,12 @@ class Scheduler {
     await initializeAlarmManager();
 
     PackageInfo info = await PackageInfo.fromPlatform();
-    Get.put(info);
+    Get.put(info, permanent: true);
+
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    AndroidBuildVersion buildVersion = androidInfo.version;
+    Get.put(buildVersion, permanent: true);
 
     try {
       _initializeFromAppIsolateReceivePort();
