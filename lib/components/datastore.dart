@@ -21,7 +21,7 @@ abstract class ScheduleDataStoreBase {
   int get quietHoursStartMinute;
   int get quietHoursEndHour;
   int get quietHoursEndMinute;
-  String get message;
+  String get reminderMessage;
   String get infoMessage;
   String get controlMessage;
   String get theme;
@@ -44,9 +44,9 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final int _quietHoursStartMinute;
   final int _quietHoursEndHour;
   final int _quietHoursEndMinute;
-  final String _message;
+  final String _reminderMessage;
   final String _infoMessage;
-  final String _heartbeatMessage;
+  final String _controlMessage;
   final String _theme;
   final String _bellId;
   final String _customBellPath;
@@ -66,9 +66,9 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._quietHoursStartMinute,
       this._quietHoursEndHour,
       this._quietHoursEndMinute,
-      this._message,
+      this._reminderMessage,
       this._infoMessage,
-      this._heartbeatMessage,
+      this._controlMessage,
       this._theme,
       this._bellId,
       this._customBellPath);
@@ -129,8 +129,8 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
     return _quietHoursEndMinute;
   }
 
-  String get message {
-    return _message;
+  String get reminderMessage {
+    return _reminderMessage;
   }
 
   String get infoMessage {
@@ -138,7 +138,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   }
 
   String get controlMessage {
-    return _heartbeatMessage;
+    return _controlMessage;
   }
 
   String get theme {
@@ -169,7 +169,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String quietHoursStartMinuteKey = 'quietHoursStartMinute';
   static const String quietHoursEndHourKey = 'quietHoursEndHour';
   static const String quietHoursEndMinuteKey = 'quietHoursEndMinute';
-  static const String messageKey = 'message';
+  static const String reminderMessageKey = 'reminderMessage';
   static const String infoMessageKey = 'infoMessage';
   static const String controlMessageKey = 'controlMessage';
   static const String themeKey = 'theme';
@@ -187,7 +187,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const int defaultQuietHoursStartMinute = 0;
   static const int defaultQuietHoursEndHour = 9;
   static const int defaultQuietHoursEndMinute = 0;
-  static const String defaultMessage = 'Not Enabled';
+  static const String defaultReminderMessage = 'Not Enabled';
   static const String defaultInfoMessage = 'Uninitialized';
   static const String defaultControlMessage = '';
   static const String defaultTheme = 'Default';
@@ -449,16 +449,16 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _prefs.getInt(ScheduleDataStore.quietHoursEndMinuteKey);
   }
 
-  set message(String value) {
-    setSync(messageKey, value);
+  set reminderMessage(String value) {
+    setSync(reminderMessageKey, value);
   }
 
   @override
-  String get message {
-    if (!_prefs.containsKey(ScheduleDataStore.messageKey)) {
-      message = defaultMessage;
+  String get reminderMessage {
+    if (!_prefs.containsKey(ScheduleDataStore.reminderMessageKey)) {
+      reminderMessage = defaultReminderMessage;
     }
-    return _prefs.getString(ScheduleDataStore.messageKey);
+    return _prefs.getString(ScheduleDataStore.reminderMessageKey);
   }
 
   set infoMessage(String value) {
@@ -537,7 +537,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
         quietHoursStartMinute,
         quietHoursEndHour,
         quietHoursEndMinute,
-        message,
+        reminderMessage,
         infoMessage,
         controlMessage,
         theme,

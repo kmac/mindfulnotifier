@@ -9,7 +9,7 @@ import 'package:mindfulnotifier/components/constants.dart' as constants;
 // import 'package:mindfulnotifier/components/backgroundservice.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
-import 'package:mindfulnotifier/components/scheduler.dart' as schedule;
+import 'package:mindfulnotifier/components/scheduler.dart';
 import 'package:mindfulnotifier/theme/themes.dart';
 import 'package:package_info/package_info.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
@@ -20,17 +20,8 @@ Future<void> initServices() async {
   // GetxService schedulerService;
   // await Get.putAsync(schedule.Scheduler()).init();
 
-  Directory outputDir = await path_provider.getApplicationDocumentsDirectory();
-  Get.put(outputDir,
-      permanent: true, tag: constants.tagApplicationDocumentsDirectory);
-
-  startScheduler();
+  await initializeScheduler();
   print('All services started...');
-}
-
-void startScheduler() async {
-  print("startScheduler");
-  await schedule.initializeScheduler();
 }
 
 void main() async {
@@ -42,6 +33,10 @@ void main() async {
 
   PackageInfo info = await PackageInfo.fromPlatform();
   Get.put(info);
+
+  Directory outputDir = await path_provider.getApplicationDocumentsDirectory();
+  Get.put(outputDir,
+      permanent: true, tag: constants.tagApplicationDocumentsDirectory);
 
   // if (constants.useForegroundService) {
   //   await FlutterBackgroundService.initialize(onStartService,

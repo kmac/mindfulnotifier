@@ -32,7 +32,7 @@ class MindfulNotifierWidgetController extends GetxController {
   static ReceivePort fromSchedulerReceivePort;
 
   final String title = appName;
-  final _message = 'Not Running'.obs;
+  final _reminderMessage = 'Not Running'.obs;
   final _infoMessage = 'Not Running'.obs;
   final _enabled = false.obs;
   final _mute = false.obs;
@@ -56,9 +56,10 @@ class MindfulNotifierWidgetController extends GetxController {
     ever(_enabled, handleEnabled);
     ever(_mute, handleMute);
     ever(_vibrate, handleVibrate);
-    ever(_message, handleMessage);
+    ever(_reminderMessage, handleReminderMessage);
     ever(_infoMessage, handleInfoMessage);
     ever(controlMessage, handleControlMessage);
+    triggerSchedulerSync();
     // if (constants.useForegroundService) {
     //   Future.delayed(Duration(seconds: 10), initializeFromBackgroundService);
     // }
@@ -77,11 +78,15 @@ class MindfulNotifierWidgetController extends GetxController {
     _enabled.value = ds.enabled;
     _mute.value = ds.mute;
     _vibrate.value = ds.vibrate;
-    _message.value = ds.message;
+    _reminderMessage.value = ds.reminderMessage;
     _infoMessage.value = ds.infoMessage;
     controlMessage.value = ds.controlMessage;
     showControlMessages.value = ds.includeDebugInfo;
     initializeNotifications();
+  }
+
+  void triggerSchedulerSync() async {
+    sendToScheduler({'sync': 1});
   }
 
   void initializeFromSchedulerReceivePort() {
@@ -101,10 +106,10 @@ class MindfulNotifierWidgetController extends GetxController {
           .i("fromSchedulerReceivePort received: $map ${getCurrentIsolate()}");
 
       String key = map.keys.first;
-      String value = map.values.first;
+      dynamic value = map.values.first;
       switch (key) {
-        case 'message':
-          _message.value = value;
+        case 'reminderMessage':
+          _reminderMessage.value = value;
           break;
         case 'infoMessage':
           _infoMessage.value = value;
@@ -112,6 +117,21 @@ class MindfulNotifierWidgetController extends GetxController {
         case 'controlMessage':
           logger.i("Received control message: $value");
           controlMessage.value = value;
+          break;
+        case 'syncResponse':
+          logger.i("Received sync response : $value");
+          if (value.containsKey('reminderMessage')) {
+            ds.reminderMessage = value['reminderMessage'];
+            _reminderMessage.value = value['reminderMessage'];
+          }
+          if (value.containsKey('infoMessage')) {
+            ds.infoMessage = value['infoMessage'];
+            _infoMessage.value = value['infoMessage'];
+          }
+          if (value.containsKey('controlMessage')) {
+            ds.controlMessage = value['controlMessage'];
+            controlMessage.value = value['controlMessage'];
+          }
           break;
         default:
           logger.e("Unexpected key: $key");
@@ -174,8 +194,8 @@ class MindfulNotifierWidgetController extends GetxController {
     IsolateNameServer.removePortNameMapping(toAppSendPortName);
   }
 
-  void handleMessage(msg) {
-    ds.message = msg;
+  void handleReminderMessage(msg) {
+    ds.reminderMessage = msg;
   }
 
   void handleInfoMessage(msg) {
@@ -197,9 +217,9 @@ class MindfulNotifierWidgetController extends GetxController {
   void handleEnabled(enabled) {
     ds.enabled = enabled;
     if (enabled) {
-      if (_message.value == 'Not Enabled' ||
-          _message.value == 'In quiet hours') {
-        _message.value = 'Enabled. Waiting for notification...';
+      if (_reminderMessage.value == 'Not Enabled' ||
+          _reminderMessage.value == 'In quiet hours') {
+        _reminderMessage.value = 'Enabled. Waiting for notification...';
       }
       _infoMessage.value = 'Enabled. Waiting for notification.';
       sendToScheduler({'enable': ds.getScheduleDataStoreRO()});
@@ -314,7 +334,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                         alignment: Alignment.center,
                         // decoration: BoxDecoration(color: Colors.grey[100]),
                         child: Text(
-                          '${controller._message}',
+                          '${controller._reminderMessage}',
                           // style: Theme.of(context).textTheme.headline4,
                           // style: Theme.of(context).textTheme.headline5,
                           style: TextStyle(

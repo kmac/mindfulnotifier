@@ -122,7 +122,7 @@ class Notifier {
     _stopAudioService();
   }
 
-  static void cancelAll() async {
+  void cancelAll() async {
     await flutterLocalNotificationsPlugin.cancelAll();
   }
 

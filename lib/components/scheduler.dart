@@ -15,6 +15,7 @@ import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/reminders.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/components/logging.dart';
+import 'package:mindfulnotifier/components/quiethours.dart';
 
 var logger = createLogger('scheduler');
 
@@ -40,15 +41,21 @@ bool androidAlarmManagerInitialized = false;
 /// We also put the notification info in shared prefs and always read from that
 /// on the UI side.
 Future<void> initializeScheduler() async {
+  // check IsolateNameServer to see if our alarm isolate is already running
+  if (IsolateNameServer.lookupPortByName(constants.toSchedulerSendPortName) !=
+      null) {
+    logger.i(
+        "initializeScheduler: already initialized: ${constants.toSchedulerSendPortName} ${getCurrentIsolate()}");
+    return;
+  }
   // !!!
   // THIS IS ON THE 'MAIN' ISOLATE
   // Nothing else in this file should be on the main isolate.
   // !!!
-  if (!androidAlarmManagerInitialized) {
-    logger.i("Initializing AndroidAlarmManager ${getCurrentIsolate()}");
-    await AndroidAlarmManager.initialize();
-    androidAlarmManagerInitialized = true;
-  }
+  logger.i("initializeScheduler ${getCurrentIsolate()}");
+
+  await initializeAlarmManager();
+
   // Send ourselves a bootstrap message. The 'controlCallback' will be
   // invoked on the alarm manager isolate (also called the scheduler isolate)
   if (!await AndroidAlarmManager.oneShot(
@@ -61,27 +68,16 @@ Future<void> initializeScheduler() async {
   }
 }
 
-void enableHeartbeat() async {
-  // Heartbeat is a last-ditch alarm triggered at a regular interval.
-  //  This is just in case we miss the scheduler alarm on a reboot.
-  if (useHeartbeat) {
-    await AndroidAlarmManager.cancel(controlAlarmId);
-    logger.i("Enabling heartbeat");
-    if (!await AndroidAlarmManager.periodic(
-        Duration(minutes: 30), controlAlarmId, controlCallback,
-        exact: true, wakeup: true, rescheduleOnReboot: true)) {
-      var errmsg =
-          "Scheduling periodic control alarm failed on timer id: $controlAlarmId";
-      logger.e(errmsg);
-      throw AssertionError(errmsg);
+Future<void> initializeAlarmManager() async {
+  if (!androidAlarmManagerInitialized) {
+    try {
+      logger.i("Initializing AndroidAlarmManager ${getCurrentIsolate()}");
+      await AndroidAlarmManager.initialize();
+      androidAlarmManagerInitialized = true;
+    } catch (e) {
+      logger.e('initializeAlarmManager failed',
+          'AndroidAlarmManager.initialize() failed', e);
     }
-  }
-}
-
-void disableHeartbeat() async {
-  if (useHeartbeat) {
-    logger.i("Cancelling heartbeat");
-    await AndroidAlarmManager.cancel(controlAlarmId);
   }
 }
 
@@ -90,27 +86,36 @@ void controlCallback() async {
   // WE ARE IN THE ALARM MANAGER ISOLATE
   // This is only available in the alarm manager isolate
   // Create and initialize the Scheduler singleton
-  bool wasInit = await Scheduler.checkInitialized();
+  Scheduler scheduler = Scheduler();
+  bool wasInit = await scheduler.checkInitialized();
   if (useHeartbeat) {
-    Scheduler.sendControlMessage(
+    scheduler.sendControlMessage(
         "HB:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
   } else {
-    Scheduler.sendControlMessage(
+    scheduler.sendControlMessage(
         "CO:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
   }
+}
+
+void scheduleCallback() async {
+  logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
+  Scheduler scheduler = Scheduler();
+  await scheduler.checkInitialized();
+  scheduler.triggerNotification();
 }
 
 /// The main class for scheduling notifications
 class Scheduler {
   static const int scheduleAlarmID = 10;
 
-  static bool running = false;
-  static bool initialized = false;
+  bool running = false;
+  bool initialized = false;
 
-  static ScheduleDataStoreRO _ds;
+  Map<String, String> _lastUiMessage = {};
+  ScheduleDataStoreRO _ds;
+  Reminders _reminders;
   bool alarmManagerInitialized = false;
   Notifier notifier;
-  static Reminders _reminders;
   DelegatedScheduler delegate;
   StreamSubscription fromAppIsolateStreamSubscription;
   ReceivePort fromAppIsolateReceivePort;
@@ -126,43 +131,46 @@ class Scheduler {
     logger.i(
         "Initializing scheduler, initialized=$initialized ${getCurrentIsolate()}");
 
+    await initializeAlarmManager();
+
     PackageInfo info = await PackageInfo.fromPlatform();
     Get.put(info);
 
     try {
-      initializeFromAppIsolateReceivePort();
+      _initializeFromAppIsolateReceivePort();
     } catch (e) {
-      logger.e("initializeFromAppIsolateReceivePort failed with: $e", null, e);
+      logger.e("_initializeFromAppIsolateReceivePort failed with: $e", null, e);
     }
 
     notifier = Notifier();
     await notifier.start();
+
     _reminders = await Reminders.create();
 
     // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
     if (_ds == null) {
-      update(await findScheduleDataStoreRO(false));
+      _update(dataStoreRO: await findScheduleDataStoreRO(false));
     }
 
     initialized = true;
 
     // if (_ds.enabled && !running) {
     if (_ds.enabled) {
-      logger.i("Not running - re-enabling on init");
-      enable();
+      logger.i("Re-enabling on init");
+      _enable();
     }
   }
 
-  void shutdown() {
+  void _shutdown() {
     logger.i("shutdown");
-    disable();
-    shutdownReceivePort();
+    _disable();
+    _shutdownReceivePort();
     notifier.shutdown();
     initialized = false;
   }
 
-  void initializeFromAppIsolateReceivePort() async {
-    logger.i("initializeFromAppIsolateReceivePort ${getCurrentIsolate()}");
+  void _initializeFromAppIsolateReceivePort() async {
+    logger.i("_initializeFromAppIsolateReceivePort ${getCurrentIsolate()}");
 
     fromAppIsolateReceivePort = ReceivePort();
 
@@ -176,32 +184,34 @@ class Scheduler {
           .i("fromAppIsolateReceivePort received: $map ${getCurrentIsolate()}");
       String key = map.keys.first;
       // String value = map.values.first;
-      Scheduler scheduler = Scheduler();
       switch (key) {
         case 'update':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
-          scheduler.update(dataStoreRO);
+          _update(dataStoreRO: dataStoreRO);
           break;
         case 'enable':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
-          scheduler.enable(dataStoreRO);
+          _enable(dataStoreRO: dataStoreRO);
           break;
         case 'disable':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
-          scheduler.update(dataStoreRO);
-          scheduler.disable();
+          _update(dataStoreRO: dataStoreRO);
+          _disable();
           break;
         case 'restart':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
-          scheduler.restart(dataStoreRO);
+          _restart(dataStoreRO);
+          break;
+        case 'sync':
+          _handleSync();
           break;
         case 'shutdown':
-          scheduler.shutdown();
+          _shutdown();
           break;
         case 'playSound':
           // the map value is either a File or a path to file
           dynamic fileOrPath = map.values.first;
-          scheduler.notifier.audioPlayer.play(fileOrPath);
+          notifier.audioPlayer.play(fileOrPath);
           break;
       }
     }, onDone: () {
@@ -229,47 +239,28 @@ class Scheduler {
     assert(result);
   }
 
-  void shutdownReceivePort() async {
-    logger.i("shutdownReceivePort");
+  void _shutdownReceivePort() async {
+    logger.i("_shutdownReceivePort");
     fromAppIsolateReceivePort.close();
     await fromAppIsolateStreamSubscription.cancel();
     IsolateNameServer.removePortNameMapping(constants.toSchedulerSendPortName);
   }
 
-  static void setMessage(String msg) async {
-    // schedDS.message = msg;
-    var toAppSendPort =
-        IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
-    toAppSendPort?.send({'message': msg});
-  }
-
-  static void setInfoMessage(String msg) async {
-    var toAppSendPort =
-        IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
-    toAppSendPort?.send({'infoMessage': msg});
-  }
-
-  static void sendControlMessage(String msg) async {
-    var toAppSendPort =
-        IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
-    toAppSendPort?.send({'controlMessage': msg});
-  }
-
-  void update([ScheduleDataStoreRO dataStoreRO]) {
-    logger.d("update, datastoreRO=$dataStoreRO");
+  void _update({ScheduleDataStoreRO dataStoreRO}) {
+    logger.d("_update, datastoreRO=$dataStoreRO");
     Get.delete<ScheduleDataStoreRO>(force: true);
     _ds = Get.put(dataStoreRO, permanent: true);
   }
 
-  void enable([ScheduleDataStoreRO dataStoreRO]) {
+  void _enable({ScheduleDataStoreRO dataStoreRO}) {
+    logger.i("_enable");
     if (dataStoreRO != null) {
-      update(dataStoreRO);
+      _update(dataStoreRO: dataStoreRO);
     }
     if (running) {
-      disable();
+      _disable();
     }
-    logger.i("enable");
-    enableHeartbeat();
+    _enableHeartbeat();
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
     delegate.scheduleNext();
@@ -277,22 +268,78 @@ class Scheduler {
         '\n\nNext notification at ${formatHHMM(delegate.queryNext())}');
   }
 
-  void disable() async {
-    logger.i("disable");
+  void _disable() async {
+    logger.i("_disable");
     delegate?.cancel();
-    Notifier.cancelAll();
-    disableHeartbeat();
+    notifier.cancelAll();
+    _disableHeartbeat();
     running = false;
   }
 
-  void restart(ScheduleDataStoreRO store) {
-    disable();
+  void _restart(ScheduleDataStoreRO store) {
+    _disable();
     sleep(Duration(seconds: 1));
-    enable(store);
+    _enable(dataStoreRO: store);
+  }
+
+  void _handleSync() async {
+    Map<String, String> map = Map.from(_lastUiMessage);
+    logger.d("_handleSync: $map");
+    _sendValueToUI('syncResponse', map);
+  }
+
+  void _enableHeartbeat() async {
+    // Heartbeat is a last-ditch alarm triggered at a regular interval.
+    //  This is just in case we miss the scheduler alarm on a reboot.
+    if (useHeartbeat) {
+      await AndroidAlarmManager.cancel(controlAlarmId);
+      logger.i("Enabling heartbeat");
+      if (!await AndroidAlarmManager.periodic(
+          Duration(minutes: 30), controlAlarmId, controlCallback,
+          exact: true, wakeup: true, rescheduleOnReboot: true)) {
+        var errmsg =
+            "Scheduling periodic control alarm failed on timer id: $controlAlarmId";
+        logger.e(errmsg);
+        throw AssertionError(errmsg);
+      }
+    }
+  }
+
+  void _disableHeartbeat() async {
+    if (useHeartbeat) {
+      logger.i("Cancelling heartbeat");
+      await AndroidAlarmManager.cancel(controlAlarmId);
+    }
   }
 
   void initialScheduleComplete() {
     running = true;
+  }
+
+  void _sendValueToUI(String tag, dynamic value) async {
+    try {
+      // look this up every time, in case the UI goes away:
+      var toAppSendPort =
+          IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
+      toAppSendPort?.send({tag: value});
+    } catch (e) {
+      logger.w('Failed to send to UI', 'send failed', e);
+    }
+  }
+
+  void sendReminderMessage(String msg) async {
+    _lastUiMessage['reminderMessage'] = msg;
+    _sendValueToUI('reminderMessage', msg);
+  }
+
+  void sendInfoMessage(String msg) async {
+    _lastUiMessage['infoMessage'] = msg;
+    _sendValueToUI('infoMessage', msg);
+  }
+
+  void sendControlMessage(String msg) async {
+    _lastUiMessage['controlMessage'] = msg;
+    _sendValueToUI('controlMessage', msg);
   }
 
   DelegatedScheduler _buildSchedulerDelegate(Scheduler scheduler) {
@@ -339,56 +386,36 @@ class Scheduler {
       if (isQuiet) {
         if (!isQuietChecked) {
           logger.i("In quiet hours... ignoring notification");
-          setInfoMessage("In quiet hours ${formatHHMM(now)}");
+          sendInfoMessage("In quiet hours ${formatHHMM(now)}");
           return;
         } else {
           logger.e(
               "Checked quiet hours disagrees with value. Cancelling quiet hours");
-          setInfoMessage("Cancelling quiet hours ${formatHHMM(now)}");
+          sendInfoMessage("Cancelling quiet hours ${formatHHMM(now)}");
           delegate.quietHours.inQuietHours = false;
         }
       }
       if (isQuietChecked) {
         // Note: this could happen if enabled in quiet hours:
         logger.i("In quiet hours (missed alarm)... ignoring notification");
-        setInfoMessage("In quiet hours ${formatHHMM(now)} NA");
+        sendInfoMessage("In quiet hours ${formatHHMM(now)} NA");
         return;
       }
       var reminder = _reminders.randomReminder();
       notifier.showReminderNotification(reminder);
-      setMessage(reminder);
+      sendReminderMessage(reminder);
     } finally {
       delegate.scheduleNext();
     }
   }
 
-  static Future<bool> checkInitialized() async {
-    if (!Scheduler.initialized) {
+  Future<bool> checkInitialized() async {
+    if (!initialized) {
       logger.w('checkInitialized: Scheduler is not initialized');
-      await Scheduler().init();
+      await init();
       return false; // was not initialized
     }
     return true;
-  }
-
-  static void scheduleCallback() async {
-    logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
-    await checkInitialized();
-    Scheduler().triggerNotification();
-  }
-
-  static void quietHoursStartCallback() async {
-    logger.i(
-        "[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
-    await checkInitialized();
-    Scheduler().delegate.quietHours.quietStart();
-  }
-
-  static void quietHoursEndCallback() async {
-    logger
-        .i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
-    await checkInitialized();
-    Scheduler().delegate.quietHours.quietEnd();
   }
 }
 
@@ -482,10 +509,10 @@ class PeriodicScheduler extends DelegatedScheduler {
 
   void scheduleNext() async {
     super.scheduleNext();
-    if (Scheduler.running) {
+    if (scheduler.running) {
       // don't need to schedule anything
       if (!scheduled) {
-        Scheduler.setInfoMessage(
+        scheduler.sendInfoMessage(
             "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}");
         scheduled = true;
       }
@@ -494,13 +521,13 @@ class PeriodicScheduler extends DelegatedScheduler {
     DateTime startTime = getInitialStart();
     logger.d("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
     var firstNotifDate = formatHHMM(startTime);
-    Scheduler.setInfoMessage(
+    scheduler.sendInfoMessage(
         "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}," +
             " beginning: $firstNotifDate");
     await AndroidAlarmManager.periodic(
         Duration(hours: durationHours, minutes: durationMinutes),
         Scheduler.scheduleAlarmID,
-        Scheduler.scheduleCallback,
+        scheduleCallback,
         startAt: startTime,
         exact: true,
         wakeup: true,
@@ -547,14 +574,14 @@ class RandomScheduler extends DelegatedScheduler {
       _nextDate =
           quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
       logger.i("Scheduling next reminder, past quiet hours: $_nextDate");
-      Scheduler.setInfoMessage(
+      scheduler.sendInfoMessage(
           "In quiet hours, next reminder at ${formatHHMMSS(_nextDate)}");
     } else {
       logger.i("Scheduling next reminder at $_nextDate");
-      Scheduler.setInfoMessage("Next reminder at ${formatHHMMSS(_nextDate)}");
+      scheduler.sendInfoMessage("Next reminder at ${formatHHMMSS(_nextDate)}");
     }
     await AndroidAlarmManager.oneShotAt(
-        _nextDate, Scheduler.scheduleAlarmID, Scheduler.scheduleCallback,
+        _nextDate, Scheduler.scheduleAlarmID, scheduleCallback,
         exact: true,
         wakeup: true,
         allowWhileIdle: true,
@@ -563,177 +590,5 @@ class RandomScheduler extends DelegatedScheduler {
     if (!scheduled) {
       initialScheduleComplete();
     }
-  }
-}
-
-class QuietHours {
-  static const int quietHoursStartAlarmID = 5521;
-  static const int quietHoursEndAlarmID = 5522;
-  final TimeOfDay startTime;
-  final TimeOfDay endTime;
-  bool inQuietHours = false;
-
-  QuietHours(this.startTime, this.endTime);
-  QuietHours.defaultQuietHours()
-      : this(TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
-
-  DateTime _convertTimeOfDayToToday(TimeOfDay tod, {DateTime current}) {
-    // now can be overridden for testing
-    current ??= DateTime.now();
-    return DateTime(
-        current.year, current.month, current.day, tod.hour, tod.minute);
-  }
-
-  DateTime _convertTimeOfDayToTomorrow(TimeOfDay tod, {DateTime current}) {
-    // now can be overridden for testing
-    current ??= DateTime.now();
-    final tomorrow = current.add(Duration(days: 1));
-    return DateTime(
-        tomorrow.year, tomorrow.month, tomorrow.day, tod.hour, tod.minute);
-  }
-
-  DateTime _convertTimeOfDayToYesterday(TimeOfDay tod, {DateTime current}) {
-    // now can be overridden for testing
-    current ??= DateTime.now();
-    final yesterday = current.subtract(Duration(days: 1));
-    return DateTime(
-        yesterday.year, yesterday.month, yesterday.day, tod.hour, tod.minute);
-  }
-
-  DateTime getNextQuietStart({DateTime current}) {
-    current ??= DateTime.now();
-    DateTime quietStart = _convertTimeOfDayToToday(startTime, current: current);
-    if (quietStart.isBefore(current)) {
-      quietStart = _convertTimeOfDayToTomorrow(startTime, current: current);
-    }
-    return quietStart;
-  }
-
-  DateTime getNextQuietEnd({DateTime current}) {
-    current ??= DateTime.now();
-    DateTime quietEnd = _convertTimeOfDayToToday(endTime, current: current);
-    // if (quietEnd.isAtSameMomentAs(now) || quietEnd.isBefore(now)) {
-    if (quietEnd.isBefore(current)) {
-      quietEnd = _convertTimeOfDayToTomorrow(endTime, current: current);
-    }
-    return quietEnd;
-  }
-
-  bool isInQuietHours(DateTime givenDate) {
-    /*
-         yesterday ???   today     ???     tomorrow  ???
-        ---------------------------------------------------------------
-              now1              now2                now3 (same as now1)
-               V                 V                   V
-        ----------------|---------------------|-------------
-                    quiet start            quiet end
-                  (past or future)      (ALWAYS IN THE FUTURE)
-
-      Quiet end is always in the future.
-      Quiet start may be in the past (only when in quiet hours) or future.
-      Therefore, we can start from the end and work our way back.
-    */
-    // Note: 'today' and 'tomorrow' are all relative to the date we're given.
-    DateTime todayEnd = _convertTimeOfDayToToday(endTime, current: givenDate);
-    DateTime tomorrowEnd =
-        _convertTimeOfDayToTomorrow(endTime, current: givenDate);
-    DateTime todayStart =
-        _convertTimeOfDayToToday(startTime, current: givenDate);
-
-    // Is quiet end today or tomorrow? It is always in the future.
-    DateTime end;
-    if (givenDate.isBefore(todayEnd)) {
-      end = todayEnd;
-    } else {
-      end = tomorrowEnd;
-    }
-    assert(givenDate.isBefore(end)); // always in the future
-
-    // Now we can base quiet start on what we know to be the end
-    // Adjust today's start if necessary (for instance, if it is just after midnight)
-    if (todayStart.add(Duration(days: 1)).isBefore(end)) {
-      todayStart = todayStart.add(Duration(days: 1));
-    }
-
-    if (todayStart.isAfter(end)) {
-      // Today's start is after today's end, but we haven't reached
-      // today's end yet (see above end calculation), which must mean that:
-      // 1) quiet hours started _yesterday_, and
-      // 2) we must be in quiet hours, since we haven't reached today's end yet.
-      DateTime yesterdayStart =
-          _convertTimeOfDayToYesterday(startTime, current: givenDate);
-      assert(givenDate.isAfter(yesterdayStart));
-      assert(givenDate.isBefore(end));
-      assert(givenDate.isBefore(todayStart));
-      return true;
-    }
-
-    // Now we know that we are before 'end' (which is either today or
-    // tomorrow - we don't care, because it is somewhere in the future).
-    // So, if we are before today's start then we're before quiet hours;
-    // otherwise we are in quiet hours.
-    if (givenDate.isBefore(todayStart)) {
-      return false;
-    }
-    return true;
-  }
-
-  void initializeTimers() async {
-    if (isInQuietHours(DateTime.now())) {
-      quietStart();
-    }
-    var nextQuietStart = getNextQuietStart();
-    var nextQuietEnd = getNextQuietEnd();
-    await AndroidAlarmManager.cancel(quietHoursStartAlarmID);
-    await AndroidAlarmManager.cancel(quietHoursEndAlarmID);
-    logger.i(
-        "Initializing quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
-    assert(nextQuietStart.isAfter(DateTime.now()));
-    if (!await AndroidAlarmManager.periodic(Duration(days: 1),
-        quietHoursStartAlarmID, Scheduler.quietHoursStartCallback,
-        startAt: nextQuietStart,
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: rescheduleOnReboot)) {
-      var message =
-          "periodic schedule failed on quiet hours start timer: $quietHoursStartAlarmID";
-      logger.e(message);
-      throw AssertionError(message);
-    }
-    if (!await AndroidAlarmManager.periodic(Duration(days: 1),
-        quietHoursEndAlarmID, Scheduler.quietHoursEndCallback,
-        startAt: nextQuietEnd,
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: rescheduleOnReboot)) {
-      var message =
-          "periodic schedule failed on quiet hours end timer: $quietHoursEndAlarmID";
-      logger.e(message);
-      throw AssertionError(message);
-    }
-  }
-
-  void cancelTimers() async {
-    logger.i("Cancelling quiet hours timers");
-    if (!await AndroidAlarmManager.cancel(quietHoursStartAlarmID)) {
-      logger.e("cancel failed on quiet hours timers: $quietHoursStartAlarmID");
-    }
-    if (!await AndroidAlarmManager.cancel(quietHoursEndAlarmID)) {
-      logger.e("cancel failed on quiet hours timers: $quietHoursEndAlarmID");
-    }
-  }
-
-  void quietStart() {
-    logger.i("Quiet hours start");
-    inQuietHours = true;
-    Scheduler.setMessage('In quiet hours');
-    Scheduler().notifier.showQuietHoursNotification(true);
-  }
-
-  void quietEnd() {
-    logger.i("Quiet hours end");
-    inQuietHours = false;
-    Scheduler.setMessage('Quiet Hours have ended.');
-    Scheduler().notifier.showQuietHoursNotification(false);
   }
 }

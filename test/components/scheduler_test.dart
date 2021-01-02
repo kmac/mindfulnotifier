@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:flutter/material.dart';
 import 'package:mindfulnotifier/components/scheduler.dart';
+import 'package:mindfulnotifier/components/quiethours.dart';
 
 void main() {
   Scheduler scheduler;
