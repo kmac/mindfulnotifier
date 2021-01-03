@@ -1,22 +1,22 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
-import 'dart:io';
 
 import 'package:android_alarm_manager/android_alarm_manager.dart';
+import 'package:device_info/device_info.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info/package_info.dart';
-import 'package:device_info/device_info.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
+import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
+import 'package:mindfulnotifier/components/quiethours.dart';
 import 'package:mindfulnotifier/components/reminders.dart';
 import 'package:mindfulnotifier/components/utils.dart';
-import 'package:mindfulnotifier/components/logging.dart';
-import 'package:mindfulnotifier/components/quiethours.dart';
 
 var logger = createLogger('scheduler');
 

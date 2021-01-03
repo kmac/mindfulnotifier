@@ -1,21 +1,21 @@
 import 'dart:io';
 
+import 'package:battery_optimization/battery_optimization.dart';
+import 'package:device_info/device_info.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
-import 'package:device_info/device_info.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
-import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
+import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/utils.dart' as utils;
-import 'package:mindfulnotifier/theme/themes.dart';
 import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
-import 'package:battery_optimization/battery_optimization.dart';
+import 'package:mindfulnotifier/theme/themes.dart';
 
 var logger = createLogger('reminderview');
 
@@ -200,7 +200,6 @@ class GeneralWidget extends StatelessWidget {
         child: Scaffold(
             appBar: AppBar(
               centerTitle: true,
-              // title: Text('Configure Reminders'),
               title: Column(
                 children: <Widget>[
                   Text(
@@ -232,7 +231,7 @@ class GeneralWidget extends StatelessWidget {
                           leading: Icon(Icons.wysiwyg),
                           title: Text('Include debug information'),
                           subtitle: Text(
-                              'Includes some extra runtime information in the bottom status panel. Usually not needed.'),
+                              'Includes extra runtime information in the bottom status panel (for debug only).'),
                           trailing: Checkbox(
                             value: controller._includeDebugInfo.value,
                             onChanged: (value) =>
@@ -305,9 +304,9 @@ class GeneralWidget extends StatelessWidget {
                           leading: Icon(Icons.wysiwyg),
                           title: Text('Check battery optimization settings'),
                           subtitle: Text('If battery optimization is enabled for this app it ' +
-                              'can be shutdown when running in background . ' +
+                              'can be shutdown when running in the background. ' +
                               'This button checks the battery optimization setting, ' +
-                              'and leads you to the proper settings to disable, if required.'),
+                              'and leads you to the proper settings to disable if required.'),
                           trailing: OutlineButton(
                             child: Text('Check'),
                             onPressed: () => _checkBatteryOptimization(context),

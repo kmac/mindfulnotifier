@@ -1,26 +1,26 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:device_info/device_info.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
+import 'package:package_info/package_info.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
+
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 // import 'package:mindfulnotifier/components/backgroundservice.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/scheduler.dart';
 import 'package:mindfulnotifier/theme/themes.dart';
-import 'package:package_info/package_info.dart';
-import 'package:path_provider/path_provider.dart' as path_provider;
-import 'package:device_info/device_info.dart';
 
 Future<void> initServices() async {
   print('starting services ...');
   // await Get.putAsync(() => ds.ScheduleDataStore.create());
   // GetxService schedulerService;
   // await Get.putAsync(schedule.Scheduler()).init();
-
   await initializeScheduler();
   print('All services started...');
 }

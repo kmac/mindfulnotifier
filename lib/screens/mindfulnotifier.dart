@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 // import 'package:mindfulnotifier/components/backgroundservice.dart' as bg;
-// import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -273,38 +272,7 @@ class MindfulNotifierWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // We almost don't need this, since the scheduler will keep going even
-    // if the app shuts down. However, the problem then is that when the
-    // UI comes back, we reschedule everything...
-    return /* WillPopScope(
-        onWillPop: () => showDialog<bool>(
-            context: context,
-            builder: (ctxt) => AlertDialog(
-                  title: Text('Warning'),
-                  content: Text(
-                    "If you use the back button here the app will exit, " +
-                        "and you won't receive any further notifications. Do you really want to exit?",
-                    softWrap: true,
-                  ),
-                  actions: [
-                    FlatButton(
-                      child: Text('Yes'),
-                      onPressed: () {
-                        controller.triggerSchedulerShutdown();
-                        sleep(Duration(seconds: 2));
-                        controller.shutdownReceivePort();
-                        Navigator.pop(ctxt, true);
-                      },
-                    ),
-                    FlatButton(
-                      child: Text('No'),
-                      onPressed: () => Navigator.pop(ctxt, false),
-                    ),
-                  ],
-                )),
-        // Widget tree
-        child: */
-        Scaffold(
+    return Scaffold(
       appBar: AppBar(
         title: Text(controller.title),
       ),
@@ -349,7 +317,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                       textAlign: TextAlign.center,
                       softWrap: true,
                     ),
-                  )) /*)*/,
+                  )),
             ),
             Expanded(
               flex: 3,

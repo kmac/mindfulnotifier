@@ -13,7 +13,6 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'package:mindfulnotifier/components/audio.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
-import 'package:mindfulnotifier/components/utils.dart' as utils;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
