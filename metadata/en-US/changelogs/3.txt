@@ -1,0 +1,3 @@
+* Minor code changes, 
+* Quote attribution in reminder
+* Aligning release with tags in github
