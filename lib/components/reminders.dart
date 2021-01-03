@@ -9,20 +9,20 @@ class Reminders {
 
   // This is the initial list of reminders. It will only be used until the reminders are persisted...
   static const List<String> defaultReminders = [
-    "Are you aware?",
-    "Breathe deeply. This is the present moment.",
-    "Take a moment to pause, and come back to the present.",
-    "Bring awareness into this moment.",
-    "Let go of greed, aversion, and delusion.",
-    "Respond, not react.",
-    "All of this is impermanent.",
-    "Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.",
-    // "RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion",
-    "Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.",
-    "What is the attitude in the mind right now?",
-    "May you be happy. May you be healthy. May you be free from harm. May you be peaceful.",
-    "Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.",
-    "Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself. -- Bashō",
+    '''Are you aware?''',
+    '''Breathe deeply. This is the present moment.''',
+    '''Take a moment to pause, and come back to the present.''',
+    '''Bring awareness into this moment.''',
+    '''Let go of greed, aversion, and delusion.''',
+    '''Respond, not react.''',
+    '''All of this is impermanent.''',
+    '''Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.''',
+    // '''RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion''',
+    '''Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.''',
+    '''What is the attitude in the mind right now?''',
+    '''May you be happy. May you be healthy. May you be free from harm. May you be peaceful.''',
+    '''"Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want." -- Joseph Goldstein''',
+    '''"Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself." -- Bashō''',
   ];
   static SharedPreferences _prefs;
 
