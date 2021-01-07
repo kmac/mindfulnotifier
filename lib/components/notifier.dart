@@ -152,7 +152,6 @@ class Notifier {
   void showReminderNotification(String notifText) async {
     bool mute = false;
     bool vibrate = false;
-    bool sticky = true;
     try {
       ScheduleDataStoreRO ds = await findScheduleDataStoreRO();
       mute = ds.mute;
