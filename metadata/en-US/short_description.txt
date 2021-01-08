@@ -1,1 +1,1 @@
-A mindfulness bell with configurable text notifications, schedules, and sound
+A mindfulness bell with configurable text notifications, scheduling, and sound

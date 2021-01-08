@@ -1,3 +1,6 @@
+# 1.0.4
+- config changes required for publishing to fdroid
+
 # 1.0.1
 - minor code cleanup
 - publishing to fdroid
