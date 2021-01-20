@@ -63,14 +63,11 @@
 
     </application>
 
-    <!-- for android_alarm_manager -->
+    <!-- for android_alarm_manager: -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- for backup/restore: -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <!--
-      android.permission.VIBRATE
-      android.permission.MODIFY_AUDIO_SETTINGS
-    -->
 
 </manifest>

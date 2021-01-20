@@ -36,6 +36,19 @@ It currently only runs on Android.
 * Separate controls for 'mute' and 'vibrate'.
 * Define a time range for daily quiet hours.
 
+### Permissions
+
+This app uses the following permissions:
+
+- `ACCESS_NETWORK_STATE`: Required by the library used to launch the github source code site
+- `RECEIVE_BOOT_COMPLETED`: Required by the underlying alarm service to restart after reboot
+- `WAKE_LOCK`: Required by the underlying alarm service to wake up at the scheduled time
+- `USE_FULL_SCREEN_INTENT`: Required to show app in foreground from the reminder notification
+- `VIBRATE`: Required to vibrate during notifications
+- `READ_EXTERNAL_STORAGE`: Required for backup. Permission is requested upon first use.
+- `WRITE_EXTERNAL_STORAGE`: Required for backup. Permission is requested upon first use.
+
+
 ### Notes on Application Settings in Android
 
 #### Battery Optimization

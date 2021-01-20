@@ -21,7 +21,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #              This number is used only to determine whether one version is more recent than another,
 #              with higher numbers indicating more recent versions
 # versionName: Customer-visible version string
-version: 1.0.4+5
+version: 1.0.5+6
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -45,9 +45,6 @@ dependencies:
   shared_preferences: '>=0.5.12+4 <2.0.0'
   get: ^3.24.0
   logger: ^0.9.4
-  # logger_flutter:
-  #   git: https://github.com/ewertonrp/logger_flutter.git
-  # logger_flutter: ^0.7.1
 
   # For audio:
   just_audio: ^0.5.6
@@ -63,7 +60,6 @@ dependencies:
   rflutter_alert: ^1.1.0
   flutter_markdown: ^0.5.1
   url_launcher: ^5.7.10
-  # synchronized: ^2.2.0+2
   battery_optimization: ^0.1.0
 
 dev_dependencies:

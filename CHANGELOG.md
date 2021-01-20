@@ -1,3 +1,6 @@
+# 1.0.5
+- cleanup/document permissions
+
 # 1.0.4
 - config changes required for publishing to fdroid
 

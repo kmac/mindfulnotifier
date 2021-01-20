@@ -18,3 +18,13 @@ your own custom bell from your phone's local storage.
 This app works very well in conjunction with a smartwatch. In
 this mode you can also mute the bell to have silent mindfulness
 prompts throughout your day.
+
+This app uses the following permissions:
+
+- ACCESS_NETWORK_STATE: Required by the library used to launch the github source code site
+- RECEIVE_BOOT_COMPLETED: Required by the underlying alarm service to restart after reboot
+- WAKE_LOCK: Required by the underlying alarm service to wake up at the scheduled time
+- USE_FULL_SCREEN_INTENT: Required to show app in foreground from the reminder notification
+- VIBRATE: Required to vibrate during notifications
+- READ_EXTERNAL_STORAGE: Required for backup. Permission is requested upon first use.
+- WRITE_EXTERNAL_STORAGE: Required for backup. Permission is requested upon first use.
