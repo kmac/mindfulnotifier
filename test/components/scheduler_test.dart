@@ -71,7 +71,7 @@ void main() {
   group('Quiet Hours', () {
     test('quiet hours - before quiet', () {
       var quiet9pm9am = QuietHours(
-          TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
+          TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0), false);
       DateTime dt = DateTime.parse("2020-01-01 14:00:00");
       expect(quiet9pm9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0));
@@ -81,7 +81,7 @@ void main() {
     });
     test('quiet hours - in quiet', () {
       var quiet9pm9am = QuietHours(
-          TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
+          TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0), false);
       DateTime dt = DateTime.parse("2020-01-01 22:00:00");
       expect(quiet9pm9am.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0).add(Duration(days: 1)));
@@ -119,8 +119,8 @@ void main() {
     });
     test('quiet hours - midnight', () {
       // start @11:55pm
-      var quiet1155pm9am = QuietHours(
-          TimeOfDay(hour: 23, minute: 55), TimeOfDay(hour: 9, minute: 0));
+      var quiet1155pm9am = QuietHours(TimeOfDay(hour: 23, minute: 55),
+          TimeOfDay(hour: 9, minute: 0), false);
       // before quiet:
       DateTime dt = DateTime.parse("2020-01-01 23:00:00");
       expect(quiet1155pm9am.getNextQuietStart(current: dt),
@@ -157,7 +157,7 @@ void main() {
     test('quiet hours - late start', () {
       // start @1am
       var quiet1am9am = QuietHours(
-          TimeOfDay(hour: 1, minute: 0), TimeOfDay(hour: 9, minute: 0));
+          TimeOfDay(hour: 1, minute: 0), TimeOfDay(hour: 9, minute: 0), false);
       // before quiet:
       DateTime dt = DateTime.parse("2020-01-01 22:00:00");
       expect(quiet1am9am.getNextQuietStart(current: dt),
@@ -193,7 +193,7 @@ void main() {
 
     test('quiet hours - after quiet', () {
       var quietHours = QuietHours(
-          TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
+          TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0), false);
       DateTime dt = DateTime.parse("2020-01-01 10:00:00");
       expect(quietHours.getNextQuietStart(current: dt),
           DateTime(dt.year, dt.month, dt.day, 21, 0));

@@ -70,6 +70,7 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void init() async {
+    logger.i("mindfulnotifier:init() ${getCurrentIsolate()}");
     ds = await ScheduleDataStore.getInstance();
     ds.dumpToLog();
     initializeFromSchedulerReceivePort();

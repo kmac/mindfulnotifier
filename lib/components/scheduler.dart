@@ -27,12 +27,13 @@ String getCurrentIsolate() {
 enum ScheduleType { PERIODIC, RANDOM }
 
 const bool useHeartbeat = true;
+const Duration heartbeatInterval = Duration(minutes: 30);
 const bool rescheduleOnReboot = useHeartbeat;
 const int controlAlarmId = 5;
 bool androidAlarmManagerInitialized = false;
 
-/// The Scheduler instance is only accessible
-/// via the alarm callback isolate. It reads all data from shared preferences.
+/// The Scheduler instance is only accessible via the alarm callback isolate.
+/// It reads all data from shared preferences.
 /// It creates the next alarm from that data on the fly.
 /// - complete decoupling of the alarm/notification from the UI
 /// - all data is shared via shared prefs
@@ -88,20 +89,17 @@ void controlCallback() async {
   // This is only available in the alarm manager isolate
   // Create and initialize the Scheduler singleton
   Scheduler scheduler = Scheduler();
-  bool wasInit = await scheduler.checkInitialized();
-  if (useHeartbeat) {
-    scheduler.sendControlMessage(
-        "HB:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
-  } else {
-    scheduler.sendControlMessage(
-        "CO:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
-  }
+  // Note: this call may end up reinitializing everything if our app has been killed:
+  bool wasInit = await scheduler.checkInitialized(kickSchedule: true);
+  scheduler.sendControlMessage(
+      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
 }
 
 void scheduleCallback() async {
   logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
   Scheduler scheduler = Scheduler();
-  await scheduler.checkInitialized();
+  // Note: this call may end up reinitializing everything if our app has been killed:
+  await scheduler.checkInitialized(kickSchedule: false);
   scheduler.triggerNotification();
 }
 
@@ -128,9 +126,9 @@ class Scheduler {
   }
   factory Scheduler() => _instance ?? Scheduler._internal();
 
-  Future<void> init() async {
-    logger.i(
-        "Initializing scheduler, initialized=$initialized ${getCurrentIsolate()}");
+  Future<void> init([bool kickSchedule = true]) async {
+    logger.i("Initializing scheduler, initialized=$initialized " +
+        "kickSchedule=$kickSchedule ${getCurrentIsolate()}");
 
     await initializeAlarmManager();
 
@@ -160,10 +158,9 @@ class Scheduler {
 
     initialized = true;
 
-    // if (_ds.enabled && !running) {
     if (_ds.enabled) {
       logger.i("Re-enabling on init");
-      _enable();
+      _enable(kickSchedule: kickSchedule);
     }
   }
 
@@ -197,7 +194,7 @@ class Scheduler {
           break;
         case 'enable':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
-          _enable(dataStoreRO: dataStoreRO);
+          _enable(kickSchedule: true, dataStoreRO: dataStoreRO);
           break;
         case 'disable':
           ScheduleDataStoreRO dataStoreRO = map.values.first;
@@ -258,8 +255,8 @@ class Scheduler {
     _ds = Get.put(dataStoreRO, permanent: true);
   }
 
-  void _enable({ScheduleDataStoreRO dataStoreRO}) {
-    logger.i("_enable");
+  void _enable({bool kickSchedule = true, ScheduleDataStoreRO dataStoreRO}) {
+    logger.i("_enable, kickSchedule=$kickSchedule");
     if (dataStoreRO != null) {
       _update(dataStoreRO: dataStoreRO);
     }
@@ -269,9 +266,18 @@ class Scheduler {
     _enableHeartbeat();
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
-    delegate.scheduleNext();
-    notifier.showInfoNotification('${constants.appName} is enabled' +
-        '\n\nNext notification at ${formatHHMM(delegate.queryNext())}');
+
+    // This is the notification we only want to show on:
+    // 1) reboot
+    // 2) first enabled by user
+    // 3) re-enable after config changes by user
+    if (kickSchedule) {
+      delegate.scheduleNext();
+      // sendInfoMessage(
+      //     'Next reminder at ${formatHHMM(delegate.queryNext())}');
+      notifier.showInfoNotification('${constants.appName} is enabled' +
+          '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}');
+    }
   }
 
   void _disable() async {
@@ -285,7 +291,7 @@ class Scheduler {
   void _restart(ScheduleDataStoreRO store) {
     _disable();
     sleep(Duration(seconds: 1));
-    _enable(dataStoreRO: store);
+    _enable(kickSchedule: true, dataStoreRO: store);
   }
 
   void _handleSync() async {
@@ -301,7 +307,7 @@ class Scheduler {
       await AndroidAlarmManager.cancel(controlAlarmId);
       logger.i("Enabling heartbeat");
       if (!await AndroidAlarmManager.periodic(
-          Duration(minutes: 30), controlAlarmId, controlCallback,
+          heartbeatInterval, controlAlarmId, controlCallback,
           exact: true, wakeup: true, rescheduleOnReboot: true)) {
         var errmsg =
             "Scheduling periodic control alarm failed on timer id: $controlAlarmId";
@@ -360,7 +366,8 @@ class Scheduler {
         new TimeOfDay(
             hour: _ds.quietHoursStartHour, minute: _ds.quietHoursStartMinute),
         new TimeOfDay(
-            hour: _ds.quietHoursEndHour, minute: _ds.quietHoursEndMinute));
+            hour: _ds.quietHoursEndHour, minute: _ds.quietHoursEndMinute),
+        _ds.notifyQuietHours);
     var delegate;
     if (scheduleType == ScheduleType.PERIODIC) {
       delegate = PeriodicScheduler(
@@ -415,10 +422,10 @@ class Scheduler {
     }
   }
 
-  Future<bool> checkInitialized() async {
+  Future<bool> checkInitialized({bool kickSchedule = false}) async {
     if (!initialized) {
       logger.w('checkInitialized: Scheduler is not initialized');
-      await init();
+      await init(kickSchedule);
       return false; // was not initialized
     }
     return true;

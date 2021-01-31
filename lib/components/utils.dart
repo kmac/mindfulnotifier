@@ -10,14 +10,23 @@ String timeNumToString(int source) {
 }
 
 String formatHHMM(DateTime dt) {
+  if (dt == null) {
+    return "n/a";
+  }
   return formatDate(dt, [hh, ':', nn, " ", am]).toString();
 }
 
 String formatHHMMSS(DateTime dt) {
+  if (dt == null) {
+    return "n/a";
+  }
   return formatDate(dt, [hh, ':', nn, ':', ss, " ", am]).toString();
 }
 
 String formatYYYYMMDDHHMM(DateTime dt) {
+  if (dt == null) {
+    return "n/a";
+  }
   return formatDate(dt, [yyyy, mm, dd, '-', HH, nn]).toString();
 }
 

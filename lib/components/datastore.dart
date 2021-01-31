@@ -23,6 +23,7 @@ abstract class ScheduleDataStoreBase {
   int get quietHoursStartMinute;
   int get quietHoursEndHour;
   int get quietHoursEndMinute;
+  bool get notifyQuietHours;
   String get reminderMessage;
   String get infoMessage;
   String get controlMessage;
@@ -47,6 +48,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
   final int _quietHoursStartMinute;
   final int _quietHoursEndHour;
   final int _quietHoursEndMinute;
+  final bool _notifyQuietHours;
   final String _reminderMessage;
   final String _infoMessage;
   final String _controlMessage;
@@ -70,6 +72,7 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
       this._quietHoursStartMinute,
       this._quietHoursEndHour,
       this._quietHoursEndMinute,
+      this._notifyQuietHours,
       this._reminderMessage,
       this._infoMessage,
       this._controlMessage,
@@ -137,6 +140,10 @@ class ScheduleDataStoreRO implements ScheduleDataStoreBase {
     return _quietHoursEndMinute;
   }
 
+  bool get notifyQuietHours {
+    return _notifyQuietHours;
+  }
+
   String get reminderMessage {
     return _reminderMessage;
   }
@@ -178,6 +185,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String quietHoursStartMinuteKey = 'quietHoursStartMinute';
   static const String quietHoursEndHourKey = 'quietHoursEndHour';
   static const String quietHoursEndMinuteKey = 'quietHoursEndMinute';
+  static const String notifyQuietHoursKey = 'notifyQuietHours';
   static const String reminderMessageKey = 'reminderMessage';
   static const String infoMessageKey = 'infoMessage';
   static const String controlMessageKey = 'controlMessage';
@@ -196,6 +204,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const int defaultQuietHoursStartMinute = 0;
   static const int defaultQuietHoursEndHour = 9;
   static const int defaultQuietHoursEndMinute = 0;
+  static const bool defaultNotifyQuietHours = true;
   static const String defaultReminderMessage = 'Not Enabled';
   static const String defaultInfoMessage = 'Uninitialized';
   static const String defaultControlMessage = '';
@@ -470,6 +479,18 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _prefs.getInt(ScheduleDataStore.quietHoursEndMinuteKey);
   }
 
+  set notifyQuietHours(bool value) {
+    setSync(notifyQuietHoursKey, value);
+  }
+
+  @override
+  bool get notifyQuietHours {
+    if (!_prefs.containsKey(ScheduleDataStore.notifyQuietHoursKey)) {
+      notifyQuietHours = defaultNotifyQuietHours;
+    }
+    return _prefs.getBool(ScheduleDataStore.notifyQuietHoursKey);
+  }
+
   set reminderMessage(String value) {
     setSync(reminderMessageKey, value);
   }
@@ -559,6 +580,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
         quietHoursStartMinute,
         quietHoursEndHour,
         quietHoursEndMinute,
+        notifyQuietHours,
         reminderMessage,
         infoMessage,
         controlMessage,

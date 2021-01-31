@@ -157,18 +157,20 @@ class GeneralWidget extends StatelessWidget {
   void _checkBatteryOptimization(var context) {
     BatteryOptimization.isIgnoringBatteryOptimizations().then((onValue) {
       if (onValue) {
-        // Igonring Battery Optimization
+        // Ignoring Battery Optimization
         utils.showInfoAlert(
             context,
-            'Battery Optimization Ignored',
+            '✔ Ignoring Battery Optimization',
             'Battery optimization is already ignored. ' +
                 'The app should run properly in the background.');
       } else {
         Alert(
             context: context,
-            title: 'Battery Optimization Is Active',
-            desc: "Battery optimization is active. The next screen will take you to the " +
-                "battery optimization settings.\nYou'll need to find the '${constants.appName}' " +
+            title: '⊘ Issue: Battery Optimization',
+            desc: "Battery optimization is active, therefore " +
+                "the app may be killed in the background. " +
+                "The next screen will take you to the " +
+                "battery optimization settings.\nFind the '${constants.appName}' " +
                 "app and turn off battery optimizations.",
             type: AlertType.warning,
             buttons: [
@@ -214,42 +216,6 @@ class GeneralWidget extends StatelessWidget {
             ),
             body: Center(
                 child: Obx(() => ListView(children: <Widget>[
-                      if (includeBackgroundService)
-                        ListTile(
-                          leading: Icon(Icons.miscellaneous_services),
-                          title: Text('Use Background Service'),
-                          subtitle:
-                              Text('Use this if the app keeps getting killed.'),
-                          trailing: Checkbox(
-                            value: controller._useBackgroundService.value,
-                            onChanged: (value) =>
-                                controller._useBackgroundService.value = value,
-                          ),
-                        ),
-                      if (includeBackgroundService) Divider(),
-                      ListTile(
-                          leading: Icon(Icons.wysiwyg),
-                          title: Text('Include debug information'),
-                          subtitle: Text(
-                              'Includes extra runtime information in the bottom status panel (for debug only).'),
-                          trailing: Checkbox(
-                            value: controller._includeDebugInfo.value,
-                            onChanged: (value) =>
-                                controller._includeDebugInfo.value = value,
-                          )),
-                      Divider(),
-                      ListTile(
-                          leading: Icon(Icons.notifications),
-                          title: Text('Use sticky notification'),
-                          subtitle: Text(controller._useStickyNotification.value
-                              ? 'The reminder notification must be swiped to dismiss.'
-                              : 'The notification is dismissed when selected.'),
-                          trailing: Checkbox(
-                            value: controller._useStickyNotification.value,
-                            onChanged: (value) =>
-                                controller._useStickyNotification.value = value,
-                          )),
-                      Divider(),
                       ListTile(
                           leading: Icon(Icons.app_settings_alt),
                           title: Text('Theme'),
@@ -312,6 +278,43 @@ class GeneralWidget extends StatelessWidget {
                             onPressed: () => _checkBatteryOptimization(context),
                           ),
                         ),
+                      Divider(),
+                      ListTile(
+                          leading: Icon(Icons.notifications),
+                          title: Text('Use sticky notification'),
+                          subtitle: Text(controller._useStickyNotification.value
+                              ? 'The reminder notification must be swiped to dismiss.'
+                              : 'The notification is dismissed when selected.'),
+                          trailing: Checkbox(
+                            value: controller._useStickyNotification.value,
+                            onChanged: (value) =>
+                                controller._useStickyNotification.value = value,
+                          )),
+                      Divider(),
+                      if (includeBackgroundService)
+                        ListTile(
+                          leading: Icon(Icons.miscellaneous_services),
+                          title: Text('Use Background Service'),
+                          subtitle:
+                              Text('Use this if the app keeps getting killed.'),
+                          trailing: Checkbox(
+                            value: controller._useBackgroundService.value,
+                            onChanged: (value) =>
+                                controller._useBackgroundService.value = value,
+                          ),
+                        ),
+                      if (includeBackgroundService) Divider(),
+                      ListTile(
+                          leading: Icon(Icons.wysiwyg),
+                          title: Text('Include debug information'),
+                          subtitle: Text(
+                              'Includes extra runtime information in the bottom status panel (for debug only).'),
+                          trailing: Checkbox(
+                            value: controller._includeDebugInfo.value,
+                            onChanged: (value) =>
+                                controller._includeDebugInfo.value = value,
+                          )),
+                      Divider(),
                     ])))));
   }
 }

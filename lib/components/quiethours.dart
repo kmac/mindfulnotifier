@@ -26,10 +26,13 @@ class QuietHours {
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   bool inQuietHours = false;
+  bool notifyQuietHours = false;
 
-  QuietHours(this.startTime, this.endTime);
+  QuietHours(this.startTime, this.endTime, this.notifyQuietHours);
+
   QuietHours.defaultQuietHours()
-      : this(TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0));
+      : this(TimeOfDay(hour: 21, minute: 0), TimeOfDay(hour: 9, minute: 0),
+            false);
 
   DateTime _convertTimeOfDayToToday(TimeOfDay tod, {DateTime current}) {
     // now can be overridden for testing
@@ -181,8 +184,10 @@ class QuietHours {
     logger.i("Quiet hours start");
     inQuietHours = true;
     Scheduler scheduler = Scheduler();
-    scheduler.sendReminderMessage('In quiet hours');
-    scheduler.notifier.showQuietHoursNotification(true);
+    scheduler.sendReminderMessage('In quiet hours.');
+    if (notifyQuietHours) {
+      scheduler.notifier.showQuietHoursNotification(true);
+    }
   }
 
   void quietEnd() {
@@ -190,6 +195,8 @@ class QuietHours {
     inQuietHours = false;
     Scheduler scheduler = Scheduler();
     scheduler.sendReminderMessage('Quiet Hours have ended.');
-    scheduler.notifier.showQuietHoursNotification(false);
+    if (notifyQuietHours) {
+      scheduler.notifier.showQuietHoursNotification(false);
+    }
   }
 }
