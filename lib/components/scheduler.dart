@@ -29,8 +29,13 @@ enum ScheduleType { PERIODIC, RANDOM }
 const bool useHeartbeat = true;
 const Duration heartbeatInterval = Duration(minutes: 30);
 const bool rescheduleOnReboot = useHeartbeat;
+const bool rescheduleAfterQuietHours = true;
 const int controlAlarmId = 5;
 bool androidAlarmManagerInitialized = false;
+
+// Design notes:
+// - the UI only makes config changes and enable/disable
+// - everything else is controlled by the scheduler
 
 /// The Scheduler instance is only accessible via the alarm callback isolate.
 /// It reads all data from shared preferences.
@@ -391,13 +396,13 @@ class Scheduler {
 
     final DateTime now = DateTime.now();
     bool isQuiet = delegate.quietHours.inQuietHours;
-    bool isQuietChecked = delegate.quietHours.isInQuietHours(now);
+    bool isQuietCheckedVal = delegate.quietHours.isInQuietHours(now);
     logger.i(
-        "triggerNotification quiet=$isQuiet, quietChecked=$isQuietChecked ${getCurrentIsolate()}");
+        "triggerNotification quiet=$isQuiet, quietChecked=$isQuietCheckedVal ${getCurrentIsolate()}");
 
     try {
       if (isQuiet) {
-        if (!isQuietChecked) {
+        if (!isQuietCheckedVal) {
           logger.i("In quiet hours... ignoring notification");
           sendInfoMessage("In quiet hours ${formatHHMM(now)}");
           return;
@@ -408,7 +413,7 @@ class Scheduler {
           delegate.quietHours.inQuietHours = false;
         }
       }
-      if (isQuietChecked) {
+      if (isQuietCheckedVal) {
         // Note: this could happen if enabled in quiet hours:
         logger.i("In quiet hours (missed alarm)... ignoring notification");
         sendInfoMessage("In quiet hours ${formatHHMM(now)} NA");
@@ -437,6 +442,7 @@ abstract class DelegatedScheduler {
   final Scheduler scheduler;
   final QuietHours quietHours;
   bool scheduled = false;
+  DateTime _nextDate;
 
   DelegatedScheduler(this.scheduleType, this.scheduler, this.quietHours);
 
@@ -446,11 +452,39 @@ abstract class DelegatedScheduler {
     await AndroidAlarmManager.cancel(Scheduler.scheduleAlarmID);
   }
 
-  DateTime queryNext();
+  DateTime queryNext() {
+    return _nextDate;
+  }
 
-  void scheduleNext() {
+  DateTime getNextFireTime({DateTime fromTime});
+
+  void scheduleNext() async {
     logger.d(
         "Scheduling next notification, type=$scheduleType ${getCurrentIsolate()}");
+
+    _nextDate = getNextFireTime();
+
+    if (rescheduleAfterQuietHours &&
+        (quietHours.inQuietHours || quietHours.isInQuietHours(_nextDate))) {
+      _nextDate = getNextFireTime(fromTime: quietHours.getNextQuietEnd());
+      logger.i("Scheduling next reminder, past quiet hours: $_nextDate");
+      scheduler.sendInfoMessage(
+          "In quiet hours, next reminder at ${formatHHMMSS(_nextDate)}");
+    } else {
+      logger.i("Scheduling next reminder at $_nextDate");
+      scheduler.sendInfoMessage("Next reminder at ${formatHHMMSS(_nextDate)}");
+    }
+
+    await AndroidAlarmManager.oneShotAt(
+        _nextDate, Scheduler.scheduleAlarmID, scheduleCallback,
+        exact: true,
+        wakeup: true,
+        allowWhileIdle: true,
+        rescheduleOnReboot: rescheduleOnReboot);
+
+    if (!scheduled) {
+      initialScheduleComplete();
+    }
   }
 
   void initialScheduleComplete() {
@@ -466,35 +500,35 @@ class PeriodicScheduler extends DelegatedScheduler {
       this.durationHours, this.durationMinutes)
       : super(ScheduleType.PERIODIC, scheduler, quietHours);
 
-  DateTime getInitialStart({DateTime now}) {
-    now ??= DateTime.now();
+  DateTime getNextFireTime({DateTime fromTime}) {
+    fromTime ??= DateTime.now();
     // int periodInMins = 60 * durationHours + durationMinutes;
-    DateTime startTime;
+    DateTime nextDate;
     switch (durationMinutes) {
       case 0:
         // case 45:
         // schedule next for top of the next hour
-        DateTime startTimeRaw = now.add(Duration(hours: 1));
-        startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+        DateTime startTimeRaw = fromTime.add(Duration(hours: 1));
+        nextDate = DateTime(startTimeRaw.year, startTimeRaw.month,
             startTimeRaw.day, startTimeRaw.hour, 0, 0, 0, 0);
         break;
       case 30:
         // schedule next for either top or bottom the hour (< 30m)
-        DateTime startTimeRaw = now.add(Duration(minutes: 30));
+        DateTime startTimeRaw = fromTime.add(Duration(minutes: 30));
         if (startTimeRaw.minute < 30) {
           // we can schedule it for the top of the next hour
-          startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+          nextDate = DateTime(startTimeRaw.year, startTimeRaw.month,
               startTimeRaw.day, startTimeRaw.hour, 0, 0, 0, 0);
         } else {
           // schedule it for the bottom of the next
-          startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+          nextDate = DateTime(startTimeRaw.year, startTimeRaw.month,
               startTimeRaw.day, startTimeRaw.hour, 30, 0, 0, 0);
         }
         break;
       case 15:
         // schedule next for < 15m
-        DateTime startTimeRaw = now.add(Duration(minutes: 15));
-        int newMinute = now.minute + 15;
+        DateTime startTimeRaw = fromTime.add(Duration(minutes: 15));
+        int newMinute = fromTime.minute + 15;
         int newHour = startTimeRaw.hour;
         if (newMinute >= 60) {
           // ++newHour;
@@ -508,53 +542,17 @@ class PeriodicScheduler extends DelegatedScheduler {
         } else {
           newMinute = 0;
         }
-        startTime = DateTime(startTimeRaw.year, startTimeRaw.month,
+        nextDate = DateTime(startTimeRaw.year, startTimeRaw.month,
             startTimeRaw.day, newHour, newMinute, 0, 0, 0);
         break;
     }
-    return startTime;
-  }
-
-  @override
-  DateTime queryNext() {
-    return getInitialStart();
-  }
-
-  void scheduleNext() async {
-    super.scheduleNext();
-    if (scheduler.running) {
-      // don't need to schedule anything
-      if (!scheduled) {
-        scheduler.sendInfoMessage(
-            "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}");
-        scheduled = true;
-      }
-      return;
-    }
-    DateTime startTime = getInitialStart();
-    logger.d("Scheduling: now: ${DateTime.now()}, startTime: $startTime");
-    var firstNotifDate = formatHHMM(startTime);
-    scheduler.sendInfoMessage(
-        "Notifications scheduled every $durationHours:${timeNumToString(durationMinutes)}," +
-            " beginning: $firstNotifDate");
-    await AndroidAlarmManager.periodic(
-        Duration(hours: durationHours, minutes: durationMinutes),
-        Scheduler.scheduleAlarmID,
-        scheduleCallback,
-        startAt: startTime,
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: rescheduleOnReboot);
-
-    initialScheduleComplete();
+    return nextDate;
   }
 }
 
 class RandomScheduler extends DelegatedScheduler {
   final int _minMinutes;
   final int _maxMinutes;
-  DateTime _nextDate;
-  static const bool rescheduleAfterQuietHours = false;
 
   RandomScheduler(Scheduler scheduler, QuietHours quietHours, this._minMinutes,
       this._maxMinutes)
@@ -565,13 +563,8 @@ class RandomScheduler extends DelegatedScheduler {
     scheduled = true;
   }
 
-  @override
-  DateTime queryNext() {
-    return _nextDate;
-  }
-
-  void scheduleNext() async {
-    super.scheduleNext();
+  DateTime getNextFireTime({DateTime fromTime}) {
+    fromTime ??= DateTime.now();
     int nextMinutes;
     if ((_maxMinutes == _minMinutes) || (_minMinutes > _maxMinutes)) {
       nextMinutes = _maxMinutes;
@@ -581,27 +574,6 @@ class RandomScheduler extends DelegatedScheduler {
     if (nextMinutes <= 1) {
       nextMinutes = 2;
     }
-    _nextDate = DateTime.now().add(Duration(minutes: nextMinutes));
-    if (rescheduleAfterQuietHours &&
-        (quietHours.inQuietHours || quietHours.isInQuietHours(_nextDate))) {
-      _nextDate =
-          quietHours.getNextQuietEnd().add(Duration(minutes: nextMinutes));
-      logger.i("Scheduling next reminder, past quiet hours: $_nextDate");
-      scheduler.sendInfoMessage(
-          "In quiet hours, next reminder at ${formatHHMMSS(_nextDate)}");
-    } else {
-      logger.i("Scheduling next reminder at $_nextDate");
-      scheduler.sendInfoMessage("Next reminder at ${formatHHMMSS(_nextDate)}");
-    }
-    await AndroidAlarmManager.oneShotAt(
-        _nextDate, Scheduler.scheduleAlarmID, scheduleCallback,
-        exact: true,
-        wakeup: true,
-        allowWhileIdle: true,
-        rescheduleOnReboot: rescheduleOnReboot);
-
-    if (!scheduled) {
-      initialScheduleComplete();
-    }
+    return fromTime.add(Duration(minutes: nextMinutes));
   }
 }
