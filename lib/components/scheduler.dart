@@ -456,7 +456,7 @@ abstract class DelegatedScheduler {
     return _nextDate;
   }
 
-  DateTime getNextFireTime({DateTime fromTime});
+  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet});
 
   void scheduleNext() async {
     logger.d(
@@ -466,7 +466,8 @@ abstract class DelegatedScheduler {
 
     if (rescheduleAfterQuietHours &&
         (quietHours.inQuietHours || quietHours.isInQuietHours(_nextDate))) {
-      _nextDate = getNextFireTime(fromTime: quietHours.getNextQuietEnd());
+      _nextDate = getNextFireTime(
+          fromTime: quietHours.getNextQuietEnd(), adjustFromQuiet: true);
       logger.i("Scheduling next reminder, past quiet hours: $_nextDate");
       scheduler.sendInfoMessage(
           "In quiet hours, next reminder at ${formatHHMMSS(_nextDate)}");
@@ -500,7 +501,7 @@ class PeriodicScheduler extends DelegatedScheduler {
       this.durationHours, this.durationMinutes)
       : super(ScheduleType.PERIODIC, scheduler, quietHours);
 
-  DateTime getNextFireTime({DateTime fromTime}) {
+  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet}) {
     fromTime ??= DateTime.now();
     // int periodInMins = 60 * durationHours + durationMinutes;
     DateTime nextDate;
@@ -563,13 +564,24 @@ class RandomScheduler extends DelegatedScheduler {
     scheduled = true;
   }
 
-  DateTime getNextFireTime({DateTime fromTime}) {
+  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet}) {
     fromTime ??= DateTime.now();
+    adjustFromQuiet ??= false;
     int nextMinutes;
     if ((_maxMinutes == _minMinutes) || (_minMinutes > _maxMinutes)) {
-      nextMinutes = _maxMinutes;
+      if (adjustFromQuiet) {
+        // For after quiet hours: pick a random time from max
+        nextMinutes = Random().nextInt(_maxMinutes);
+      } else {
+        nextMinutes = _maxMinutes;
+      }
     } else {
-      nextMinutes = _minMinutes + Random().nextInt(_maxMinutes - _minMinutes);
+      if (adjustFromQuiet) {
+        // For after quiet hours: pick a random time
+        nextMinutes = Random().nextInt(_maxMinutes - _minMinutes);
+      } else {
+        nextMinutes = _minMinutes + Random().nextInt(_maxMinutes - _minMinutes);
+      }
     }
     if (nextMinutes <= 1) {
       nextMinutes = 2;
