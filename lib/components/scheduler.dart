@@ -4,7 +4,6 @@ import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:device_info/device_info.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -16,22 +15,19 @@ import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/quiethours.dart';
 import 'package:mindfulnotifier/components/reminders.dart';
+import 'package:mindfulnotifier/components/timerservice.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 
 var logger = createLogger('scheduler');
 
+enum ScheduleType { PERIODIC, RANDOM }
+
+const bool rescheduleAfterQuietHours = true;
+const int scheduleAlarmID = 10;
+
 String getCurrentIsolate() {
   return "I:${Isolate.current.hashCode}";
 }
-
-enum ScheduleType { PERIODIC, RANDOM }
-
-const bool useHeartbeat = true;
-const Duration heartbeatInterval = Duration(minutes: 30);
-const bool rescheduleOnReboot = useHeartbeat;
-const bool rescheduleAfterQuietHours = true;
-const int controlAlarmId = 5;
-bool androidAlarmManagerInitialized = false;
 
 // Design notes:
 // - the UI only makes config changes and enable/disable
@@ -47,71 +43,18 @@ bool androidAlarmManagerInitialized = false;
 /// - quiet hours start/end (maybe end not required - just reschedule past next)
 /// We also put the notification info in shared prefs and always read from that
 /// on the UI side.
-Future<void> initializeScheduler() async {
-  // check IsolateNameServer to see if our alarm isolate is already running
-  if (IsolateNameServer.lookupPortByName(constants.toSchedulerSendPortName) !=
-      null) {
-    logger.i(
-        "initializeScheduler: already initialized: ${constants.toSchedulerSendPortName} ${getCurrentIsolate()}");
-    return;
-  }
-  // !!!
-  // THIS IS ON THE 'MAIN' ISOLATE
-  // Nothing else in this file should be on the main isolate.
-  // !!!
-  logger.i("initializeScheduler ${getCurrentIsolate()}");
-
-  await initializeAlarmManager();
-
-  // Send ourselves a bootstrap message. The 'controlCallback' will be
-  // invoked on the alarm manager isolate (also called the scheduler isolate)
-  if (!await AndroidAlarmManager.oneShot(
-      Duration(seconds: 1), controlAlarmId, controlCallback,
-      exact: true, wakeup: true, rescheduleOnReboot: false)) {
-    var errmsg =
-        "Scheduling oneShot control alarm failed on timer id: $controlAlarmId";
-    logger.e(errmsg);
-    throw AssertionError(errmsg);
-  }
-}
-
-Future<void> initializeAlarmManager() async {
-  if (!androidAlarmManagerInitialized) {
-    try {
-      logger.i("Initializing AndroidAlarmManager ${getCurrentIsolate()}");
-      await AndroidAlarmManager.initialize();
-      androidAlarmManagerInitialized = true;
-    } catch (e) {
-      logger.e('initializeAlarmManager failed',
-          'AndroidAlarmManager.initialize() failed', e);
-    }
-  }
-}
-
-void controlCallback() async {
-  logger.i("controlCallback ${getCurrentIsolate()}");
-  // WE ARE IN THE ALARM MANAGER ISOLATE
-  // This is only available in the alarm manager isolate
-  // Create and initialize the Scheduler singleton
-  Scheduler scheduler = Scheduler();
-  // Note: this call may end up reinitializing everything if our app has been killed:
-  bool wasInit = await scheduler.checkInitialized(kickSchedule: true);
-  scheduler.sendControlMessage(
-      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
-}
 
 void scheduleCallback() async {
   logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
   Scheduler scheduler = Scheduler();
-  // Note: this call may end up reinitializing everything if our app has been killed:
-  await scheduler.checkInitialized(kickSchedule: false);
+  await scheduler.checkInitialized();
+
+  // change here is to just re-initialize the scheduler every time and just schedule next
   scheduler.triggerNotification();
 }
 
 /// The main class for scheduling notifications
 class Scheduler {
-  static const int scheduleAlarmID = 10;
-
   bool running = false;
   bool initialized = false;
 
@@ -121,7 +64,6 @@ class Scheduler {
   bool alarmManagerInitialized = false;
   Notifier notifier;
   DelegatedScheduler delegate;
-  StreamSubscription fromAppIsolateStreamSubscription;
   ReceivePort fromAppIsolateReceivePort;
 
   // Singleton
@@ -135,8 +77,6 @@ class Scheduler {
     logger.i("Initializing scheduler, initialized=$initialized " +
         "kickSchedule=$kickSchedule ${getCurrentIsolate()}");
 
-    await initializeAlarmManager();
-
     PackageInfo info = await PackageInfo.fromPlatform();
     Get.put(info, permanent: true);
 
@@ -145,12 +85,6 @@ class Scheduler {
     AndroidBuildVersion buildVersion = androidInfo.version;
     Get.put(buildVersion, permanent: true);
 
-    try {
-      _initializeFromAppIsolateReceivePort();
-    } catch (e) {
-      logger.e("_initializeFromAppIsolateReceivePort failed with: $e", null, e);
-    }
-
     notifier = Notifier();
     await notifier.start();
 
@@ -158,120 +92,40 @@ class Scheduler {
 
     // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
     if (_ds == null) {
-      _update(dataStoreRO: await findScheduleDataStoreRO(false));
+      update(dataStoreRO: await findScheduleDataStoreRO(false));
     }
 
     initialized = true;
 
     if (_ds.enabled) {
       logger.i("Re-enabling on init");
-      _enable(kickSchedule: kickSchedule);
+      enable(kickSchedule: kickSchedule);
     }
   }
 
-  void _shutdown() {
+  void shutdown() {
     logger.i("shutdown");
-    _disable();
-    _shutdownReceivePort();
+    disable();
     notifier.shutdown();
     initialized = false;
   }
 
-  void _initializeFromAppIsolateReceivePort() async {
-    logger.i("_initializeFromAppIsolateReceivePort ${getCurrentIsolate()}");
-
-    fromAppIsolateReceivePort = ReceivePort();
-
-    // Register for events from the UI isolate. These messages will
-    // be triggered from the UI side
-    fromAppIsolateStreamSubscription = fromAppIsolateReceivePort.listen((map) {
-      //
-      // WE ARE IN THE ALARM ISOLATE
-      //
-      logger
-          .i("fromAppIsolateReceivePort received: $map ${getCurrentIsolate()}");
-      String key = map.keys.first;
-      // String value = map.values.first;
-      switch (key) {
-        case 'update':
-          ScheduleDataStoreRO dataStoreRO = map.values.first;
-          _update(dataStoreRO: dataStoreRO);
-          break;
-        case 'enable':
-          ScheduleDataStoreRO dataStoreRO = map.values.first;
-          _enable(kickSchedule: true, dataStoreRO: dataStoreRO);
-          break;
-        case 'disable':
-          ScheduleDataStoreRO dataStoreRO = map.values.first;
-          _update(dataStoreRO: dataStoreRO);
-          _disable();
-          break;
-        case 'restart':
-          ScheduleDataStoreRO dataStoreRO = map.values.first;
-          _restart(dataStoreRO);
-          break;
-        case 'sync':
-          _handleSync();
-          break;
-        case 'shutdown':
-          _shutdown();
-          break;
-        case 'playSound':
-          // the map value is either a File or a path to file
-          dynamic fileOrPath = map.values.first;
-          notifier.audioPlayer.play(fileOrPath);
-          break;
-      }
-    }, onDone: () {
-      logger.w("fromAppIsolateReceivePort is closed ${getCurrentIsolate()}");
-    });
-    // if (IsolateNameServer.lookupPortByName(constants.toSchedulerSendPortName) !=
-    //     null) {
-    IsolateNameServer.removePortNameMapping(constants.toSchedulerSendPortName);
-    // }
-    // Register our SendPort for the app to be able to send to our ReceivePort
-    bool result = IsolateNameServer.registerPortWithName(
-      fromAppIsolateReceivePort.sendPort,
-      constants.toSchedulerSendPortName,
-    );
-    // if (!result) {
-    //   IsolateNameServer.removePortNameMapping(
-    //       constants.toSchedulerSendPortName);
-    //   result = IsolateNameServer.registerPortWithName(
-    //     fromAppIsolateReceivePort.sendPort,
-    //     constants.toSchedulerSendPortName,
-    //   );
-    // }
-    logger.d(
-        "registerPortWithName: ${constants.toSchedulerSendPortName}, result=$result ${getCurrentIsolate()}");
-    assert(result);
-  }
-
-  void _shutdownReceivePort() async {
-    logger.i("_shutdownReceivePort");
-    fromAppIsolateReceivePort.close();
-    await fromAppIsolateStreamSubscription.cancel();
-    IsolateNameServer.removePortNameMapping(constants.toSchedulerSendPortName);
-  }
-
-  void _update({ScheduleDataStoreRO dataStoreRO}) {
-    logger.d("_update, datastoreRO=$dataStoreRO");
+  void update({ScheduleDataStoreRO dataStoreRO}) {
+    logger.d("update, datastoreRO=$dataStoreRO");
     Get.delete<ScheduleDataStoreRO>(force: true);
     _ds = Get.put(dataStoreRO, permanent: true);
   }
 
-  void _enable({bool kickSchedule = true, ScheduleDataStoreRO dataStoreRO}) {
-    logger.i("_enable, kickSchedule=$kickSchedule");
+  void enable({bool kickSchedule = true, ScheduleDataStoreRO dataStoreRO}) {
+    logger.i("enable");
     if (dataStoreRO != null) {
-      _update(dataStoreRO: dataStoreRO);
+      update(dataStoreRO: dataStoreRO);
     }
     if (running) {
-      _disable();
+      disable();
     }
-    _enableHeartbeat();
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
-
     // This is the notification we only want to show on:
     // 1) reboot
     // 2) first enabled by user
@@ -285,48 +139,28 @@ class Scheduler {
     }
   }
 
-  void _disable() async {
-    logger.i("_disable");
+  void disable() async {
+    logger.i("disable");
     delegate?.cancel();
     notifier.cancelAll();
-    _disableHeartbeat();
     running = false;
   }
 
-  void _restart(ScheduleDataStoreRO store) {
-    _disable();
+  void restart(ScheduleDataStoreRO store) {
+    logger.i("restart");
+    disable();
     sleep(Duration(seconds: 1));
-    _enable(kickSchedule: true, dataStoreRO: store);
+    enable(kickSchedule: true, dataStoreRO: store);
   }
 
-  void _handleSync() async {
+  void playSound(var fileOrPath) {
+    notifier.audioPlayer.play(fileOrPath);
+  }
+
+  void handleSync() async {
     Map<String, String> map = Map.from(_lastUiMessage);
-    logger.d("_handleSync: $map");
+    logger.d("handleSync: $map");
     _sendValueToUI('syncResponse', map);
-  }
-
-  void _enableHeartbeat() async {
-    // Heartbeat is a last-ditch alarm triggered at a regular interval.
-    //  This is just in case we miss the scheduler alarm on a reboot.
-    if (useHeartbeat) {
-      await AndroidAlarmManager.cancel(controlAlarmId);
-      logger.i("Enabling heartbeat");
-      if (!await AndroidAlarmManager.periodic(
-          heartbeatInterval, controlAlarmId, controlCallback,
-          exact: true, wakeup: true, rescheduleOnReboot: true)) {
-        var errmsg =
-            "Scheduling periodic control alarm failed on timer id: $controlAlarmId";
-        logger.e(errmsg);
-        throw AssertionError(errmsg);
-      }
-    }
-  }
-
-  void _disableHeartbeat() async {
-    if (useHeartbeat) {
-      logger.i("Cancelling heartbeat");
-      await AndroidAlarmManager.cancel(controlAlarmId);
-    }
   }
 
   void initialScheduleComplete() {
@@ -449,7 +283,8 @@ abstract class DelegatedScheduler {
   void cancel() async {
     logger.i("Cancelling notification schedule ${getCurrentIsolate()}");
     quietHours.cancelTimers();
-    await AndroidAlarmManager.cancel(Scheduler.scheduleAlarmID);
+    TimerService timerService = Get.find<TimerService>();
+    await timerService.cancel(scheduleAlarmID);
   }
 
   DateTime queryNext() {
@@ -476,12 +311,8 @@ abstract class DelegatedScheduler {
       scheduler.sendInfoMessage("Next reminder at ${formatHHMMSS(_nextDate)}");
     }
 
-    await AndroidAlarmManager.oneShotAt(
-        _nextDate, Scheduler.scheduleAlarmID, scheduleCallback,
-        exact: true,
-        wakeup: true,
-        allowWhileIdle: true,
-        rescheduleOnReboot: rescheduleOnReboot);
+    TimerService timerService = Get.find<TimerService>();
+    timerService.oneShotAt(_nextDate, scheduleAlarmID, scheduleCallback);
 
     if (!scheduled) {
       initialScheduleComplete();

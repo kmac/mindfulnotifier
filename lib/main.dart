@@ -13,7 +13,7 @@ import 'package:mindfulnotifier/components/constants.dart' as constants;
 // import 'package:mindfulnotifier/components/backgroundservice.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
-import 'package:mindfulnotifier/components/scheduler.dart';
+import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/theme/themes.dart';
 
 Future<void> initServices() async {
@@ -21,7 +21,7 @@ Future<void> initServices() async {
   // await Get.putAsync(() => ds.ScheduleDataStore.create());
   // GetxService schedulerService;
   // await Get.putAsync(schedule.Scheduler()).init();
-  await initializeScheduler();
+  await initializeAlarmService();
   print('All services started...');
 }
 

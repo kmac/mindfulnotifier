@@ -1,28 +1,47 @@
-import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/scheduler.dart';
+import 'package:mindfulnotifier/components/timerservice.dart';
+import 'package:mindfulnotifier/components/utils.dart';
 
 var logger = createLogger('quiethours');
+
+const int quietHoursStartAlarmID = 5521;
+const int quietHoursEndAlarmID = 5522;
 
 void quietHoursStartCallback() async {
   logger
       .i("[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
   Scheduler scheduler = Scheduler();
   await scheduler.checkInitialized();
-  scheduler.delegate.quietHours.quietStart();
+  QuietHours quietHours = scheduler.delegate.quietHours;
+  quietHours.quietStart();
+
+  var nextQuietStart = quietHours.getNextQuietStart();
+  assert(nextQuietStart.isAfter(DateTime.now()));
+
+  TimerService timerService = Get.find();
+  await timerService.oneShotAt(
+      nextQuietStart, quietHoursStartAlarmID, quietHoursStartCallback);
 }
 
 void quietHoursEndCallback() async {
   logger.i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
   Scheduler scheduler = Scheduler();
   await scheduler.checkInitialized();
-  scheduler.delegate.quietHours.quietEnd();
+  QuietHours quietHours = scheduler.delegate.quietHours;
+  quietHours.quietEnd();
+
+  var nextQuietEnd = quietHours.getNextQuietEnd();
+  assert(nextQuietEnd.isAfter(DateTime.now()));
+
+  TimerService timerService = Get.find();
+  await timerService.oneShotAt(
+      nextQuietEnd, quietHoursStartAlarmID, quietHoursStartCallback);
 }
 
 class QuietHours {
-  static const int quietHoursStartAlarmID = 5521;
-  static const int quietHoursEndAlarmID = 5522;
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   bool inQuietHours = false;
@@ -141,43 +160,23 @@ class QuietHours {
     }
     var nextQuietStart = getNextQuietStart();
     var nextQuietEnd = getNextQuietEnd();
-    await AndroidAlarmManager.cancel(quietHoursStartAlarmID);
-    await AndroidAlarmManager.cancel(quietHoursEndAlarmID);
+    TimerService timerService = Get.find();
+    await timerService.cancel(quietHoursStartAlarmID);
+    await timerService.cancel(quietHoursEndAlarmID);
     logger.i(
         "Initializing quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
     assert(nextQuietStart.isAfter(DateTime.now()));
-    if (!await AndroidAlarmManager.periodic(
-        Duration(days: 1), quietHoursStartAlarmID, quietHoursStartCallback,
-        startAt: nextQuietStart,
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: rescheduleOnReboot)) {
-      var message =
-          "periodic schedule failed on quiet hours start timer: $quietHoursStartAlarmID";
-      logger.e(message);
-      throw AssertionError(message);
-    }
-    if (!await AndroidAlarmManager.periodic(
-        Duration(days: 1), quietHoursEndAlarmID, quietHoursEndCallback,
-        startAt: nextQuietEnd,
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: rescheduleOnReboot)) {
-      var message =
-          "periodic schedule failed on quiet hours end timer: $quietHoursEndAlarmID";
-      logger.e(message);
-      throw AssertionError(message);
-    }
+    await timerService.oneShotAt(
+        nextQuietStart, quietHoursStartAlarmID, quietHoursStartCallback);
+    await timerService.oneShotAt(
+        nextQuietEnd, quietHoursEndAlarmID, quietHoursEndCallback);
   }
 
   void cancelTimers() async {
     logger.i("Cancelling quiet hours timers");
-    if (!await AndroidAlarmManager.cancel(quietHoursStartAlarmID)) {
-      logger.e("cancel failed on quiet hours timers: $quietHoursStartAlarmID");
-    }
-    if (!await AndroidAlarmManager.cancel(quietHoursEndAlarmID)) {
-      logger.e("cancel failed on quiet hours timers: $quietHoursEndAlarmID");
-    }
+    TimerService timerService = Get.find();
+    await timerService.cancel(quietHoursStartAlarmID);
+    await timerService.cancel(quietHoursEndAlarmID);
   }
 
   void quietStart() {

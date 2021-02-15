@@ -177,7 +177,7 @@ class BellWidget extends StatelessWidget {
             onPressed: () {
               MindfulNotifierWidgetController mainUiController = Get.find();
               if (bellDefinitions[bellId]['path'] != '') {
-                mainUiController.sendToScheduler(
+                mainUiController.sendToAlarmService(
                     {'playSound': bellDefinitions[bellId]['path']});
               }
             },
@@ -216,7 +216,7 @@ class BellWidget extends StatelessWidget {
                           File(bellDefinitions[bellId]['path']);
                       if (customsoundfile.existsSync()) {
                         mainUiController
-                            .sendToScheduler({'playSound': customsoundfile});
+                            .sendToAlarmService({'playSound': customsoundfile});
                       } else {
                         _showNoCustomSoundAlert(context,
                             "The custom sound path '${bellDefinitions[bellId]['path']}' is not found.");

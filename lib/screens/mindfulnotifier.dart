@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 // import 'package:mindfulnotifier/components/backgroundservice.dart' as bg;
+import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -15,19 +16,17 @@ import 'package:mindfulnotifier/screens/about.dart';
 
 var logger = createLogger('mindfulnotifier');
 
-const String appName = 'Mindful Notifier';
-
 String getCurrentIsolate() {
   return "I:${Isolate.current.hashCode}";
 }
 
+const String appName = 'Mindful Notifier';
+
 class MindfulNotifierWidgetController extends GetxController {
-  static const String toAppSendPortName = 'toAppIsolate';
-  static const String toSchedulerSendPortName = 'toSchedulerIsolate';
-  static SendPort toSchedulerSendPort;
+  static SendPort toAlarmServiceSendPort;
   // A port used to communicate from the app isolate to the alarm_manager isolate.
-  static StreamSubscription fromSchedulerStreamSubscription;
-  static ReceivePort fromSchedulerReceivePort;
+  static StreamSubscription fromAlarmServiceStreamSubscription;
+  static ReceivePort fromAlarmServiceReceivePort;
 
   final String title = appName;
   final _reminderMessage = 'Not Running'.obs;
@@ -73,7 +72,7 @@ class MindfulNotifierWidgetController extends GetxController {
     logger.i("mindfulnotifier:init() ${getCurrentIsolate()}");
     ds = await ScheduleDataStore.getInstance();
     ds.dumpToLog();
-    initializeFromSchedulerReceivePort();
+    initializeFromAlarmServiceReceivePort();
     _enabled.value = ds.enabled;
     _mute.value = ds.mute;
     _vibrate.value = ds.vibrate;
@@ -85,24 +84,25 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void triggerSchedulerSync() async {
-    sendToScheduler({'sync': 1});
+    sendToAlarmService({'sync': 1});
   }
 
-  void initializeFromSchedulerReceivePort() {
-    logger.i("initializeFromSchedulerReceivePort ${getCurrentIsolate()}");
+  void initializeFromAlarmServiceReceivePort() {
+    logger.i("initializeFromAlarmServiceReceivePort ${getCurrentIsolate()}");
 
-    if (fromSchedulerReceivePort == null) {
-      logger.d("new fromSchedulerReceivePort");
-      fromSchedulerReceivePort = ReceivePort();
+    if (fromAlarmServiceReceivePort == null) {
+      logger.d("new fromAlarmServiceReceivePort");
+      fromAlarmServiceReceivePort = ReceivePort();
     }
     // Register for events from the alarm isolate. These messages will
     // always coincide with an alarm firing.
-    fromSchedulerStreamSubscription = fromSchedulerReceivePort.listen((map) {
+    fromAlarmServiceStreamSubscription =
+        fromAlarmServiceReceivePort.listen((map) {
       //
       // WE ARE IN THE APP ISOLATE
       //
-      logger
-          .i("fromSchedulerReceivePort received: $map ${getCurrentIsolate()}");
+      logger.i(
+          "fromAlarmServiceReceivePort received: $map ${getCurrentIsolate()}");
 
       String key = map.keys.first;
       dynamic value = map.values.first;
@@ -137,17 +137,17 @@ class MindfulNotifierWidgetController extends GetxController {
           break;
       }
     }, onDone: () {
-      logger.w("fromSchedulerReceivePort is closed");
+      logger.w("fromAlarmServiceReceivePort is closed");
     });
 
     // Register our SendPort for the Scheduler to be able to send to our ReceivePort
-    IsolateNameServer.removePortNameMapping(toAppSendPortName);
+    IsolateNameServer.removePortNameMapping(constants.toAppSendPortName);
     bool result = IsolateNameServer.registerPortWithName(
-      fromSchedulerReceivePort.sendPort,
-      toAppSendPortName,
+      fromAlarmServiceReceivePort.sendPort,
+      constants.toAppSendPortName,
     );
     logger.d(
-        "registerPortWithName: $toAppSendPortName, result=$result ${getCurrentIsolate()}");
+        "registerPortWithName: ${constants.toAppSendPortName}, result=$result ${getCurrentIsolate()}");
     assert(result);
   }
 
@@ -167,18 +167,14 @@ class MindfulNotifierWidgetController extends GetxController {
 
   void triggerSchedulerShutdown() {
     // Send to the alarm isolate
-    toSchedulerSendPort ??=
-        IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
-    toSchedulerSendPort?.send({'shutdown': '1'});
+    sendToAlarmService({'shutdown': '1'});
   }
 
   void triggerSchedulerRestart() {
     if (_enabled.value) {
       logger.i("sending restart to scheduler");
       // Send to the alarm isolate
-      toSchedulerSendPort ??=
-          IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
-      toSchedulerSendPort?.send({'restart': ds.getScheduleDataStoreRO()});
+      sendToAlarmService({'restart': ds.getScheduleDataStoreRO()});
       // alert user
       Get.snackbar(
           "Restarting", "Configuration changed, restarting the notifier.",
@@ -188,9 +184,9 @@ class MindfulNotifierWidgetController extends GetxController {
 
   void shutdownReceivePort() async {
     logger.i("shutdownReceivePort");
-    fromSchedulerReceivePort.close();
-    await fromSchedulerStreamSubscription.cancel();
-    IsolateNameServer.removePortNameMapping(toAppSendPortName);
+    fromAlarmServiceReceivePort.close();
+    await fromAlarmServiceStreamSubscription.cancel();
+    IsolateNameServer.removePortNameMapping(constants.toAppSendPortName);
   }
 
   void handleReminderMessage(msg) {
@@ -206,11 +202,11 @@ class MindfulNotifierWidgetController extends GetxController {
     // Get.snackbar("Control Message", "Received control message: $msg");
   }
 
-  void sendToScheduler(Map<String, dynamic> msg) {
-    logger.d("sendToScheduler: $msg");
-    toSchedulerSendPort ??=
-        IsolateNameServer.lookupPortByName(toSchedulerSendPortName);
-    toSchedulerSendPort?.send(msg);
+  void sendToAlarmService(Map<String, dynamic> msg) {
+    logger.d("sendToAlarmService: $msg");
+    toAlarmServiceSendPort ??= IsolateNameServer.lookupPortByName(
+        constants.toAlarmServiceSendPortName);
+    toAlarmServiceSendPort?.send(msg);
   }
 
   void handleEnabled(enabled) {
@@ -221,11 +217,11 @@ class MindfulNotifierWidgetController extends GetxController {
         _reminderMessage.value = 'Enabled. Waiting for notification...';
       }
       _infoMessage.value = 'Enabled. Waiting for notification.';
-      sendToScheduler({'enable': ds.getScheduleDataStoreRO()});
+      sendToAlarmService({'enable': ds.getScheduleDataStoreRO()});
     } else {
       // setMessage('Disabled');
       _infoMessage.value = 'Disabled';
-      sendToScheduler({'disable': ds.getScheduleDataStoreRO()});
+      sendToAlarmService({'disable': ds.getScheduleDataStoreRO()});
     }
   }
 
@@ -242,7 +238,7 @@ class MindfulNotifierWidgetController extends GetxController {
   void forceSchedulerUpdate() {
     if (_enabled.value) {
       logger.i("Forcing scheduler update");
-      sendToScheduler({'update': ds.getScheduleDataStoreRO()});
+      sendToAlarmService({'update': ds.getScheduleDataStoreRO()});
     }
   }
 
