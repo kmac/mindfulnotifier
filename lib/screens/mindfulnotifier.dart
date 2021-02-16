@@ -6,7 +6,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-// import 'package:mindfulnotifier/components/backgroundservice.dart' as bg;
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
@@ -15,10 +14,6 @@ import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/screens/about.dart';
 
 var logger = createLogger('mindfulnotifier');
-
-String getCurrentIsolate() {
-  return "I:${Isolate.current.hashCode}";
-}
 
 const String appName = 'Mindful Notifier';
 
@@ -57,9 +52,6 @@ class MindfulNotifierWidgetController extends GetxController {
     ever(_infoMessage, handleInfoMessage);
     ever(controlMessage, handleControlMessage);
     triggerSchedulerSync();
-    // if (constants.useForegroundService) {
-    //   Future.delayed(Duration(seconds: 10), initializeFromBackgroundService);
-    // }
   }
 
   @override
@@ -150,20 +142,6 @@ class MindfulNotifierWidgetController extends GetxController {
         "registerPortWithName: ${constants.toAppSendPortName}, result=$result ${getCurrentIsolate()}");
     assert(result);
   }
-
-  // void initializeFromBackgroundService() {
-  //   bg.getServiceInstance().onDataReceived.listen((event) {
-  //     String key = event.keys.first;
-  //     String value = event.values.first;
-  //     switch (key) {
-  //       case 'current_date':
-  //         logger.i("Received current_date=$value from background service");
-  //         break;
-  //     }
-  //   }, onDone: () {
-  //     logger.w("background service is closed");
-  //   });
-  // }
 
   void triggerSchedulerShutdown() {
     // Send to the alarm isolate

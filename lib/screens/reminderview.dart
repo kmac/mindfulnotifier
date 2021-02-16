@@ -37,7 +37,7 @@ class ReminderWidgetController extends GetxController {
 
   void init() async {
     logger.d("init");
-    _reminders = await Reminders.create();
+    _reminders = Reminders();
     reminderList.assignAll(_reminders.reminders);
     ever(reminderList, handleReminderList);
     ever(needToScroll, handleNeedToScroll);

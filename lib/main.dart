@@ -4,23 +4,20 @@ import 'dart:io';
 import 'package:device_info/device_info.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-// import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
+import 'package:mindfulnotifier/components/utils.dart';
 import 'package:package_info/package_info.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
-// import 'package:mindfulnotifier/components/backgroundservice.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/theme/themes.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> initServices() async {
   print('starting services ...');
-  // await Get.putAsync(() => ds.ScheduleDataStore.create());
-  // GetxService schedulerService;
-  // await Get.putAsync(schedule.Scheduler()).init();
   await initializeAlarmService();
   print('All services started...');
 }
@@ -28,6 +25,9 @@ Future<void> initServices() async {
 void main() async {
   // needed if you intend to initialize in the `main` function
   WidgetsFlutterBinding.ensureInitialized();
+
+  SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+  Get.put(sharedPreferences);
 
   ScheduleDataStore ds = await ScheduleDataStore.getInstance();
   Get.put(ds);
@@ -39,17 +39,8 @@ void main() async {
   Get.put(outputDir,
       permanent: true, tag: constants.tagApplicationDocumentsDirectory);
 
-  DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-  AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-  AndroidBuildVersion buildVersion = androidInfo.version;
+  AndroidBuildVersion buildVersion = await getAndroidBuildVersion();
   Get.put(buildVersion, permanent: true);
-
-  // if (constants.useForegroundService) {
-  //   await FlutterBackgroundService.initialize(onStartService,
-  //       autoStart: true, foreground: true);
-  // } else {
-  //   await initServices();
-  // }
 
   await initServices();
 

@@ -4,10 +4,8 @@ import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:device_info/device_info.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:package_info/package_info.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -25,9 +23,12 @@ enum ScheduleType { PERIODIC, RANDOM }
 const bool rescheduleAfterQuietHours = true;
 const int scheduleAlarmID = 10;
 
-String getCurrentIsolate() {
-  return "I:${Isolate.current.hashCode}";
-}
+/// Newest changes:
+/// scheduler owns the data
+/// is reinitialized upon every alarm
+/// reschedules next alarm upon every alarm
+/// always refreshes from the datastore
+///  - no need to reinitialize when UI changes config
 
 // Design notes:
 // - the UI only makes config changes and enable/disable
@@ -47,7 +48,7 @@ String getCurrentIsolate() {
 void scheduleCallback() async {
   logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
   Scheduler scheduler = Scheduler();
-  await scheduler.checkInitialized();
+  // await scheduler.checkInitialized();
 
   // change here is to just re-initialize the scheduler every time and just schedule next
   scheduler.triggerNotification();
@@ -56,13 +57,11 @@ void scheduleCallback() async {
 /// The main class for scheduling notifications
 class Scheduler {
   bool running = false;
-  bool initialized = false;
+  // bool initialized = false;
 
   Map<String, String> _lastUiMessage = {};
   ScheduleDataStoreRO _ds;
-  Reminders _reminders;
   bool alarmManagerInitialized = false;
-  Notifier notifier;
   DelegatedScheduler delegate;
   ReceivePort fromAppIsolateReceivePort;
 
@@ -70,44 +69,22 @@ class Scheduler {
   static Scheduler _instance;
   Scheduler._internal() {
     _instance = this;
+    init();
   }
   factory Scheduler() => _instance ?? Scheduler._internal();
 
   Future<void> init([bool kickSchedule = true]) async {
-    logger.i("Initializing scheduler, initialized=$initialized " +
-        "kickSchedule=$kickSchedule ${getCurrentIsolate()}");
+    logger.i(
+        "Initializing scheduler, kickSchedule=$kickSchedule ${getCurrentIsolate()}");
 
-    PackageInfo info = await PackageInfo.fromPlatform();
-    Get.put(info, permanent: true);
-
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-    AndroidBuildVersion buildVersion = androidInfo.version;
-    Get.put(buildVersion, permanent: true);
-
-    notifier = Notifier();
-    await notifier.start();
-
-    _reminders = await Reminders.create();
-
-    // this is the only time we read from SharedPreferences (to avoid race conditions I was hitting)
-    if (_ds == null) {
-      update(dataStoreRO: await findScheduleDataStoreRO(false));
-    }
-
-    initialized = true;
-
-    if (_ds.enabled) {
-      logger.i("Re-enabling on init");
-      enable(kickSchedule: kickSchedule);
-    }
+    ScheduleDataStore dataStore = Get.find();
+    update(dataStoreRO: dataStore.getScheduleDataStoreRO());
   }
 
   void shutdown() {
     logger.i("shutdown");
     disable();
-    notifier.shutdown();
-    initialized = false;
+    Notifier().shutdown();
   }
 
   void update({ScheduleDataStoreRO dataStoreRO}) {
@@ -134,15 +111,24 @@ class Scheduler {
       delegate.scheduleNext();
       // sendInfoMessage(
       //     'Next reminder at ${formatHHMM(delegate.queryNext())}');
-      notifier.showInfoNotification('${constants.appName} is enabled' +
+      Notifier().showInfoNotification('${constants.appName} is enabled' +
           '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}');
     }
+  }
+
+  bool enableIfNecessary() {
+    if (_ds.enabled) {
+      logger.i("Re-enabling on init");
+      enable(kickSchedule: true);
+      return true;
+    }
+    return false;
   }
 
   void disable() async {
     logger.i("disable");
     delegate?.cancel();
-    notifier.cancelAll();
+    Notifier().shutdown();
     running = false;
   }
 
@@ -154,10 +140,12 @@ class Scheduler {
   }
 
   void playSound(var fileOrPath) {
-    notifier.audioPlayer.play(fileOrPath);
+    Notifier().playSound(fileOrPath);
   }
 
   void handleSync() async {
+    // Respond to UI with the dictionary of last UI messages
+    // This is for when the UI is restarted and needs to refresh its display
     Map<String, String> map = Map.from(_lastUiMessage);
     logger.d("handleSync: $map");
     _sendValueToUI('syncResponse', map);
@@ -253,21 +241,12 @@ class Scheduler {
         sendInfoMessage("In quiet hours ${formatHHMM(now)} NA");
         return;
       }
-      var reminder = _reminders.randomReminder();
-      notifier.showReminderNotification(reminder);
+      var reminder = Reminders().randomReminder();
+      Notifier().showReminderNotification(reminder);
       sendReminderMessage(reminder);
     } finally {
       delegate.scheduleNext();
     }
-  }
-
-  Future<bool> checkInitialized({bool kickSchedule = false}) async {
-    if (!initialized) {
-      logger.w('checkInitialized: Scheduler is not initialized');
-      await init(kickSchedule);
-      return false; // was not initialized
-    }
-    return true;
   }
 }
 

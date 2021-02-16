@@ -1,8 +1,24 @@
 import 'dart:isolate';
 
+import 'package:device_info/device_info.dart';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
+
+AndroidBuildVersion _cachedBbuildVersion;
+
+String getCurrentIsolate() {
+  return "I:${Isolate.current.hashCode}";
+}
+
+Future<AndroidBuildVersion> getAndroidBuildVersion() async {
+  if (_cachedBbuildVersion == null) {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    _cachedBbuildVersion = androidInfo.version;
+  }
+  return _cachedBbuildVersion;
+}
 
 String timeNumToString(int source) {
   if (source < 10) {

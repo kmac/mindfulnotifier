@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 
@@ -29,20 +30,19 @@ class Reminders {
   List<String> reminders;
   List<String> shuffledReminders;
 
-  /// Public factory
-  static Future<Reminders> create() async {
-    var component = Reminders._create();
-    await component._init();
-    return component;
-  }
+  static Reminders _instance;
 
   /// Private constructor
-  Reminders._create() {
-    logger.i("Creating Reminders");
+  Reminders._internal() {
+    _instance = this;
+    _instance._init();
   }
 
-  Future<void> _init() async {
-    _prefs = await SharedPreferences.getInstance();
+  /// Public factory
+  factory Reminders() => _instance ?? Reminders._internal();
+
+  void _init() {
+    _prefs = Get.find();
     reload();
     if (_prefs.containsKey(reminderInitializedKey)) {
       load();

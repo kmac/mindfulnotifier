@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 import 'package:get/get.dart';
+import 'package:mindfulnotifier/components/utils.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -89,18 +90,8 @@ void initializeNotifications() async {
   });
 }
 
-Future<ScheduleDataStoreRO> findScheduleDataStoreRO(
-    [bool errorNotFound = true]) async {
-  try {
-    return Get.find<ScheduleDataStoreRO>();
-  } catch (e) {
-    if (errorNotFound) {
-      logger.e("Could not get ScheduleDataStoreRO, e=$e", 'not found', e);
-    }
-  }
-  // rebuild using ScheduleDataStore
-  ScheduleDataStore dataStore = await ScheduleDataStore.getInstance();
-  return dataStore.getScheduleDataStoreRO();
+ScheduleDataStoreRO findScheduleDataStoreRO() {
+  return Get.find<ScheduleDataStoreRO>();
 }
 
 class Notifier {
@@ -109,35 +100,44 @@ class Notifier {
   File customSoundFile;
   NotifyAudioPlayer audioPlayer;
 
-  Notifier();
-  Notifier.withCustomSound(File customSoundFile) {
-    this.customSoundFile = customSoundFile;
+  static Notifier _instance;
+
+  /// Private constructor
+  Notifier._internal() {
+    _instance = this;
+    _instance._init();
   }
 
-  Future<void> start() async {
-    _startAudioService();
+  factory Notifier() => _instance ?? Notifier._internal();
+
+  factory Notifier.withCustomSoundFile(File customSoundFile) {
+    if (_instance == null) {
+      Notifier._internal();
+      _instance.customSoundFile = customSoundFile;
+    }
+    return _instance;
   }
 
-  void shutdown() {
-    _stopAudioService();
+  void _init() async {
+    logger.i("Initializing Notifier");
   }
 
-  void cancelAll() async {
+  void shutdown() async {
     await flutterLocalNotificationsPlugin.cancelAll();
   }
 
-  void _startAudioService() {
-    if (useSeparateAudio) {
-      audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
-    }
-  }
+  // Future<void> _startAudioService() async {
+  //   if (useSeparateAudio) {
+  //     audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
+  //   }
+  // }
 
-  void _stopAudioService() {
-    if (useSeparateAudio) {
-      audioPlayer?.dispose();
-      audioPlayer = null;
-    }
-  }
+  // void _stopAudioService() {
+  //   if (useSeparateAudio) {
+  //     audioPlayer?.dispose();
+  //     audioPlayer = null;
+  //   }
+  // }
 
   void showQuietHoursNotification(bool start) async {
     final String notifText =
@@ -153,7 +153,7 @@ class Notifier {
     bool mute = false;
     bool vibrate = false;
     try {
-      ScheduleDataStoreRO ds = await findScheduleDataStoreRO();
+      ScheduleDataStoreRO ds = findScheduleDataStoreRO();
       mute = ds.mute;
       vibrate = ds.vibrate;
     } catch (e) {
@@ -203,14 +203,14 @@ class Notifier {
             "text=$notifText mute=$mute vibrate=$vibrate");
 
     var styleInfo = BigTextStyleInformation('');
-    AndroidBuildVersion buildVersion = Get.find();
+    AndroidBuildVersion buildVersion = await getAndroidBuildVersion();
     if (buildVersion.sdkInt <= 23) {
       styleInfo = null;
     }
 
     bool sticky = true;
     try {
-      ScheduleDataStoreRO ds = await findScheduleDataStoreRO();
+      ScheduleDataStoreRO ds = findScheduleDataStoreRO();
       sticky = ds.useStickyNotification;
     } catch (e) {
       logger.e("Could not get ScheduleDataStoreRO, e=$e");
@@ -238,7 +238,13 @@ class Notifier {
         payload: notifText);
 
     if (useSeparateAudio && !mute) {
+      audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
       audioPlayer.playBell();
     }
+  }
+
+  void playSound(dynamic fileOrPath) {
+    audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
+    audioPlayer.play(fileOrPath);
   }
 }

@@ -2,22 +2,21 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:ui';
 
-import 'package:get/get.dart';
 import 'package:android_alarm_manager/android_alarm_manager.dart';
+import 'package:get/get.dart';
+import 'package:package_info/package_info.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/scheduler.dart';
 import 'package:mindfulnotifier/components/timerservice.dart';
 import 'package:mindfulnotifier/components/utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 var logger = createLogger('alarmservice');
 
-String getCurrentIsolate() {
-  return "I:${Isolate.current.hashCode}";
-}
-
 /// This service could actually be abstracted into the timerservice
+/// - i.e. the listen port stuff
 
 const bool useHeartbeat = true;
 const Duration heartbeatInterval = Duration(minutes: 30);
@@ -157,18 +156,29 @@ void bootstrapCallback() async {
   TimerService timerService = AlarmManagerTimerService();
   Get.put<TimerService>(timerService, permanent: true);
 
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  Get.delete<SharedPreferences>();
+  Get.put(prefs, permanent: true);
+
+  ScheduleDataStore dataStore = await ScheduleDataStore.getInstance();
+  Get.delete<ScheduleDataStore>();
+  Get.put(dataStore, permanent: true);
+
   try {
     await initializeFromAppIsolateReceivePort();
   } catch (e) {
     logger.e("initializeFromAppIsolateReceivePort failed with: $e", null, e);
   }
 
+  // TODO get this out of here
+  PackageInfo info = await PackageInfo.fromPlatform();
+  Get.put(info, permanent: true);
+
   // Create and initialize the Scheduler singleton
   Scheduler scheduler = Scheduler();
-  // Note: this call may end up reinitializing everything if our app has been killed:
-  bool wasInit = await scheduler.checkInitialized(kickSchedule: true);
+  bool enabled = scheduler.enableIfNecessary();
   scheduler.sendControlMessage(
-      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
+      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${enabled ? 'T' : 'F'}");
 }
 
 void heartbeatCallback() async {
@@ -178,10 +188,8 @@ void heartbeatCallback() async {
 
   // Create and initialize the Scheduler singleton
   Scheduler scheduler = Scheduler();
-  // Note: this call may end up reinitializing everything if our app has been killed:
-  bool wasInit = await scheduler.checkInitialized(kickSchedule: true);
   scheduler.sendControlMessage(
-      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${wasInit ? 'T' : 'F'}");
+      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}");
 }
 
 void enableHeartbeat() async {

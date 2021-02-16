@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/logging.dart';
+import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/scheduler.dart';
 import 'package:mindfulnotifier/components/timerservice.dart';
 import 'package:mindfulnotifier/components/utils.dart';
@@ -14,7 +15,7 @@ void quietHoursStartCallback() async {
   logger
       .i("[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
   Scheduler scheduler = Scheduler();
-  await scheduler.checkInitialized();
+  // await scheduler.checkInitialized();
   QuietHours quietHours = scheduler.delegate.quietHours;
   quietHours.quietStart();
 
@@ -29,7 +30,7 @@ void quietHoursStartCallback() async {
 void quietHoursEndCallback() async {
   logger.i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
   Scheduler scheduler = Scheduler();
-  await scheduler.checkInitialized();
+  // await scheduler.checkInitialized();
   QuietHours quietHours = scheduler.delegate.quietHours;
   quietHours.quietEnd();
 
@@ -185,7 +186,7 @@ class QuietHours {
     Scheduler scheduler = Scheduler();
     scheduler.sendReminderMessage('In quiet hours.');
     if (notifyQuietHours) {
-      scheduler.notifier.showQuietHoursNotification(true);
+      Notifier().showQuietHoursNotification(true);
     }
   }
 
@@ -195,7 +196,7 @@ class QuietHours {
     Scheduler scheduler = Scheduler();
     scheduler.sendReminderMessage('Quiet Hours have ended.');
     if (notifyQuietHours) {
-      scheduler.notifier.showQuietHoursNotification(false);
+      Notifier().showQuietHoursNotification(false);
     }
   }
 }
