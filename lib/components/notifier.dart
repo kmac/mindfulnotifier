@@ -162,7 +162,8 @@ class Notifier {
     showNotification(notifText, mute: mute, vibrate: vibrate);
   }
 
-  void showNotification(String notifText, {bool mute, bool vibrate}) async {
+  void showNotification(String notifText,
+      {bool mute = false, bool vibrate}) async {
     // Some reference links:
     // https://developer.android.com/training/notify-user/channels
     // https://itnext.io/android-notification-channel-as-deep-as-possible-1a5b08538c87

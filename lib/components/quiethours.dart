@@ -14,7 +14,7 @@ const int quietHoursEndAlarmID = 5522;
 void quietHoursStartCallback() async {
   logger
       .i("[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
-  Scheduler scheduler = Scheduler();
+  Scheduler scheduler = await Scheduler.getScheduler();
   // await scheduler.checkInitialized();
   QuietHours quietHours = scheduler.delegate.quietHours;
   quietHours.quietStart();
@@ -29,8 +29,7 @@ void quietHoursStartCallback() async {
 
 void quietHoursEndCallback() async {
   logger.i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
-  Scheduler scheduler = Scheduler();
-  // await scheduler.checkInitialized();
+  Scheduler scheduler = await Scheduler.getScheduler();
   QuietHours quietHours = scheduler.delegate.quietHours;
   quietHours.quietEnd();
 
@@ -180,20 +179,20 @@ class QuietHours {
     await timerService.cancel(quietHoursEndAlarmID);
   }
 
-  void quietStart() {
+  void quietStart() async {
     logger.i("Quiet hours start");
     inQuietHours = true;
-    Scheduler scheduler = Scheduler();
+    Scheduler scheduler = await Scheduler.getScheduler();
     scheduler.sendReminderMessage('In quiet hours.');
     if (notifyQuietHours) {
       Notifier().showQuietHoursNotification(true);
     }
   }
 
-  void quietEnd() {
+  void quietEnd() async {
     logger.i("Quiet hours end");
     inQuietHours = false;
-    Scheduler scheduler = Scheduler();
+    Scheduler scheduler = await Scheduler.getScheduler();
     scheduler.sendReminderMessage('Quiet Hours have ended.');
     if (notifyQuietHours) {
       Notifier().showQuietHoursNotification(false);

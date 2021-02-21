@@ -6,6 +6,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:package_info/package_info.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -47,7 +49,7 @@ const int scheduleAlarmID = 10;
 
 void scheduleCallback() async {
   logger.i("[${DateTime.now()}] scheduleCallback  ${getCurrentIsolate()}");
-  Scheduler scheduler = Scheduler();
+  Scheduler scheduler = await Scheduler.getScheduler();
   // await scheduler.checkInitialized();
 
   // change here is to just re-initialize the scheduler every time and just schedule next
@@ -67,18 +69,34 @@ class Scheduler {
 
   // Singleton
   static Scheduler _instance;
-  Scheduler._internal() {
-    _instance = this;
-    init();
+
+  static Future<Scheduler> getScheduler() async {
+    if (_instance == null) {
+      _instance = Scheduler();
+      await _instance.init();
+    }
+    return _instance;
   }
-  factory Scheduler() => _instance ?? Scheduler._internal();
 
   Future<void> init([bool kickSchedule = true]) async {
     logger.i(
         "Initializing scheduler, kickSchedule=$kickSchedule ${getCurrentIsolate()}");
 
-    ScheduleDataStore dataStore = Get.find();
-    update(dataStoreRO: dataStore.getScheduleDataStoreRO());
+    PackageInfo info = await PackageInfo.fromPlatform();
+    Get.put(info, permanent: true);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    Get.delete<SharedPreferences>();
+    Get.put(prefs, permanent: true);
+
+    ScheduleDataStore dataStore = await ScheduleDataStore.getInstance();
+    Get.delete<ScheduleDataStore>();
+    Get.put(dataStore, permanent: true);
+
+    _ds = dataStore.getScheduleDataStoreRO();
+    update(dataStoreRO: _ds);
+
+    delegate = _buildSchedulerDelegate(this);
   }
 
   void shutdown() {
@@ -101,8 +119,10 @@ class Scheduler {
     if (running) {
       disable();
     }
+
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
+
     // This is the notification we only want to show on:
     // 1) reboot
     // 2) first enabled by user

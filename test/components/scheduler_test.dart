@@ -8,11 +8,10 @@ void main() {
   Scheduler scheduler;
 
   bool initialized = false;
-  setUp(() {
+  setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    scheduler = Scheduler();
+    scheduler = await Scheduler.getScheduler();
     if (!initialized) {
-      scheduler.init();
       initialized = true;
     }
   });
@@ -24,20 +23,20 @@ void main() {
           PeriodicScheduler(scheduler, QuietHours.defaultQuietHours(), 0, 15);
       scheduler.delegate = delegate;
       DateTime dt = DateTime(2020, 1, 1, 0, 5);
-      DateTime start = delegate.getInitialStart(now: dt);
+      DateTime start = delegate.getNextFireTime(fromTime: dt);
       print("start: $start");
       expect(start.minute, 15);
 
       dt = DateTime(2020, 1, 1, 0, 0);
-      start = delegate.getInitialStart(now: dt);
+      start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 15);
 
       dt = DateTime(2020, 1, 1, 0, 14, 59);
-      start = delegate.getInitialStart(now: dt);
+      start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 15);
 
       dt = DateTime(2020, 1, 1, 0, 15);
-      start = delegate.getInitialStart(now: dt);
+      start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 30);
     });
     test('test schedule 30m', () {
@@ -46,20 +45,20 @@ void main() {
       scheduler.delegate = delegate;
       // scheduler.durationMinutes = 30;
       DateTime dt = DateTime(2020, 1, 1, 0, 5);
-      DateTime start = delegate.getInitialStart(now: dt);
+      DateTime start = delegate.getNextFireTime(fromTime: dt);
       print("start: $start");
       expect(start.minute, 30);
 
       dt = DateTime(2020, 1, 1, 0, 0);
-      start = delegate.getInitialStart(now: dt);
+      start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 30);
 
       dt = DateTime(2020, 1, 1, 0, 14, 59);
-      start = delegate.getInitialStart(now: dt);
+      start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 30);
 
       dt = DateTime(2020, 1, 1, 0, 15);
-      start = delegate.getInitialStart(now: dt);
+      start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 30);
     });
   });

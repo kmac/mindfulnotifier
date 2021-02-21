@@ -4,14 +4,12 @@ import 'dart:ui';
 
 import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:get/get.dart';
-import 'package:package_info/package_info.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/scheduler.dart';
 import 'package:mindfulnotifier/components/timerservice.dart';
 import 'package:mindfulnotifier/components/utils.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 var logger = createLogger('alarmservice');
 
@@ -80,17 +78,19 @@ Future<void> initializeFromAppIsolateReceivePort() async {
 
   // Register for events from the UI isolate. These messages will
   // be triggered from the UI side
-  fromAppIsolateStreamSubscription = fromAppIsolateReceivePort.listen((map) {
+  fromAppIsolateStreamSubscription =
+      fromAppIsolateReceivePort.listen((map) async {
     //
     // WE ARE IN THE ALARM ISOLATE
     //
     logger.i("fromAppIsolateReceivePort received: $map ${getCurrentIsolate()}");
     String key = map.keys.first;
     // String value = map.values.first;
+    Scheduler scheduler = await Scheduler.getScheduler();
     switch (key) {
       case 'update':
         ScheduleDataStoreRO dataStoreRO = map.values.first;
-        Scheduler().update(dataStoreRO: dataStoreRO);
+        scheduler.update(dataStoreRO: dataStoreRO);
         break;
       case 'enable':
         ScheduleDataStoreRO dataStoreRO = map.values.first;
@@ -98,15 +98,15 @@ Future<void> initializeFromAppIsolateReceivePort() async {
         break;
       case 'disable':
         ScheduleDataStoreRO dataStoreRO = map.values.first;
-        Scheduler().update(dataStoreRO: dataStoreRO);
+        scheduler.update(dataStoreRO: dataStoreRO);
         disable();
         break;
       case 'restart':
         ScheduleDataStoreRO dataStoreRO = map.values.first;
-        Scheduler().restart(dataStoreRO);
+        scheduler.restart(dataStoreRO);
         break;
       case 'sync':
-        Scheduler().handleSync();
+        scheduler.handleSync();
         break;
       case 'shutdown':
         shutdown();
@@ -114,7 +114,7 @@ Future<void> initializeFromAppIsolateReceivePort() async {
       case 'playSound':
         // the map value is either a File or a path to file
         dynamic fileOrPath = map.values.first;
-        Scheduler().playSound(fileOrPath);
+        scheduler.playSound(fileOrPath);
         break;
     }
   }, onDone: () {
@@ -147,22 +147,18 @@ void shutdownReceivePort() async {
   IsolateNameServer.removePortNameMapping(constants.toAlarmServiceSendPortName);
 }
 
+void initializeGet() {
+  Get.delete<TimerService>();
+  TimerService timerService = AlarmManagerTimerService();
+  Get.put<TimerService>(timerService, permanent: true);
+}
+
 void bootstrapCallback() async {
   logger.i("bootstrapCallback ${getCurrentIsolate()}");
   // WE ARE IN THE ALARM MANAGER ISOLATE
   // This is only available in the alarm manager isolate
 
-  Get.delete<TimerService>();
-  TimerService timerService = AlarmManagerTimerService();
-  Get.put<TimerService>(timerService, permanent: true);
-
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  Get.delete<SharedPreferences>();
-  Get.put(prefs, permanent: true);
-
-  ScheduleDataStore dataStore = await ScheduleDataStore.getInstance();
-  Get.delete<ScheduleDataStore>();
-  Get.put(dataStore, permanent: true);
+  initializeGet();
 
   try {
     await initializeFromAppIsolateReceivePort();
@@ -170,12 +166,8 @@ void bootstrapCallback() async {
     logger.e("initializeFromAppIsolateReceivePort failed with: $e", null, e);
   }
 
-  // TODO get this out of here
-  PackageInfo info = await PackageInfo.fromPlatform();
-  Get.put(info, permanent: true);
-
   // Create and initialize the Scheduler singleton
-  Scheduler scheduler = Scheduler();
+  Scheduler scheduler = await Scheduler.getScheduler();
   bool enabled = scheduler.enableIfNecessary();
   scheduler.sendControlMessage(
       "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${enabled ? 'T' : 'F'}");
@@ -186,8 +178,10 @@ void heartbeatCallback() async {
   // WE ARE IN THE ALARM MANAGER ISOLATE
   // This is only available in the alarm manager isolate
 
+  initializeGet();
+
   // Create and initialize the Scheduler singleton
-  Scheduler scheduler = Scheduler();
+  Scheduler scheduler = await Scheduler.getScheduler();
   scheduler.sendControlMessage(
       "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}");
 }
@@ -216,15 +210,17 @@ void disableHeartbeat() async {
   }
 }
 
-void enable({bool kickSchedule = true, ScheduleDataStoreRO dataStoreRO}) {
+void enable({bool kickSchedule = true, ScheduleDataStoreRO dataStoreRO}) async {
   logger.i("enable");
-  Scheduler().enable(kickSchedule: kickSchedule, dataStoreRO: dataStoreRO);
+  Scheduler scheduler = await Scheduler.getScheduler();
+  scheduler.enable(kickSchedule: kickSchedule, dataStoreRO: dataStoreRO);
   enableHeartbeat();
 }
 
 void disable() async {
   logger.i("disable");
-  Scheduler().disable();
+  Scheduler scheduler = await Scheduler.getScheduler();
+  scheduler.disable();
   disableHeartbeat();
 }
 
