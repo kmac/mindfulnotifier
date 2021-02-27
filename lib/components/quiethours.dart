@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/scheduler.dart';
@@ -22,7 +22,7 @@ void quietHoursStartCallback() async {
   var nextQuietStart = quietHours.getNextQuietStart();
   assert(nextQuietStart.isAfter(DateTime.now()));
 
-  TimerService timerService = Get.find();
+  TimerService timerService = await getAlarmManagerTimerService();
   await timerService.oneShotAt(
       nextQuietStart, quietHoursStartAlarmID, quietHoursStartCallback);
 }
@@ -36,7 +36,7 @@ void quietHoursEndCallback() async {
   var nextQuietEnd = quietHours.getNextQuietEnd();
   assert(nextQuietEnd.isAfter(DateTime.now()));
 
-  TimerService timerService = Get.find();
+  TimerService timerService = await getAlarmManagerTimerService();
   await timerService.oneShotAt(
       nextQuietEnd, quietHoursStartAlarmID, quietHoursStartCallback);
 }
@@ -160,7 +160,7 @@ class QuietHours {
     }
     var nextQuietStart = getNextQuietStart();
     var nextQuietEnd = getNextQuietEnd();
-    TimerService timerService = Get.find();
+    TimerService timerService = await getAlarmManagerTimerService();
     await timerService.cancel(quietHoursStartAlarmID);
     await timerService.cancel(quietHoursEndAlarmID);
     logger.i(
@@ -174,7 +174,7 @@ class QuietHours {
 
   void cancelTimers() async {
     logger.i("Cancelling quiet hours timers");
-    TimerService timerService = Get.find();
+    TimerService timerService = await getAlarmManagerTimerService();
     await timerService.cancel(quietHoursStartAlarmID);
     await timerService.cancel(quietHoursEndAlarmID);
   }

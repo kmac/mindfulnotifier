@@ -3,7 +3,6 @@ import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:android_alarm_manager/android_alarm_manager.dart';
-import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -26,7 +25,7 @@ bool androidAlarmManagerInitialized = false;
 ReceivePort fromAppIsolateReceivePort;
 StreamSubscription fromAppIsolateStreamSubscription;
 
-Future<void> initializeAlarmService() async {
+Future<void> initializeAlarmService({bool bootstrap: false}) async {
   // check IsolateNameServer to see if our alarm isolate is already running
   if (IsolateNameServer.lookupPortByName(
           constants.toAlarmServiceSendPortName) !=
@@ -35,23 +34,26 @@ Future<void> initializeAlarmService() async {
         "initializeAlarmService: already initialized: ${constants.toAlarmServiceSendPortName} ${getCurrentIsolate()}");
     return;
   }
-  // !!!
-  // THIS IS ON THE 'MAIN' ISOLATE
-  // Nothing else in this file should be on the main isolate.
-  // !!!
   logger.i("initialize ${getCurrentIsolate()}");
 
   await initializeAlarmManager();
 
-  // Send ourselves a bootstrap message. The 'bootstrapCallback' will be
-  // invoked on the alarm manager isolate
-  if (!await AndroidAlarmManager.oneShot(
-      Duration(seconds: 1), controlAlarmId, bootstrapCallback,
-      exact: true, wakeup: true, rescheduleOnReboot: false)) {
-    var errmsg =
-        "Scheduling oneShot control alarm failed on timer id: $controlAlarmId";
-    logger.e(errmsg);
-    throw AssertionError(errmsg);
+  if (bootstrap) {
+    // !!!
+    // THIS IS ON THE 'MAIN' ISOLATE
+    // Nothing else in this file should be on the main isolate.
+    // !!!
+
+    // Send ourselves a bootstrap message. The 'bootstrapCallback' will be
+    // invoked on the alarm manager isolate
+    if (!await AndroidAlarmManager.oneShot(
+        Duration(seconds: 1), controlAlarmId, bootstrapCallback,
+        exact: true, wakeup: true, rescheduleOnReboot: false)) {
+      var errmsg =
+          "Scheduling oneShot control alarm failed on timer id: $controlAlarmId";
+      logger.e(errmsg);
+      throw AssertionError(errmsg);
+    }
   }
 }
 
@@ -147,18 +149,12 @@ void shutdownReceivePort() async {
   IsolateNameServer.removePortNameMapping(constants.toAlarmServiceSendPortName);
 }
 
-void initializeGet() {
-  Get.delete<TimerService>();
-  TimerService timerService = AlarmManagerTimerService();
-  Get.put<TimerService>(timerService, permanent: true);
-}
-
 void bootstrapCallback() async {
   logger.i("bootstrapCallback ${getCurrentIsolate()}");
   // WE ARE IN THE ALARM MANAGER ISOLATE
   // This is only available in the alarm manager isolate
 
-  initializeGet();
+  getAlarmManagerTimerService();
 
   try {
     await initializeFromAppIsolateReceivePort();
@@ -178,7 +174,7 @@ void heartbeatCallback() async {
   // WE ARE IN THE ALARM MANAGER ISOLATE
   // This is only available in the alarm manager isolate
 
-  initializeGet();
+  getAlarmManagerTimerService();
 
   // Create and initialize the Scheduler singleton
   Scheduler scheduler = await Scheduler.getScheduler();
@@ -228,6 +224,11 @@ void shutdown() {
   logger.i("shutdown");
   disable();
   shutdownReceivePort();
+}
+
+Future<AlarmManagerTimerService> getAlarmManagerTimerService() async {
+  await initializeAlarmService();
+  return AlarmManagerTimerService();
 }
 
 class AlarmManagerTimerService extends TimerService {

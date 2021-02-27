@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:package_info/package_info.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -24,6 +25,7 @@ enum ScheduleType { PERIODIC, RANDOM }
 
 const bool rescheduleAfterQuietHours = true;
 const int scheduleAlarmID = 10;
+bool initialNotificationTriggered = false;
 
 /// Newest changes:
 /// scheduler owns the data
@@ -138,8 +140,12 @@ class Scheduler {
 
   bool enableIfNecessary() {
     if (_ds.enabled) {
-      logger.i("Re-enabling on init");
-      enable(kickSchedule: true);
+      if (initialNotificationTriggered) {
+        logger.i("initialNotificationTriggered: not re-enabling on init");
+      } else {
+        logger.i("Re-enabling on init");
+        enable(kickSchedule: true);
+      }
       return true;
     }
     return false;
@@ -282,7 +288,7 @@ abstract class DelegatedScheduler {
   void cancel() async {
     logger.i("Cancelling notification schedule ${getCurrentIsolate()}");
     quietHours.cancelTimers();
-    TimerService timerService = Get.find<TimerService>();
+    TimerService timerService = await getAlarmManagerTimerService();
     await timerService.cancel(scheduleAlarmID);
   }
 
@@ -310,7 +316,7 @@ abstract class DelegatedScheduler {
       scheduler.sendInfoMessage("Next reminder at ${formatHHMMSS(_nextDate)}");
     }
 
-    TimerService timerService = Get.find<TimerService>();
+    TimerService timerService = await getAlarmManagerTimerService();
     timerService.oneShotAt(_nextDate, scheduleAlarmID, scheduleCallback);
 
     if (!scheduled) {

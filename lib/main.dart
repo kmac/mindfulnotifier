@@ -18,7 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> initServices() async {
   print('starting services ...');
-  await initializeAlarmService();
+  await initializeAlarmService(bootstrap: true);
   print('All services started...');
 }
 
