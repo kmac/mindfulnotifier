@@ -17,9 +17,9 @@ import 'package:mindfulnotifier/theme/themes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> initServices() async {
-  print('starting services ...');
+  print("main:initServices: starting services");
   await initializeAlarmService(bootstrap: true);
-  print('All services started...');
+  print("main:initServices: finished");
 }
 
 void main() async {

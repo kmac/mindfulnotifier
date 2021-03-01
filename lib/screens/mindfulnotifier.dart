@@ -61,7 +61,7 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void init() async {
-    logger.i("mindfulnotifier:init() ${getCurrentIsolate()}");
+    logger.i("mindfulnotifier UI init() ${getCurrentIsolate()}");
     ds = await ScheduleDataStore.getInstance();
     ds.dumpToLog();
     initializeFromAlarmServiceReceivePort();

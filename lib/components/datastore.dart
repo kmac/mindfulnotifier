@@ -267,10 +267,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   void dumpToLog() {
-    logger.d("ScheduleDataStore:");
-    for (String key in _prefs.getKeys()) {
-      logger.d("$key=${_prefs.get(key)}");
-    }
+    logger.d("ScheduleDataStore: ${_toJson()}");
   }
 
   Future<void> setSync(String key, dynamic val) async {

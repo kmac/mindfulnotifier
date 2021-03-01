@@ -12,12 +12,8 @@ import 'package:mindfulnotifier/components/utils.dart';
 
 var logger = createLogger('alarmservice');
 
-/// This service could actually be abstracted into the timerservice
-/// - i.e. the listen port stuff
-
-const bool useHeartbeat = true;
+const bool useHeartbeat = false;
 const Duration heartbeatInterval = Duration(minutes: 30);
-const bool rescheduleOnReboot = useHeartbeat;
 const int controlAlarmId = 5;
 
 bool androidAlarmManagerInitialized = false;
@@ -31,10 +27,10 @@ Future<void> initializeAlarmService({bool bootstrap: false}) async {
           constants.toAlarmServiceSendPortName) !=
       null) {
     logger.i(
-        "initializeAlarmService: already initialized: ${constants.toAlarmServiceSendPortName} ${getCurrentIsolate()}");
+        "initializeAlarmService bootstrap:$bootstrap, already initialized: ${constants.toAlarmServiceSendPortName} ${getCurrentIsolate()}");
     return;
   }
-  logger.i("initialize ${getCurrentIsolate()}");
+  logger.i("initializeAlarmService bootstrap:$bootstrap ${getCurrentIsolate()}");
 
   await initializeAlarmManager();
 
@@ -164,9 +160,12 @@ void bootstrapCallback() async {
 
   // Create and initialize the Scheduler singleton
   Scheduler scheduler = await Scheduler.getScheduler();
-  bool enabled = scheduler.enableIfNecessary();
+  // this shouldn't be needed since we should have the alarm scheduled:
+  // bool enabled = scheduler.enableIfNecessary();
+  // scheduler.sendControlMessage(
+  //     "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${enabled ? 'T' : 'F'}");
   scheduler.sendControlMessage(
-      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${enabled ? 'T' : 'F'}");
+      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${scheduler.running ? 'T' : 'F'}");
 }
 
 void heartbeatCallback() async {
@@ -232,7 +231,7 @@ Future<AlarmManagerTimerService> getAlarmManagerTimerService() async {
 }
 
 class AlarmManagerTimerService extends TimerService {
-  Future<void> oneShotAt(DateTime time, int id, Function callback) async {
+  Future<void> oneShotAt(DateTime time, int id, Function callback, {bool rescheduleOnReboot=true}) async {
     await AndroidAlarmManager.oneShotAt(time, id, callback,
         exact: true,
         wakeup: true,

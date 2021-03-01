@@ -80,9 +80,9 @@ class Scheduler {
     return _instance;
   }
 
-  Future<void> init([bool kickSchedule = true]) async {
+  Future<void> init() async {
     logger.i(
-        "Initializing scheduler, kickSchedule=$kickSchedule ${getCurrentIsolate()}");
+        "Initializing scheduler ${getCurrentIsolate()}");
 
     PackageInfo info = await PackageInfo.fromPlatform();
     Get.put(info, permanent: true);
@@ -143,7 +143,7 @@ class Scheduler {
       if (initialNotificationTriggered) {
         logger.i("initialNotificationTriggered: not re-enabling on init");
       } else {
-        logger.i("Re-enabling on init");
+        logger.i("re-enabling on init");
         enable(kickSchedule: true);
       }
       return true;
