@@ -204,7 +204,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const int defaultQuietHoursStartMinute = 0;
   static const int defaultQuietHoursEndHour = 9;
   static const int defaultQuietHoursEndMinute = 0;
-  static const bool defaultNotifyQuietHours = true;
+  static const bool defaultNotifyQuietHours = false;
   static const String defaultReminderMessage = 'Not Enabled';
   static const String defaultInfoMessage = 'Uninitialized';
   static const String defaultControlMessage = '';
@@ -476,16 +476,17 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _prefs.getInt(ScheduleDataStore.quietHoursEndMinuteKey);
   }
 
-  set notifyQuietHours(bool value) {
-    setSync(notifyQuietHoursKey, value);
-  }
+  // set notifyQuietHours(bool value) {
+  //   setSync(notifyQuietHoursKey, value);
+  // }
 
   @override
   bool get notifyQuietHours {
-    if (!_prefs.containsKey(ScheduleDataStore.notifyQuietHoursKey)) {
-      notifyQuietHours = defaultNotifyQuietHours;
-    }
-    return _prefs.getBool(ScheduleDataStore.notifyQuietHoursKey);
+    return defaultNotifyQuietHours;
+    // if (!_prefs.containsKey(ScheduleDataStore.notifyQuietHoursKey)) {
+    //   notifyQuietHours = defaultNotifyQuietHours;
+    // }
+    // return _prefs.getBool(ScheduleDataStore.notifyQuietHoursKey);
   }
 
   set reminderMessage(String value) {

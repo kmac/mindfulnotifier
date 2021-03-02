@@ -304,8 +304,7 @@ abstract class DelegatedScheduler {
 
     _nextDate = getNextFireTime();
 
-    if (rescheduleAfterQuietHours &&
-        (quietHours.inQuietHours || quietHours.isInQuietHours(_nextDate))) {
+    if (rescheduleAfterQuietHours && quietHours.isInQuietHours(_nextDate)) {
       _nextDate = getNextFireTime(
           fromTime: quietHours.getNextQuietEnd(), adjustFromQuiet: true);
       logger.i("Scheduling next reminder, past quiet hours: $_nextDate");
