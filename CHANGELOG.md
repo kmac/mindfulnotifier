@@ -1,3 +1,8 @@
+# 1.0.6
+- Fixes after testing on Android 10 / LineageOS (Issue #2)
+    - purely alarm driven
+    - tweaking notifications which happen after main UI is killed
+
 # 1.0.5
 - cleanup/document permissions
 

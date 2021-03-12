@@ -15,13 +15,13 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# 
+#
 # My notes on Android:
 # versionCode: Internal version number. Must always be increasing.
 #              This number is used only to determine whether one version is more recent than another,
 #              with higher numbers indicating more recent versions
 # versionName: Customer-visible version string
-version: 1.0.5+6
+version: 1.0.6+9
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -35,7 +35,7 @@ dependencies:
   cupertino_icons: ^1.0.0
 
   # https://pub.dev/packages/<package>
-  
+
   android_alarm_manager: '>=0.4.5+17 <2.0.0'
   flutter_local_notifications: ^3.0.2
   date_format: ^1.0.9

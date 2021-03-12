@@ -1,0 +1,3 @@
+- Fixes after testing on Android 10 / LineageOS (Issue #2)
+    - purely alarm driven
+    - tweaking notifications which happen after main UI is killed

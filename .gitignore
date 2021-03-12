@@ -40,8 +40,8 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+README-kmac.md
 mindfulnotifier.code-workspace
-build.sh
 adb-logcat.sh
 /keystore
 /issues
