@@ -1,3 +1,6 @@
+# 1.0.7
+- Remove quiet hours end callback
+
 # 1.0.6
 - Fixes after testing on Android 10 / LineageOS (Issue #2)
     - purely alarm driven

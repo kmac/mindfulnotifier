@@ -9,7 +9,7 @@ import 'package:mindfulnotifier/components/utils.dart';
 var logger = createLogger('quiethours');
 
 const int quietHoursStartAlarmID = 5521;
-const int quietHoursEndAlarmID = 5522;
+// const int quietHoursEndAlarmID = 5522;
 
 void quietHoursStartCallback() async {
   logger
@@ -27,19 +27,19 @@ void quietHoursStartCallback() async {
       nextQuietStart, quietHoursStartAlarmID, quietHoursStartCallback);
 }
 
-void quietHoursEndCallback() async {
-  logger.i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
-  Scheduler scheduler = await Scheduler.getScheduler();
-  QuietHours quietHours = scheduler.delegate.quietHours;
-  quietHours.quietEnd();
+// void quietHoursEndCallback() async {
+//   logger.i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
+//   Scheduler scheduler = await Scheduler.getScheduler();
+//   QuietHours quietHours = scheduler.delegate.quietHours;
+//   quietHours.quietEnd();
 
-  var nextQuietEnd = quietHours.getNextQuietEnd();
-  assert(nextQuietEnd.isAfter(DateTime.now()));
+//   var nextQuietEnd = quietHours.getNextQuietEnd();
+//   assert(nextQuietEnd.isAfter(DateTime.now()));
 
-  TimerService timerService = await getAlarmManagerTimerService();
-  await timerService.oneShotAt(
-      nextQuietEnd, quietHoursStartAlarmID, quietHoursStartCallback);
-}
+//   TimerService timerService = await getAlarmManagerTimerService();
+//   await timerService.oneShotAt(
+//       nextQuietEnd, quietHoursStartAlarmID, quietHoursStartCallback);
+// }
 
 class QuietHours {
   final TimeOfDay startTime;
@@ -162,21 +162,21 @@ class QuietHours {
     var nextQuietEnd = getNextQuietEnd();
     TimerService timerService = await getAlarmManagerTimerService();
     await timerService.cancel(quietHoursStartAlarmID);
-    await timerService.cancel(quietHoursEndAlarmID);
+    // await timerService.cancel(quietHoursEndAlarmID);
     logger.i(
         "Initializing quiet hours timers, start=$nextQuietStart, end=$nextQuietEnd");
     assert(nextQuietStart.isAfter(DateTime.now()));
     await timerService.oneShotAt(
         nextQuietStart, quietHoursStartAlarmID, quietHoursStartCallback);
-    await timerService.oneShotAt(
-        nextQuietEnd, quietHoursEndAlarmID, quietHoursEndCallback);
+    // await timerService.oneShotAt(
+    //     nextQuietEnd, quietHoursEndAlarmID, quietHoursEndCallback);
   }
 
   void cancelTimers() async {
     logger.i("Cancelling quiet hours timers");
     TimerService timerService = await getAlarmManagerTimerService();
     await timerService.cancel(quietHoursStartAlarmID);
-    await timerService.cancel(quietHoursEndAlarmID);
+    // await timerService.cancel(quietHoursEndAlarmID);
   }
 
   void quietStart() async {
@@ -189,13 +189,13 @@ class QuietHours {
     }
   }
 
-  void quietEnd() async {
-    logger.i("Quiet hours end");
-    inQuietHours = false;
-    Scheduler scheduler = await Scheduler.getScheduler();
-    scheduler.sendReminderMessage('Quiet Hours have ended.');
-    if (notifyQuietHours) {
-      Notifier().showQuietHoursNotification(false);
-    }
-  }
+  // void quietEnd() async {
+  //   logger.i("Quiet hours end");
+  //   inQuietHours = false;
+  //   Scheduler scheduler = await Scheduler.getScheduler();
+  //   scheduler.sendReminderMessage('Quiet Hours have ended.');
+  //   if (notifyQuietHours) {
+  //     Notifier().showQuietHoursNotification(false);
+  //   }
+  // }
 }
