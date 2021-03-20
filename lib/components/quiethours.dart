@@ -9,13 +9,11 @@ import 'package:mindfulnotifier/components/utils.dart';
 var logger = createLogger('quiethours');
 
 const int quietHoursStartAlarmID = 5521;
-// const int quietHoursEndAlarmID = 5522;
 
 void quietHoursStartCallback() async {
   logger
       .i("[${DateTime.now()}] quietHoursStartCallback ${getCurrentIsolate()}");
   Scheduler scheduler = await Scheduler.getScheduler();
-  // await scheduler.checkInitialized();
   QuietHours quietHours = scheduler.delegate.quietHours;
   quietHours.quietStart();
 
@@ -26,20 +24,6 @@ void quietHoursStartCallback() async {
   await timerService.oneShotAt(
       nextQuietStart, quietHoursStartAlarmID, quietHoursStartCallback);
 }
-
-// void quietHoursEndCallback() async {
-//   logger.i("[${DateTime.now()}] quietHoursEndCallback ${getCurrentIsolate()}");
-//   Scheduler scheduler = await Scheduler.getScheduler();
-//   QuietHours quietHours = scheduler.delegate.quietHours;
-//   quietHours.quietEnd();
-
-//   var nextQuietEnd = quietHours.getNextQuietEnd();
-//   assert(nextQuietEnd.isAfter(DateTime.now()));
-
-//   TimerService timerService = await getAlarmManagerTimerService();
-//   await timerService.oneShotAt(
-//       nextQuietEnd, quietHoursStartAlarmID, quietHoursStartCallback);
-// }
 
 class QuietHours {
   final TimeOfDay startTime;
@@ -168,15 +152,12 @@ class QuietHours {
     assert(nextQuietStart.isAfter(DateTime.now()));
     await timerService.oneShotAt(
         nextQuietStart, quietHoursStartAlarmID, quietHoursStartCallback);
-    // await timerService.oneShotAt(
-    //     nextQuietEnd, quietHoursEndAlarmID, quietHoursEndCallback);
   }
 
   void cancelTimers() async {
     logger.i("Cancelling quiet hours timers");
     TimerService timerService = await getAlarmManagerTimerService();
     await timerService.cancel(quietHoursStartAlarmID);
-    // await timerService.cancel(quietHoursEndAlarmID);
   }
 
   void quietStart() async {
@@ -188,14 +169,4 @@ class QuietHours {
       Notifier().showQuietHoursNotification(true);
     }
   }
-
-  // void quietEnd() async {
-  //   logger.i("Quiet hours end");
-  //   inQuietHours = false;
-  //   Scheduler scheduler = await Scheduler.getScheduler();
-  //   scheduler.sendReminderMessage('Quiet Hours have ended.');
-  //   if (notifyQuietHours) {
-  //     Notifier().showQuietHoursNotification(false);
-  //   }
-  // }
 }
