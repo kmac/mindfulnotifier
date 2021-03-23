@@ -1,3 +1,6 @@
+# 1.0.8
+- Fix Issue #7 - fix bug in quiet hours end
+
 # 1.0.7
 - Remove quiet hours end callback
 

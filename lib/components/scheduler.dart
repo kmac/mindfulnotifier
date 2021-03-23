@@ -243,25 +243,11 @@ class Scheduler {
     //    https://pub.dev/packages/flutter_local_notifications
 
     final DateTime now = DateTime.now();
-    bool isQuiet = delegate.quietHours.inQuietHours;
-    bool isQuietCheckedVal = delegate.quietHours.isInQuietHours(now);
-    logger.i(
-        "triggerNotification quiet=$isQuiet, quietChecked=$isQuietCheckedVal ${getCurrentIsolate()}");
+    bool isQuiet = delegate.quietHours.isInQuietHours(now);
+    logger.i("triggerNotification isQuiet=$isQuiet ${getCurrentIsolate()}");
 
     try {
       if (isQuiet) {
-        if (!isQuietCheckedVal) {
-          logger.i("In quiet hours... ignoring notification");
-          sendInfoMessage("In quiet hours ${formatHHMM(now)}");
-          return;
-        } else {
-          logger.e(
-              "Checked quiet hours disagrees with value. Cancelling quiet hours");
-          sendInfoMessage("Cancelling quiet hours ${formatHHMM(now)}");
-          delegate.quietHours.inQuietHours = false;
-        }
-      }
-      if (isQuietCheckedVal) {
         // Note: this could happen if enabled in quiet hours:
         logger.i("In quiet hours (missed alarm)... ignoring notification");
         sendInfoMessage("In quiet hours ${formatHHMM(now)} NA");
