@@ -241,8 +241,10 @@ class GeneralWidget extends StatelessWidget {
                           subtitle: Text('Backup settings to file'),
                           trailing: Container(
                             // padding: EdgeInsets.all(2.0),
-                            child: OutlineButton(
-                              visualDensity: VisualDensity.compact,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
                               child: Text("Save..."),
                               onPressed: () {
                                 _doBackup();
@@ -256,8 +258,10 @@ class GeneralWidget extends StatelessWidget {
                           subtitle: Text('Restore settings from file'),
                           trailing: Container(
                             // padding: EdgeInsets.all(2.0),
-                            child: OutlineButton(
-                              visualDensity: VisualDensity.compact,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
                               child: Text("Load..."),
                               onPressed: () {
                                 _doRestore();
@@ -273,7 +277,7 @@ class GeneralWidget extends StatelessWidget {
                               'can be shutdown when running in the background. ' +
                               'This button checks the battery optimization setting, ' +
                               'and leads you to the proper settings to disable if required.'),
-                          trailing: OutlineButton(
+                          trailing: OutlinedButton(
                             child: Text('Check'),
                             onPressed: () => _checkBatteryOptimization(context),
                           ),

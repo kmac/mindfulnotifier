@@ -171,9 +171,11 @@ class BellWidget extends StatelessWidget {
             controller._bellId.value = val;
           },
           activeColor: Theme.of(context).colorScheme.onSurface,
-          secondary: OutlineButton(
+          secondary: OutlinedButton(
             child: Text("Play"),
-            visualDensity: VisualDensity.compact,
+            style: OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+            ),
             onPressed: () {
               MindfulNotifierWidgetController mainUiController = Get.find();
               if (bellDefinitions[bellId]['path'] != '') {
@@ -200,13 +202,17 @@ class BellWidget extends StatelessWidget {
           secondary: SizedBox(
               width: 180,
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                OutlineButton(
-                  visualDensity: VisualDensity.compact,
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
                   child: Text("Select"),
                   onPressed: () => _pickFile(bellId),
                 ),
-                OutlineButton(
-                  visualDensity: VisualDensity.compact,
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
                   child: Text("Play"),
                   onPressed: () {
                     MindfulNotifierWidgetController mainUiController =

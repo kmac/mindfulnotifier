@@ -36,30 +36,30 @@ dependencies:
 
   # https://pub.dev/packages/<package>
 
-  android_alarm_manager: '>=0.4.5+17 <2.0.0'
-  flutter_local_notifications: ^3.0.2
+  android_alarm_manager: ^2.0.0
+  flutter_local_notifications: ^5.0.0
   date_format: ^1.0.9
   device_info: ^0.4.2+4
-  rxdart: ^0.24.0
+  rxdart: ^0.26.0
   flutter_native_timezone: ^1.0.4
-  shared_preferences: '>=0.5.12+4 <2.0.0'
-  get: ^3.24.0
+  shared_preferences: ^2.0.5
+  get: ^4.1.1
   logger: ^0.9.4
 
   # For audio:
-  just_audio: ^0.5.6
-  audio_session: ^0.0.9
+  just_audio: ^0.7.2
+  audio_session: ^0.1.0
   # audio_service: ^0.15.3
 
-  file_picker: ^2.1.4
-  package_info: '>=0.4.3+2 <2.0.0'
-  path_provider: ^1.6.24
+  file_picker: ^3.0.0
+  package_info: ^2.0.0
+  path_provider: ^2.0.1
 
-  permission_handler: ^5.0.1+1
+  permission_handler: ^6.1.1
   # flutter_background_service: ^0.0.1+19
-  rflutter_alert: ^1.1.0
-  flutter_markdown: ^0.5.1
-  url_launcher: ^5.7.10
+  rflutter_alert: ^2.0.2
+  flutter_markdown: ^0.6.1
+  url_launcher: ^6.0.3
   battery_optimization: ^0.1.0
 
 dev_dependencies:

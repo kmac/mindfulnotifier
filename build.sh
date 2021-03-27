@@ -71,11 +71,14 @@ build_clean() {
 }
 
 build_apk() {
-  # rm -f ~/sync/scratch-mobile/app-arm64-v8a-release.apk
+  rm -f ~/sync/scratch-mobile/app-arm64-v8a-*.apk
   log_progress "building apk --split-per-abi $arg_debug"
   #flutter build apk --target-platform android-arm64 --split-per-abi && cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ~/sync/scratch-mobile/
   #shellcheck disable=SC2086
-  flutter build apk --split-per-abi $arg_debug && cp build/app/outputs/flutter-apk/app-arm64-v8a-*.apk ~/sync/scratch-mobile/
+  if flutter build apk --split-per-abi $arg_debug; then
+    cp build/app/outputs/flutter-apk/app-arm64-v8a-*.apk ~/sync/scratch-mobile/
+    log_progress "Successful build"
+  fi
 }
 
 build_appbundle() {

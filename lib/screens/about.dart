@@ -114,7 +114,7 @@ class AppAboutListTile extends AboutListTile {
                 'This is open-source free/libre software, licensed under GPL v3.0',
             aboutBoxChildren: [
               Center(
-                child: OutlineButton(
+                child: OutlinedButton(
                   child: Text("Visit project on github"),
                   // visualDensity: VisualDensity.compact,
                   onPressed: () {
