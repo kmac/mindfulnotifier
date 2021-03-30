@@ -30,7 +30,8 @@ Future<void> initializeAlarmService({bool bootstrap: false}) async {
         "initializeAlarmService bootstrap:$bootstrap, already initialized: ${constants.toAlarmServiceSendPortName} ${getCurrentIsolate()}");
     return;
   }
-  logger.i("initializeAlarmService bootstrap:$bootstrap ${getCurrentIsolate()}");
+  logger
+      .i("initializeAlarmService bootstrap:$bootstrap ${getCurrentIsolate()}");
 
   await initializeAlarmManager();
 
@@ -87,24 +88,42 @@ Future<void> initializeFromAppIsolateReceivePort() async {
     Scheduler scheduler = await Scheduler.getScheduler();
     switch (key) {
       case 'update':
-        ScheduleDataStoreRO dataStoreRO = map.values.first;
-        scheduler.update(dataStoreRO: dataStoreRO);
+        InMemoryScheduleDataStore mds = map.values.first;
+        scheduler.update(mds);
         break;
       case 'enable':
-        ScheduleDataStoreRO dataStoreRO = map.values.first;
-        enable(kickSchedule: true, dataStoreRO: dataStoreRO);
+        String infoMessage = map.values.first;
+        scheduler.updateDS('infoMessage', infoMessage);
+        enable(kickSchedule: true);
         break;
       case 'disable':
-        ScheduleDataStoreRO dataStoreRO = map.values.first;
-        scheduler.update(dataStoreRO: dataStoreRO);
+        String infoMessage = map.values.first;
+        scheduler.updateDS('infoMessage', infoMessage);
         disable();
         break;
       case 'restart':
-        ScheduleDataStoreRO dataStoreRO = map.values.first;
-        scheduler.restart(dataStoreRO);
+        InMemoryScheduleDataStore mds = map.values.first;
+        scheduler.update(mds);
+        scheduler.restart();
         break;
-      case 'sync':
-        scheduler.handleSync();
+      case 'syncDataStore':
+        scheduler.sendDataStoreUpdate();
+        break;
+      case 'mute':
+        bool mute = map.values.first;
+        scheduler.updateDS('mute', mute);
+        break;
+      case 'vibrate':
+        bool vibrate = map.values.first;
+        scheduler.updateDS('vibrate', vibrate);
+        break;
+      case 'bellId':
+        String bellId = map.values.first;
+        scheduler.updateDS('bellId', bellId);
+        break;
+      case 'customBellPath':
+        String bellPath = map.values.first;
+        scheduler.updateDS('customBellPath', bellPath);
         break;
       case 'shutdown':
         shutdown();
@@ -205,10 +224,10 @@ void disableHeartbeat() async {
   }
 }
 
-void enable({bool kickSchedule = true, ScheduleDataStoreRO dataStoreRO}) async {
+void enable({bool kickSchedule = true}) async {
   logger.i("enable");
   Scheduler scheduler = await Scheduler.getScheduler();
-  scheduler.enable(kickSchedule: kickSchedule, dataStoreRO: dataStoreRO);
+  scheduler.enable(kickSchedule: kickSchedule);
   enableHeartbeat();
 }
 
@@ -231,7 +250,8 @@ Future<AlarmManagerTimerService> getAlarmManagerTimerService() async {
 }
 
 class AlarmManagerTimerService extends TimerService {
-  Future<void> oneShotAt(DateTime time, int id, Function callback, {bool rescheduleOnReboot=true}) async {
+  Future<void> oneShotAt(DateTime time, int id, Function callback,
+      {bool rescheduleOnReboot = true}) async {
     await AndroidAlarmManager.oneShotAt(time, id, callback,
         exact: true,
         wakeup: true,

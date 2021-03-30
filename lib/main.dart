@@ -29,7 +29,7 @@ void main() async {
   SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
   Get.put(sharedPreferences);
 
-  ScheduleDataStore ds = await ScheduleDataStore.getInstance();
+  InMemoryScheduleDataStore ds = await ScheduleDataStore.getInMemoryInstance();
   Get.put(ds);
 
   PackageInfo info = await PackageInfo.fromPlatform();

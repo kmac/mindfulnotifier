@@ -28,7 +28,6 @@ void quietHoursStartCallback() async {
 class QuietHours {
   final TimeOfDay startTime;
   final TimeOfDay endTime;
-  bool inQuietHours = false;
   bool notifyQuietHours = false;
 
   QuietHours(this.startTime, this.endTime, this.notifyQuietHours);
@@ -162,7 +161,6 @@ class QuietHours {
 
   void quietStart() async {
     logger.i("Quiet hours start");
-    inQuietHours = true;
     Scheduler scheduler = await Scheduler.getScheduler();
     scheduler.sendReminderMessage('In quiet hours.');
     if (notifyQuietHours) {

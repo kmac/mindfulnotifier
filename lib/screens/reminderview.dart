@@ -4,43 +4,41 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:mindfulnotifier/components/datastore.dart';
 
 import 'package:rflutter_alert/rflutter_alert.dart';
 
 import 'package:mindfulnotifier/components/logging.dart';
-import 'package:mindfulnotifier/components/reminders.dart';
+import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
 
 var logger = createLogger('reminderview');
 
 class ReminderWidgetController extends GetxController {
-  Reminders _reminders;
-
+  InMemoryScheduleDataStore _mds;
   final reminderList = <String>[].obs;
   final needToScroll = false.obs;
   final ScrollController scrollController = ScrollController();
 
   // UI event handlers, init code, etc goes here
-  ReminderWidgetController() {
-    // init();
-  }
+  ReminderWidgetController();
 
   @override
   void onInit() {
     super.onInit();
+    init();
   }
 
   @override
   void onReady() {
-    init();
+    ever(reminderList, handleReminderList);
+    ever(needToScroll, handleNeedToScroll);
     super.onReady();
   }
 
   void init() async {
     logger.d("init");
-    _reminders = Reminders();
-    reminderList.assignAll(_reminders.reminders);
-    ever(reminderList, handleReminderList);
-    ever(needToScroll, handleNeedToScroll);
+    _mds = Get.find();
+    reminderList.assignAll(_mds.reminders);
   }
 
   void handleNeedToScroll(bool scroll) async {
@@ -56,8 +54,9 @@ class ReminderWidgetController extends GetxController {
   }
 
   void handleReminderList(changedReminderList) {
-    _reminders.reminders = changedReminderList;
-    _reminders.persist();
+    _mds.reminders = changedReminderList;
+    Get.find<MindfulNotifierWidgetController>()
+        .sendToAlarmService({'update': _mds});
   }
 }
 

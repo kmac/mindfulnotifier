@@ -59,7 +59,6 @@ Map<String, Map<String, String>> bellDefinitions = {
 class BellWidgetController extends GetxController {
   final _bellId = 'bell1'.obs;
   final _customBellPath = ''.obs;
-  ScheduleDataStore ds = Get.find();
   var _selectedBellId;
 
   // UI event handlers, init code, etc goes here
@@ -68,36 +67,35 @@ class BellWidgetController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    ScheduleDataStore ds = Get.find();
+    InMemoryScheduleDataStore ds = Get.find();
     _bellId.value = ds.bellId;
     _selectedBellId = _bellId.value;
     _customBellPath.value = ds
         .customBellPath; // tracks the value of bellDefinitions['customBell']['path']
     bellDefinitions['customBell']['path'] = _customBellPath.value;
-    ever(_bellId, handleBellId);
-    ever(_customBellPath, handleCustomBellPath);
   }
 
   @override
   void onReady() {
+    ever(_bellId, handleBellId);
+    ever(_customBellPath, handleCustomBellPath);
     super.onReady();
   }
 
   void handleBellId(String value) {
     logger.d("Change bell: $value");
-    ScheduleDataStore ds = Get.find();
-    ds.bellId = value;
     _selectedBellId = value;
     // update the alarm isolate:
     MindfulNotifierWidgetController mainUiController = Get.find();
-    mainUiController.forceSchedulerUpdate();
+    mainUiController.sendToAlarmService({'bellId': _selectedBellId});
   }
 }
 
 void handleCustomBellPath(String value) async {
   logger.d("Change custom bell: $value");
-  ScheduleDataStore ds = Get.find();
-  ds.customBellPath = value;
+  // update the alarm isolate:
+  MindfulNotifierWidgetController mainUiController = Get.find();
+  mainUiController.sendToAlarmService({'customBellPath': value});
 }
 
 class BellWidget extends StatelessWidget {

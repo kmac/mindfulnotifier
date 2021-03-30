@@ -49,43 +49,46 @@ class GeneralWidgetController extends GetxController {
     if (buildVersion.sdkInt < 23) {
       includeBatteryOptimizationCheck = false;
     }
-    ScheduleDataStore ds = Get.find();
+    InMemoryScheduleDataStore ds = Get.find();
     _theme.value = ds.theme;
     _includeDebugInfo.value = ds.includeDebugInfo;
     _useStickyNotification.value = ds.useStickyNotification;
     _useBackgroundService.value = ds.useBackgroundService;
-    ever(_useBackgroundService, handleUseBackgroundService);
-    ever(_useStickyNotification, handleUseStickyNotification);
-    ever(_includeDebugInfo, handleIncludeDebugInfo);
-    ever(_theme, handleTheme);
   }
 
   @override
   void onReady() {
+    ever(_useBackgroundService, handleUseBackgroundService);
+    ever(_useStickyNotification, handleUseStickyNotification);
+    ever(_includeDebugInfo, handleIncludeDebugInfo);
+    ever(_theme, handleTheme);
     super.onReady();
   }
 
   void handleUseBackgroundService(bool value) {
     // todo; persist, and inform user restart required
-    ScheduleDataStore ds = Get.find();
-    ds.useBackgroundService = value;
+    InMemoryScheduleDataStore mds = Get.find();
+    mds.useBackgroundService = value;
+    scheduleDirty.value = true;
   }
 
   void handleUseStickyNotification(bool value) {
-    ScheduleDataStore ds = Get.find();
-    ds.useStickyNotification = value;
+    InMemoryScheduleDataStore mds = Get.find();
+    mds.useStickyNotification = value;
     scheduleDirty.value = true;
   }
 
   void handleScheduleDirty() {
     logger.d("handleScheduleDirty");
-    Get.find<MindfulNotifierWidgetController>().forceSchedulerUpdate();
+    InMemoryScheduleDataStore mds = Get.find();
+    Get.find<MindfulNotifierWidgetController>()
+        .sendToAlarmService({'update': mds});
     scheduleDirty.value = false;
   }
 
   void handleIncludeDebugInfo(bool value) {
     // todo; persist, and inform user restart required
-    ScheduleDataStore ds = Get.find();
+    InMemoryScheduleDataStore ds = Get.find();
     ds?.includeDebugInfo = value;
     MindfulNotifierWidgetController mainUiController = Get.find();
     mainUiController?.showControlMessages?.value = value;
@@ -94,8 +97,8 @@ class GeneralWidgetController extends GetxController {
   void handleTheme(String value) {
     logger.d("Change theme: $value");
     Get.changeTheme(allThemes[value] ?? defaultTheme);
-    ScheduleDataStore ds = Get.find();
-    ds.theme = value;
+    InMemoryScheduleDataStore mds = Get.find();
+    mds.theme = value;
   }
 }
 
@@ -110,9 +113,8 @@ class GeneralWidget extends StatelessWidget {
     if (saveToDir != null) {
       File backupFile = File(
           "$saveToDir/${constants.appName}-backup-${utils.formatYYYYMMDDHHMM(DateTime.now())}.json");
-      ScheduleDataStore ds = Get.find();
       try {
-        ds.backup(backupFile);
+        ScheduleDataStore.backup(backupFile);
         utils.showInfoAlert(Get.context, 'Backup success',
             'The backup is saved at ${backupFile.path}');
       } catch (e) {
@@ -133,17 +135,17 @@ class GeneralWidget extends StatelessWidget {
     ], type: FileType.custom, allowMultiple: false);
     if (result != null) {
       File backupFile = File(result.files.first.path);
-      ScheduleDataStore ds = Get.find();
       if (await utils.showYesNoAlert(
           Get.context,
           "Proceed with restore?",
           "WARNING: this will overwrite any existing settings.\n\n" +
               "Do you want to restore using file ${backupFile.path}?")) {
         try {
-          ds.restore(backupFile);
+          ScheduleDataStore.restore(backupFile);
           utils.showInfoAlert(Get.context, 'Successful Restore',
               'The restore operation was successful.');
-          Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart();
+          Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart(
+              await ScheduleDataStore.getInMemoryInstance());
         } catch (e) {
           logger.e(
               'Restore failed, file=${result.files.first.path}, exception: $e');

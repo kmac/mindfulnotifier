@@ -15,7 +15,6 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/quiethours.dart';
-import 'package:mindfulnotifier/components/reminders.dart';
 import 'package:mindfulnotifier/components/timerservice.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 
@@ -63,8 +62,7 @@ class Scheduler {
   bool running = false;
   // bool initialized = false;
 
-  Map<String, String> _lastUiMessage = {};
-  ScheduleDataStoreRO _ds;
+  ScheduleDataStore _ds;
   bool alarmManagerInitialized = false;
   DelegatedScheduler delegate;
   ReceivePort fromAppIsolateReceivePort;
@@ -81,8 +79,7 @@ class Scheduler {
   }
 
   Future<void> init() async {
-    logger.i(
-        "Initializing scheduler ${getCurrentIsolate()}");
+    logger.i("Initializing scheduler ${getCurrentIsolate()}");
 
     PackageInfo info = await PackageInfo.fromPlatform();
     Get.put(info, permanent: true);
@@ -91,12 +88,9 @@ class Scheduler {
     Get.delete<SharedPreferences>();
     Get.put(prefs, permanent: true);
 
-    ScheduleDataStore dataStore = await ScheduleDataStore.getInstance();
+    _ds = await ScheduleDataStore.getInstance();
     Get.delete<ScheduleDataStore>();
-    Get.put(dataStore, permanent: true);
-
-    _ds = dataStore.getScheduleDataStoreRO();
-    update(dataStoreRO: _ds);
+    Get.put(_ds, permanent: true);
 
     delegate = _buildSchedulerDelegate(this);
   }
@@ -107,20 +101,19 @@ class Scheduler {
     Notifier().shutdown();
   }
 
-  void update({ScheduleDataStoreRO dataStoreRO}) {
-    logger.d("update, datastoreRO=$dataStoreRO");
-    Get.delete<ScheduleDataStoreRO>(force: true);
-    _ds = Get.put(dataStoreRO, permanent: true);
+  void update(InMemoryScheduleDataStore mds) {
+    logger.d("update, InMemoryScheduleDataStore=$mds");
+    _ds.merge(mds);
   }
 
-  void enable({bool kickSchedule = true, ScheduleDataStoreRO dataStoreRO}) {
+  void updateDS(String key, var value) async {
+    logger.d("updateDS");
+    await ScheduleDataStore.setSync(key, value);
+  }
+
+  void enable({bool kickSchedule = true}) {
     logger.i("enable");
-    if (dataStoreRO != null) {
-      update(dataStoreRO: dataStoreRO);
-    }
-    if (running) {
-      disable();
-    }
+    _ds.enabled = true;
 
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
@@ -136,75 +129,77 @@ class Scheduler {
       Notifier().showInfoNotification('${constants.appName} is enabled' +
           '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}');
     }
+    sendDataStoreUpdate();
   }
 
-  bool enableIfNecessary() {
-    if (_ds.enabled) {
-      if (initialNotificationTriggered) {
-        logger.i("initialNotificationTriggered: not re-enabling on init");
-      } else {
-        logger.i("re-enabling on init");
-        enable(kickSchedule: true);
-      }
-      return true;
-    }
-    return false;
-  }
+  // bool enableIfNecessary() {
+  //   if (_ds.enabled) {
+  //     if (initialNotificationTriggered) {
+  //       logger.i("initialNotificationTriggered: not re-enabling on init");
+  //     } else {
+  //       logger.i("re-enabling on init");
+  //       enable(kickSchedule: true);
+  //     }
+  //     return true;
+  //   }
+  //   return false;
+  // }
 
   void disable() async {
     logger.i("disable");
     delegate?.cancel();
     Notifier().shutdown();
+    _ds.enabled = false;
     running = false;
+    sendDataStoreUpdate();
   }
 
-  void restart(ScheduleDataStoreRO store) {
+  void restart() {
     logger.i("restart");
     disable();
     sleep(Duration(seconds: 1));
-    enable(kickSchedule: true, dataStoreRO: store);
+    enable(kickSchedule: true);
   }
 
   void playSound(var fileOrPath) {
     Notifier().playSound(fileOrPath);
   }
 
-  void handleSync() async {
-    // Respond to UI with the dictionary of last UI messages
-    // This is for when the UI is restarted and needs to refresh its display
-    Map<String, String> map = Map.from(_lastUiMessage);
-    logger.d("handleSync: $map");
-    _sendValueToUI('syncResponse', map);
-  }
-
   void initialScheduleComplete() {
     running = true;
   }
 
-  void _sendValueToUI(String tag, dynamic value) async {
+  static void sendValueToUI(String tag, dynamic value) async {
     try {
       // look this up every time, in case the UI goes away:
       var toAppSendPort =
           IsolateNameServer.lookupPortByName(constants.toAppSendPortName);
       toAppSendPort?.send({tag: value});
     } catch (e) {
-      logger.w('Failed to send to UI', 'send failed', e);
+      logger.w('Failed to send to UI', 'send failed', e.stackTrace);
     }
   }
 
   void sendReminderMessage(String msg) async {
-    _lastUiMessage['reminderMessage'] = msg;
-    _sendValueToUI('reminderMessage', msg);
+    // _lastUiMessage['reminderMessage'] = msg;
+    _ds.reminderMessage = msg;
+    sendValueToUI('reminderMessage', msg);
   }
 
   void sendInfoMessage(String msg) async {
-    _lastUiMessage['infoMessage'] = msg;
-    _sendValueToUI('infoMessage', msg);
+    // _lastUiMessage['infoMessage'] = msg;
+    _ds.infoMessage = msg;
+    sendValueToUI('infoMessage', msg);
   }
 
   void sendControlMessage(String msg) async {
-    _lastUiMessage['controlMessage'] = msg;
-    _sendValueToUI('controlMessage', msg);
+    // _lastUiMessage['controlMessage'] = msg;
+    sendValueToUI('controlMessage', msg);
+  }
+
+  void sendDataStoreUpdate() async {
+    sendValueToUI(
+        'syncDataStore', await ScheduleDataStore.getInMemoryInstance());
   }
 
   DelegatedScheduler _buildSchedulerDelegate(Scheduler scheduler) {
@@ -253,7 +248,7 @@ class Scheduler {
         sendInfoMessage("In quiet hours ${formatHHMM(now)} NA");
         return;
       }
-      var reminder = Reminders().randomReminder();
+      String reminder = _ds.randomReminder();
       Notifier().showReminderNotification(reminder);
       sendReminderMessage(reminder);
     } finally {

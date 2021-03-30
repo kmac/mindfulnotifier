@@ -1,3 +1,8 @@
+# 1.0.9
+- Update internal libraries
+- Move all datastore writes into the alarm/scheduler isolate
+    - Should fix issues with initial consistency of data
+
 # 1.0.8
 - Fix Issue #7 - fix bug in quiet hours end
 

@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:just_audio/just_audio.dart';
-import 'package:get/get.dart';
 import 'package:audio_session/audio_session.dart';
 
 import 'package:mindfulnotifier/screens/bell.dart';
@@ -79,7 +78,7 @@ class NotifyAudioPlayer {
   }
 
   Future<void> playBell() async {
-    ScheduleDataStoreRO ds = Get.find();
+    ScheduleDataStore ds = await ScheduleDataStore.getInstance();
     String bellId = ds.bellId;
     logger.i("playBellId: $bellId");
     if (bellId == 'customBell') {

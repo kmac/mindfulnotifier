@@ -1,11 +1,32 @@
 import 'dart:convert';
 import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = createLogger('datastore');
+
+// TODO need to support some way of updating this list/merging with user-defined entries
+const List<String> defaultReminderList = [
+  '''Are you aware?''',
+  '''Breathe deeply. This is the present moment.''',
+  '''Take a moment to pause, and come back to the present.''',
+  '''Bring awareness into this moment.''',
+  '''Let go of greed, aversion, and delusion.''',
+  '''Respond, not react.''',
+  '''All of this is impermanent.''',
+  '''Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.''',
+  // '''RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion''',
+  '''Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.''',
+  '''What is the attitude in the mind right now?''',
+  '''May you be happy. May you be healthy. May you be free from harm. May you be peaceful.''',
+  '''"Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want." -- Joseph Goldstein''',
+  '''"Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself." -- Bashō''',
+];
+
+// ISSUE sharing data across the UI and the alarm/scheduler isolate:
+//  https://github.com/flutter/flutter/issues/61529
 
 abstract class ScheduleDataStoreBase {
   bool get enabled;
@@ -25,6 +46,7 @@ abstract class ScheduleDataStoreBase {
   int get quietHoursEndMinute;
   bool get notifyQuietHours;
   String get reminderMessage;
+  List<String> get reminders;
   String get infoMessage;
   String get controlMessage;
   String get theme;
@@ -32,141 +54,55 @@ abstract class ScheduleDataStoreBase {
   String get customBellPath;
 }
 
-class ScheduleDataStoreRO implements ScheduleDataStoreBase {
-  final bool _enabled;
-  final bool _mute;
-  final bool _vibrate;
-  final bool _useBackgroundService;
-  final bool _useStickyNotification;
-  final bool _includeDebugInfo;
-  final String _scheduleTypeStr;
-  final int _periodicHours;
-  final int _periodicMinutes;
-  final int _randomMinMinutes;
-  final int _randomMaxMinutes;
-  final int _quietHoursStartHour;
-  final int _quietHoursStartMinute;
-  final int _quietHoursEndHour;
-  final int _quietHoursEndMinute;
-  final bool _notifyQuietHours;
-  final String _reminderMessage;
-  final String _infoMessage;
-  final String _controlMessage;
-  final String _theme;
-  final String _bellId;
-  final String _customBellPath;
+class InMemoryScheduleDataStore implements ScheduleDataStoreBase {
+  bool enabled;
+  bool mute;
+  bool vibrate;
+  bool useBackgroundService;
+  bool useStickyNotification;
+  bool includeDebugInfo;
+  String scheduleTypeStr;
+  int periodicHours;
+  int periodicMinutes;
+  int randomMinMinutes;
+  int randomMaxMinutes;
+  int quietHoursStartHour;
+  int quietHoursStartMinute;
+  int quietHoursEndHour;
+  int quietHoursEndMinute;
+  bool notifyQuietHours;
+  String reminderMessage;
+  List<String> reminders;
+  String infoMessage;
+  String controlMessage;
+  String theme;
+  String bellId;
+  String customBellPath;
 
-  ScheduleDataStoreRO(
-      this._enabled,
-      this._mute,
-      this._vibrate,
-      this._useBackgroundService,
-      this._useStickyNotification,
-      this._includeDebugInfo,
-      this._scheduleTypeStr,
-      this._periodicHours,
-      this._periodicMinutes,
-      this._randomMinMinutes,
-      this._randomMaxMinutes,
-      this._quietHoursStartHour,
-      this._quietHoursStartMinute,
-      this._quietHoursEndHour,
-      this._quietHoursEndMinute,
-      this._notifyQuietHours,
-      this._reminderMessage,
-      this._infoMessage,
-      this._controlMessage,
-      this._theme,
-      this._bellId,
-      this._customBellPath);
-
-  bool get enabled {
-    return _enabled;
-  }
-
-  bool get mute {
-    return _mute;
-  }
-
-  bool get vibrate {
-    return _vibrate;
-  }
-
-  bool get useBackgroundService {
-    return _useBackgroundService;
-  }
-
-  bool get useStickyNotification {
-    return _useStickyNotification;
-  }
-
-  bool get includeDebugInfo {
-    return _includeDebugInfo;
-  }
-
-  String get scheduleTypeStr {
-    return _scheduleTypeStr;
-  }
-
-  int get periodicHours {
-    return _periodicHours;
-  }
-
-  int get periodicMinutes {
-    return _periodicMinutes;
-  }
-
-  int get randomMinMinutes {
-    return _randomMinMinutes;
-  }
-
-  int get randomMaxMinutes {
-    return _randomMaxMinutes;
-  }
-
-  int get quietHoursStartHour {
-    return _quietHoursStartHour;
-  }
-
-  int get quietHoursStartMinute {
-    return _quietHoursStartMinute;
-  }
-
-  int get quietHoursEndHour {
-    return _quietHoursEndHour;
-  }
-
-  int get quietHoursEndMinute {
-    return _quietHoursEndMinute;
-  }
-
-  bool get notifyQuietHours {
-    return _notifyQuietHours;
-  }
-
-  String get reminderMessage {
-    return _reminderMessage;
-  }
-
-  String get infoMessage {
-    return _infoMessage;
-  }
-
-  String get controlMessage {
-    return _controlMessage;
-  }
-
-  String get theme {
-    return _theme;
-  }
-
-  String get bellId {
-    return _bellId;
-  }
-
-  String get customBellPath {
-    return _customBellPath;
-  }
+  InMemoryScheduleDataStore.fromDS(ScheduleDataStoreBase ds)
+      : this.enabled = ds.enabled,
+        this.mute = ds.mute,
+        this.vibrate = ds.vibrate,
+        this.useBackgroundService = ds.useBackgroundService,
+        this.useStickyNotification = ds.useStickyNotification,
+        this.includeDebugInfo = ds.includeDebugInfo,
+        this.scheduleTypeStr = ds.scheduleTypeStr,
+        this.periodicHours = ds.periodicHours,
+        this.periodicMinutes = ds.periodicMinutes,
+        this.randomMinMinutes = ds.randomMinMinutes,
+        this.randomMaxMinutes = ds.randomMaxMinutes,
+        this.quietHoursStartHour = ds.quietHoursStartHour,
+        this.quietHoursStartMinute = ds.quietHoursStartMinute,
+        this.quietHoursEndHour = ds.quietHoursEndHour,
+        this.quietHoursEndMinute = ds.quietHoursEndMinute,
+        this.notifyQuietHours = ds.notifyQuietHours,
+        this.reminderMessage = ds.reminderMessage,
+        this.reminders = ds.reminders,
+        this.infoMessage = ds.infoMessage,
+        this.controlMessage = ds.controlMessage,
+        this.theme = ds.theme,
+        this.bellId = ds.bellId,
+        this.customBellPath = ds.customBellPath;
 }
 
 class ScheduleDataStore implements ScheduleDataStoreBase {
@@ -187,6 +123,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String quietHoursEndMinuteKey = 'quietHoursEndMinute';
   static const String notifyQuietHoursKey = 'notifyQuietHours';
   static const String reminderMessageKey = 'reminderMessage';
+  static const String remindersKey = 'reminders';
   static const String infoMessageKey = 'infoMessage';
   static const String controlMessageKey = 'controlMessage';
   static const String themeKey = 'theme';
@@ -206,6 +143,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const int defaultQuietHoursEndMinute = 0;
   static const bool defaultNotifyQuietHours = false;
   static const String defaultReminderMessage = 'Not Enabled';
+  static const List<String> defaultReminders = defaultReminderList;
   static const String defaultInfoMessage = 'Uninitialized';
   static const String defaultControlMessage = '';
   static const String defaultTheme = 'Default';
@@ -224,6 +162,11 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _instance;
   }
 
+  static Future<InMemoryScheduleDataStore> getInMemoryInstance() async {
+    ScheduleDataStore ds = await getInstance();
+    return InMemoryScheduleDataStore.fromDS(ds);
+  }
+
   /// Private constructor
   ScheduleDataStore._create() {
     logger.i("Creating DataStore");
@@ -238,20 +181,20 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     await _prefs.reload();
   }
 
-  void backup(File backupFile) {
+  static void backup(File backupFile) {
     var jsonData = _toJson();
     logger.d('backup, tofile:${backupFile.path}: $jsonData');
     backupFile.writeAsStringSync(_toJson(), flush: true);
   }
 
-  void restore(File backupFile) {
+  static void restore(File backupFile) {
     String jsonData = backupFile.readAsStringSync();
     logger.d('restore, file=${backupFile.path}: $jsonData');
     Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
     _initFromJson(jsonMap);
   }
 
-  String _toJson() {
+  static String _toJson() {
     Map<String, dynamic> toMap = Map();
     for (var key in _prefs.getKeys()) {
       toMap[key] = _prefs.get(key);
@@ -259,18 +202,61 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return json.encoder.convert(toMap);
   }
 
-  void _initFromJson(Map<String, dynamic> jsonMap) async {
+  static void _initFromJson(Map<String, dynamic> jsonMap) async {
     //json.decoder.convert(input)
     for (var key in jsonMap.keys) {
       setSync(key, jsonMap[key]);
     }
   }
 
+  void _mergeVal(String key, var val) {
+    bool dirty = false;
+    // check list equality differently:
+    if (val is List<dynamic>) {
+      if (!listEquals(_prefs.getStringList(key), val)) {
+        dirty = true;
+      }
+    } else if (_prefs.get(key) != val) {
+      dirty = true;
+    }
+    if (dirty) {
+      logger.i("merging $key => $val");
+      setSync(key, val);
+    }
+  }
+
+  void merge(InMemoryScheduleDataStore mds) {
+    logger.i("merge: $mds");
+    _mergeVal(enabledKey, mds.enabled);
+    _mergeVal(muteKey, mds.mute);
+    _mergeVal(vibrateKey, mds.vibrate);
+    _mergeVal(useBackgroundServiceKey, mds.useBackgroundService);
+    _mergeVal(useStickyNotificationKey, mds.useStickyNotification);
+    _mergeVal(includeDebugInfoKey, mds.includeDebugInfo);
+    _mergeVal(scheduleTypeKey, mds.scheduleTypeStr);
+    _mergeVal(periodicHoursKey, mds.periodicHours);
+    _mergeVal(periodicMinutesKey, mds.periodicMinutes);
+    _mergeVal(randomMinMinutesKey, mds.randomMinMinutes);
+    _mergeVal(randomMaxMinutesKey, mds.randomMaxMinutes);
+    _mergeVal(quietHoursStartHourKey, mds.quietHoursStartHour);
+    _mergeVal(quietHoursStartMinuteKey, mds.quietHoursStartMinute);
+    _mergeVal(quietHoursEndHourKey, mds.quietHoursEndHour);
+    _mergeVal(quietHoursEndMinuteKey, mds.quietHoursEndMinute);
+    _mergeVal(notifyQuietHoursKey, mds.notifyQuietHours);
+    _mergeVal(reminderMessageKey, mds.reminderMessage);
+    _mergeVal(remindersKey, mds.reminders);
+    _mergeVal(infoMessageKey, mds.infoMessage);
+    _mergeVal(controlMessageKey, mds.controlMessage);
+    _mergeVal(themeKey, mds.theme);
+    _mergeVal(bellIdKey, mds.bellId);
+    _mergeVal(customBellPathKey, mds.customBellPath);
+  }
+
   void dumpToLog() {
     logger.d("ScheduleDataStore: ${_toJson()}");
   }
 
-  Future<void> setSync(String key, dynamic val) async {
+  static Future<void> setSync(String key, dynamic val) async {
     if (val is bool) {
       await _prefs.setBool(key, val);
     } else if (val is int) {
@@ -282,7 +268,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     } else if (val is List) {
       // For restore:
       if (val is List<dynamic>) {
-        List<String> newlist = List();
+        List<String> newlist = [];
         for (dynamic newval in val) {
           newlist.add("$newval");
         }
@@ -561,29 +547,21 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _prefs.getString(ScheduleDataStore.customBellPathKey);
   }
 
-  ScheduleDataStoreRO getScheduleDataStoreRO() {
-    return ScheduleDataStoreRO(
-        enabled,
-        mute,
-        vibrate,
-        useBackgroundService,
-        useStickyNotification,
-        includeDebugInfo,
-        scheduleTypeStr,
-        periodicHours,
-        periodicMinutes,
-        randomMinMinutes,
-        randomMaxMinutes,
-        quietHoursStartHour,
-        quietHoursStartMinute,
-        quietHoursEndHour,
-        quietHoursEndMinute,
-        notifyQuietHours,
-        reminderMessage,
-        infoMessage,
-        controlMessage,
-        theme,
-        bellId,
-        customBellPath);
+  set reminders(List<String> value) {
+    setSync(remindersKey, value);
+  }
+
+  @override
+  List<String> get reminders {
+    if (!_prefs.containsKey(ScheduleDataStore.remindersKey)) {
+      reminders = defaultReminders;
+    }
+    return _prefs.getStringList(ScheduleDataStore.remindersKey);
+  }
+
+  String randomReminder() {
+    List<String> shuffled = List.from(reminders);
+    shuffled.shuffle();
+    return shuffled.first;
   }
 }

@@ -21,7 +21,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #              This number is used only to determine whether one version is more recent than another,
 #              with higher numbers indicating more recent versions
 # versionName: Customer-visible version string
-version: 1.0.8+11
+version: 1.0.9+12
 
 environment:
   sdk: ">=2.7.0 <3.0.0"

@@ -31,27 +31,22 @@ class MindfulNotifierWidgetController extends GetxController {
   final _vibrate = false.obs;
   final controlMessage = ''.obs;
   final showControlMessages = false.obs;
-  ScheduleDataStore ds;
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
   @override
-  void onInit() {
-    init();
-    // initializeFromBackgroundService();
+  void onInit() async {
     super.onInit();
+    await init();
+    // initializeFromBackgroundService();
+    ever(_enabled, handleEnabled);
+    ever(_mute, handleMute);
+    ever(_vibrate, handleVibrate);
   }
 
   @override
   void onReady() {
     super.onReady();
-    ever(_enabled, handleEnabled);
-    ever(_mute, handleMute);
-    ever(_vibrate, handleVibrate);
-    ever(_reminderMessage, handleReminderMessage);
-    ever(_infoMessage, handleInfoMessage);
-    ever(controlMessage, handleControlMessage);
-    triggerSchedulerSync();
   }
 
   @override
@@ -60,23 +55,25 @@ class MindfulNotifierWidgetController extends GetxController {
     super.onClose();
   }
 
-  void init() async {
+  Future<void> init() async {
     logger.i("mindfulnotifier UI init() ${getCurrentIsolate()}");
-    ds = await ScheduleDataStore.getInstance();
-    ds.dumpToLog();
     initializeFromAlarmServiceReceivePort();
-    _enabled.value = ds.enabled;
-    _mute.value = ds.mute;
-    _vibrate.value = ds.vibrate;
-    _reminderMessage.value = ds.reminderMessage;
-    _infoMessage.value = ds.infoMessage;
-    controlMessage.value = ds.controlMessage;
-    showControlMessages.value = ds.includeDebugInfo;
+    initFromDS(await ScheduleDataStore.getInMemoryInstance());
+    // Now send a sync message which will reinit the data store from the alarm/scheduler isolate
+    sendToAlarmService({'syncDataStore': 1});
     initializeNotifications();
   }
 
-  void triggerSchedulerSync() async {
-    sendToAlarmService({'sync': 1});
+  void initFromDS(InMemoryScheduleDataStore mds) {
+    Get.put(mds);
+    // set all the UI-visible values
+    _enabled.value = mds.enabled;
+    _mute.value = mds.mute;
+    _vibrate.value = mds.vibrate;
+    _reminderMessage.value = mds.reminderMessage;
+    _infoMessage.value = mds.infoMessage;
+    controlMessage.value = mds.controlMessage;
+    showControlMessages.value = mds.includeDebugInfo;
   }
 
   void initializeFromAlarmServiceReceivePort() {
@@ -109,20 +106,10 @@ class MindfulNotifierWidgetController extends GetxController {
           logger.i("Received control message: $value");
           controlMessage.value = value;
           break;
-        case 'syncResponse':
-          logger.i("Received sync response : $value");
-          if (value.containsKey('reminderMessage')) {
-            ds.reminderMessage = value['reminderMessage'];
-            _reminderMessage.value = value['reminderMessage'];
-          }
-          if (value.containsKey('infoMessage')) {
-            ds.infoMessage = value['infoMessage'];
-            _infoMessage.value = value['infoMessage'];
-          }
-          if (value.containsKey('controlMessage')) {
-            ds.controlMessage = value['controlMessage'];
-            controlMessage.value = value['controlMessage'];
-          }
+        case 'syncDataStore':
+          logger.i("Received syncDataStore");
+          InMemoryScheduleDataStore mds = value;
+          initFromDS(mds);
           break;
         default:
           logger.e("Unexpected key: $key");
@@ -148,15 +135,18 @@ class MindfulNotifierWidgetController extends GetxController {
     sendToAlarmService({'shutdown': '1'});
   }
 
-  void triggerSchedulerRestart() {
+  void triggerSchedulerRestart(InMemoryScheduleDataStore mds) {
     if (_enabled.value) {
       logger.i("sending restart to scheduler");
       // Send to the alarm isolate
-      sendToAlarmService({'restart': ds.getScheduleDataStoreRO()});
+      sendToAlarmService({'restart': mds});
       // alert user
       Get.snackbar(
           "Restarting", "Configuration changed, restarting the notifier.",
           snackPosition: SnackPosition.BOTTOM, instantInit: false);
+    } else {
+      // we need to update the datastore
+      sendToAlarmService({'update': mds});
     }
   }
 
@@ -167,19 +157,6 @@ class MindfulNotifierWidgetController extends GetxController {
     IsolateNameServer.removePortNameMapping(constants.toAppSendPortName);
   }
 
-  void handleReminderMessage(msg) {
-    ds.reminderMessage = msg;
-  }
-
-  void handleInfoMessage(msg) {
-    ds.infoMessage = msg;
-  }
-
-  void handleControlMessage(msg) {
-    ds.controlMessage = msg;
-    // Get.snackbar("Control Message", "Received control message: $msg");
-  }
-
   void sendToAlarmService(Map<String, dynamic> msg) {
     logger.d("sendToAlarmService: $msg");
     toAlarmServiceSendPort ??= IsolateNameServer.lookupPortByName(
@@ -188,41 +165,31 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void handleEnabled(enabled) {
-    ds.enabled = enabled;
     if (enabled) {
       if (_reminderMessage.value == 'Not Enabled' ||
           _reminderMessage.value == 'In quiet hours') {
         _reminderMessage.value = 'Enabled. Waiting for notification...';
       }
       _infoMessage.value = 'Enabled. Waiting for notification.';
-      sendToAlarmService({'enable': ds.getScheduleDataStoreRO()});
+      sendToAlarmService({'enable': _infoMessage.value});
     } else {
       // setMessage('Disabled');
       _infoMessage.value = 'Disabled';
-      sendToAlarmService({'disable': ds.getScheduleDataStoreRO()});
+      sendToAlarmService({'disable': _infoMessage.value});
     }
   }
 
   void handleMute(bool mute) {
-    ds.mute = mute;
-    forceSchedulerUpdate();
+    sendToAlarmService({'mute': mute});
   }
 
   void handleVibrate(bool vibrate) {
-    ds.vibrate = vibrate;
-    forceSchedulerUpdate();
+    sendToAlarmService({'vibrate': vibrate});
   }
 
-  void forceSchedulerUpdate() {
-    if (_enabled.value) {
-      logger.i("Forcing scheduler update");
-      sendToAlarmService({'update': ds.getScheduleDataStoreRO()});
-    }
-  }
-
-  void setNextNotification(DateTime dateTime) {
-    _infoMessage.value = "Next notification at ${formatHHMMSS(dateTime)}";
-  }
+  // void setNextNotification(DateTime dateTime) {
+  //   _infoMessage.value = "Next notification at ${formatHHMMSS(dateTime)}";
+  // }
 
   void handleScheduleOnTap() {
     Get.toNamed('/schedules');

@@ -17,7 +17,7 @@ var logger = createLogger('schedulesview');
 enum ScheduleType { periodic, random }
 
 class SchedulesWidgetController extends GetxController {
-  ScheduleDataStore ds;
+  InMemoryScheduleDataStore mds;
   final scheduleType = ScheduleType.periodic.obs;
   final periodicHours = 1.obs;
   final periodicMinutes = 0.obs;
@@ -38,40 +38,11 @@ class SchedulesWidgetController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    init();
   }
 
   @override
   void onReady() {
-    init();
-    super.onReady();
-  }
-
-  void init() async {
-    logger.d("init");
-
-    // ds = Get.find();
-    ds = await ScheduleDataStore.getInstance();
-
-    if (ds.scheduleTypeStr == 'periodic') {
-      scheduleType.value = ScheduleType.periodic;
-    } else {
-      scheduleType.value = ScheduleType.random;
-    }
-
-    periodicHours.value = ds.periodicHours;
-    periodicMinutes.value = ds.periodicMinutes;
-    randomMinMinutesController.text = "${ds.randomMinMinutes}";
-    randomMaxMinutesController.text = "${ds.randomMaxMinutes}";
-
-    quietHoursStartPicked.value = TimeOfDay(
-        hour: ds.quietHoursStartHour, minute: ds.quietHoursStartMinute);
-    quietHoursEndPicked.value =
-        TimeOfDay(hour: ds.quietHoursEndHour, minute: ds.quietHoursEndMinute);
-    quietHoursStartTimeController.text = formatHHMM(DateTime(
-        2020, 01, 1, ds.quietHoursStartHour, ds.quietHoursStartMinute));
-    quietHoursEndTimeController.text = formatHHMM(
-        DateTime(2020, 01, 1, ds.quietHoursEndHour, ds.quietHoursEndMinute));
-
     ever(scheduleType, handleScheduleType);
     ever(periodicHours, handlePeriodicHours);
     ever(periodicMinutes, handlePeriodicMinutes);
@@ -79,25 +50,52 @@ class SchedulesWidgetController extends GetxController {
     ever(randomMaxMinutes, handleRandomMaxMinutes);
     ever(quietHoursStartPicked, handleQuietHoursStartPicked);
     ever(quietHoursEndPicked, handleQuietHoursEndPicked);
+    super.onReady();
+  }
+
+  void init() async {
+    logger.d("init");
+
+    mds = Get.find();
+
+    if (mds.scheduleTypeStr == 'periodic') {
+      scheduleType.value = ScheduleType.periodic;
+    } else {
+      scheduleType.value = ScheduleType.random;
+    }
+
+    periodicHours.value = mds.periodicHours;
+    periodicMinutes.value = mds.periodicMinutes;
+    randomMinMinutesController.text = "${mds.randomMinMinutes}";
+    randomMaxMinutesController.text = "${mds.randomMaxMinutes}";
+
+    quietHoursStartPicked.value = TimeOfDay(
+        hour: mds.quietHoursStartHour, minute: mds.quietHoursStartMinute);
+    quietHoursEndPicked.value =
+        TimeOfDay(hour: mds.quietHoursEndHour, minute: mds.quietHoursEndMinute);
+    quietHoursStartTimeController.text = formatHHMM(DateTime(
+        2020, 01, 1, mds.quietHoursStartHour, mds.quietHoursStartMinute));
+    quietHoursEndTimeController.text = formatHHMM(
+        DateTime(2020, 01, 1, mds.quietHoursEndHour, mds.quietHoursEndMinute));
   }
 
   void handleScheduleType(ScheduleType t) {
     if (t == ScheduleType.periodic) {
-      if (ds.scheduleTypeStr != 'periodic') {
-        ds.scheduleTypeStr = 'periodic';
+      if (mds.scheduleTypeStr != 'periodic') {
+        mds.scheduleTypeStr = 'periodic';
         scheduleDirty.value = true;
       }
     } else {
-      if (ds.scheduleTypeStr != 'random') {
-        ds.scheduleTypeStr = 'random';
+      if (mds.scheduleTypeStr != 'random') {
+        mds.scheduleTypeStr = 'random';
         scheduleDirty.value = true;
       }
     }
   }
 
   void handlePeriodicHours(int hours) {
-    if (ds.periodicHours != hours) {
-      ds.periodicHours = hours;
+    if (mds.periodicHours != hours) {
+      mds.periodicHours = hours;
       if (hours > 0) {
         periodicMinutes.value = 0;
       } else if (periodicMinutes.value < 15) {
@@ -108,15 +106,15 @@ class SchedulesWidgetController extends GetxController {
   }
 
   void handlePeriodicMinutes(int minutes) {
-    if (ds.periodicMinutes != minutes) {
-      ds.periodicMinutes = minutes;
+    if (mds.periodicMinutes != minutes) {
+      mds.periodicMinutes = minutes;
       scheduleDirty.value = true;
     }
   }
 
   void handleRandomMinMinutes(int minutes) {
-    if (ds.randomMinMinutes != minutes) {
-      ds.randomMinMinutes = minutes;
+    if (mds.randomMinMinutes != minutes) {
+      mds.randomMinMinutes = minutes;
       // check for consistency with max value
       if (randomMaxMinutes.value < minutes) {
         randomMaxMinutes.value = minutes + 15;
@@ -127,8 +125,8 @@ class SchedulesWidgetController extends GetxController {
   }
 
   void handleRandomMaxMinutes(int minutes) {
-    if (ds.randomMaxMinutes != minutes) {
-      ds.randomMaxMinutes = minutes;
+    if (mds.randomMaxMinutes != minutes) {
+      mds.randomMaxMinutes = minutes;
       // check for consistency with min value
       if (randomMinMinutes.value > minutes) {
         randomMinMinutes.value = minutes;
@@ -140,17 +138,17 @@ class SchedulesWidgetController extends GetxController {
 
   void handleScheduleDirty() {
     logger.d("handleScheduleDirty");
-    Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart();
+    Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart(mds);
     scheduleDirty.value = false;
   }
 
   void handleQuietHoursStartPicked(TimeOfDay time) {
     quietHoursStartTimeController.text =
         formatHHMM(DateTime(2020, 01, 1, time.hour, time.minute));
-    if (ds.quietHoursStartHour != time.hour ||
-        ds.quietHoursStartMinute != time.minute) {
-      ds.quietHoursStartHour = time.hour;
-      ds.quietHoursStartMinute = time.minute;
+    if (mds.quietHoursStartHour != time.hour ||
+        mds.quietHoursStartMinute != time.minute) {
+      mds.quietHoursStartHour = time.hour;
+      mds.quietHoursStartMinute = time.minute;
       scheduleDirty.value = true;
     }
   }
@@ -158,10 +156,10 @@ class SchedulesWidgetController extends GetxController {
   void handleQuietHoursEndPicked(TimeOfDay time) {
     quietHoursEndTimeController.text =
         formatHHMM(DateTime(2020, 01, 1, time.hour, time.minute));
-    if (ds.quietHoursEndHour != time.hour ||
-        ds.quietHoursEndMinute != time.minute) {
-      ds.quietHoursEndHour = time.hour;
-      ds.quietHoursEndMinute = time.minute;
+    if (mds.quietHoursEndHour != time.hour ||
+        mds.quietHoursEndMinute != time.minute) {
+      mds.quietHoursEndHour = time.hour;
+      mds.quietHoursEndMinute = time.minute;
       scheduleDirty.value = true;
     }
   }
@@ -354,8 +352,8 @@ class SchedulesWidget extends StatelessWidget {
 
   Future<Null> _selectQuietHoursStartTime(BuildContext context) async {
     var selectedTime = TimeOfDay(
-        hour: controller.ds.quietHoursStartHour,
-        minute: controller.ds.quietHoursStartMinute);
+        hour: controller.mds.quietHoursStartHour,
+        minute: controller.mds.quietHoursStartMinute);
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
@@ -368,8 +366,8 @@ class SchedulesWidget extends StatelessWidget {
 
   Future<Null> _selectQuietHoursEndTime(BuildContext context) async {
     var selectedTime = TimeOfDay(
-        hour: controller.ds.quietHoursEndHour,
-        minute: controller.ds.quietHoursEndMinute);
+        hour: controller.mds.quietHoursEndHour,
+        minute: controller.mds.quietHoursEndMinute);
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
@@ -437,7 +435,6 @@ class SchedulesWidget extends StatelessWidget {
           if (controller.scheduleDirty.value) {
             logger.d("schedule is dirty");
             controller.handleScheduleDirty();
-            controller.scheduleDirty.value = false;
           }
           return true;
         },

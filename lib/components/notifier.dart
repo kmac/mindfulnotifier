@@ -5,7 +5,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
-import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
@@ -90,10 +89,6 @@ void initializeNotifications() async {
   });
 }
 
-ScheduleDataStoreRO findScheduleDataStoreRO() {
-  return Get.find<ScheduleDataStoreRO>();
-}
-
 class Notifier {
   static const int notifId = 0;
 
@@ -153,11 +148,12 @@ class Notifier {
     bool mute = false;
     bool vibrate = false;
     try {
-      ScheduleDataStoreRO ds = findScheduleDataStoreRO();
+      ScheduleDataStore ds = await ScheduleDataStore.getInstance();
+      ds.reload();
       mute = ds.mute;
       vibrate = ds.vibrate;
     } catch (e) {
-      logger.e("Could not get ScheduleDataStoreRO, e=$e");
+      logger.e("Could not get ScheduleDataStore, e=$e");
     }
     showNotification(notifText, mute: mute, vibrate: vibrate);
   }
@@ -211,10 +207,11 @@ class Notifier {
 
     bool sticky = true;
     try {
-      ScheduleDataStoreRO ds = findScheduleDataStoreRO();
+      ScheduleDataStore ds = await ScheduleDataStore.getInstance();
+      ds.reload();
       sticky = ds.useStickyNotification;
     } catch (e) {
-      logger.e("Could not get ScheduleDataStoreRO, e=$e");
+      logger.e("Could not get ScheduleDataStore, e=$e");
     }
 
     AndroidNotificationDetails androidPlatformChannelSpecifics =
