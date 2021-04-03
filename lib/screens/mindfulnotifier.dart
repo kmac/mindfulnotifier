@@ -65,6 +65,8 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void initFromDS(InMemoryScheduleDataStore mds) {
+    // logger.d("initFromDS, mds=${mds.reminders}");
+    Get.delete<InMemoryScheduleDataStore>();
     Get.put(mds);
     // set all the UI-visible values
     _enabled.value = mds.enabled;
@@ -135,6 +137,12 @@ class MindfulNotifierWidgetController extends GetxController {
     sendToAlarmService({'shutdown': '1'});
   }
 
+  void triggerSchedulerRestore(InMemoryScheduleDataStore mds) {
+    // we need to update the datastore
+    logger.i("sending update to scheduler");
+    sendToAlarmService({'restore': mds});
+  }
+
   void triggerSchedulerRestart(InMemoryScheduleDataStore mds) {
     if (_enabled.value) {
       logger.i("sending restart to scheduler");
@@ -146,6 +154,7 @@ class MindfulNotifierWidgetController extends GetxController {
           snackPosition: SnackPosition.BOTTOM, instantInit: false);
     } else {
       // we need to update the datastore
+      logger.i("sending update to scheduler");
       sendToAlarmService({'update': mds});
     }
   }
@@ -212,6 +221,9 @@ class MindfulNotifierWidget extends StatelessWidget {
   final MindfulNotifierWidgetController controller =
       Get.put(MindfulNotifierWidgetController(), permanent: true);
 
+  final Color mainTextColor =
+      Get.isDarkMode ? Colors.grey[400] : Colors.grey[800];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -248,9 +260,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                       // style: Theme.of(context).textTheme.headline4,
                       // style: Theme.of(context).textTheme.headline5,
                       style: TextStyle(
-                          color: Get.isDarkMode
-                              ? Colors.grey[400]
-                              : Colors.grey[800],
+                          color: mainTextColor,
                           fontWeight: FontWeight.w900,
                           fontStyle: FontStyle.italic,
                           fontFamily: 'Open Sans',
@@ -325,9 +335,9 @@ class MindfulNotifierWidget extends StatelessWidget {
                             controller.showControlMessages.value
                         ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
                         : '${controller._infoMessage.value}',
-                    style: TextStyle(
-                        color:
-                            Get.isDarkMode ? Colors.grey[400] : Colors.black38),
+                    // style: TextStyle(
+                    //     color: Get.isDarkMode ? mainTextColor : Colors.black38),
+                    style: TextStyle(color: mainTextColor),
                     overflow: TextOverflow.ellipsis,
                   ),
                 )),

@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'package:device_info/device_info.dart';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 
 AndroidBuildVersion _cachedBbuildVersion;
@@ -53,14 +54,32 @@ bool isDark(var context) {
   return brightnessValue == Brightness.dark;
 }
 
+TextStyle getGlobalDialogTextStyle(bool isDark) {
+  return isDark
+      ? TextStyle(color: Colors.blue[900])
+      : TextStyle(color: Colors.white);
+}
+
+AlertStyle getGlobalAlertStyle(bool isDark) {
+  return isDark
+      ? AlertStyle(titleStyle: TextStyle(color: Colors.white))
+      : AlertStyle();
+}
+
 void showInfoAlert(BuildContext context, String title, String alertText,
-    {AlertType type, String desc}) {
+    {AlertType type,
+    String desc,
+    AlertStyle alertStyle,
+    TextStyle dialogTextStyle}) {
   type ??= AlertType.info;
+  alertStyle ??= getGlobalAlertStyle(Get.isDarkMode);
+  dialogTextStyle ??= getGlobalDialogTextStyle(Get.isDarkMode);
   Alert(
       context: context,
       title: title,
       desc: desc,
       type: type,
+      style: alertStyle,
       content: Column(
         children: <Widget>[
           Text(alertText,
@@ -76,7 +95,7 @@ void showInfoAlert(BuildContext context, String title, String alertText,
           },
           child: Text(
             "Close",
-            style: TextStyle(color: Colors.white),
+            style: dialogTextStyle,
           ),
         ),
       ]).show();
@@ -89,6 +108,7 @@ void showWarnAlert(BuildContext context, String title, String alertText,
       title: title,
       desc: desc,
       type: AlertType.warning,
+      style: getGlobalAlertStyle(Get.isDarkMode),
       content: Column(
         children: <Widget>[
           Text(alertText,
@@ -105,7 +125,7 @@ void showWarnAlert(BuildContext context, String title, String alertText,
           },
           child: Text(
             "Close",
-            style: TextStyle(color: Colors.white),
+            style: getGlobalDialogTextStyle(Get.isDarkMode),
           ),
         ),
       ]).show();
@@ -118,6 +138,7 @@ void showErrorAlert(BuildContext context, String title, String alertText,
       title: title,
       desc: desc,
       type: AlertType.error,
+      style: getGlobalAlertStyle(Get.isDarkMode),
       content: Column(
         children: <Widget>[
           Text(alertText,
@@ -134,7 +155,7 @@ void showErrorAlert(BuildContext context, String title, String alertText,
           },
           child: Text(
             "Close",
-            style: TextStyle(color: Colors.white),
+            style: getGlobalDialogTextStyle(Get.isDarkMode),
           ),
         ),
       ]).show();
@@ -151,6 +172,7 @@ Future<bool> showYesNoAlert(
       title: title,
       desc: desc,
       type: AlertType.warning,
+      style: getGlobalAlertStyle(Get.isDarkMode),
       content: Column(
         children: <Widget>[
           Text(alertText,
@@ -167,7 +189,7 @@ Future<bool> showYesNoAlert(
           },
           child: Text(
             noButtonText,
-            style: TextStyle(color: Colors.white),
+            style: getGlobalDialogTextStyle(Get.isDarkMode),
           ),
         ),
         DialogButton(
@@ -177,7 +199,7 @@ Future<bool> showYesNoAlert(
           },
           child: Text(
             yesButtonText,
-            style: TextStyle(color: Colors.white),
+            style: getGlobalDialogTextStyle(Get.isDarkMode),
           ),
         )
       ]).show();

@@ -93,7 +93,8 @@ class NotifyAudioPlayer {
     File fileToPlay;
     _player ??= AudioPlayer();
     if (_player.playing) {
-      await _player.stop();
+      logger.d("already playing; ignoring 'play $fileOrPath'");
+      return;
     }
     if (fileOrPath != null) {
       if (fileOrPath is String) {
@@ -126,7 +127,7 @@ class NotifyAudioPlayer {
     }
   }
 
-  void dispose() async {
+  Future<void> dispose() async {
     logger.d("AudioPlayer dispose");
     await _player?.stop();
     await _session

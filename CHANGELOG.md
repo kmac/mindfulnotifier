@@ -1,3 +1,8 @@
+# 1.0.10
+- More fixes for move to data store in alarm/scheduler isolate
+- Issue #9: fix dark color scheme dialogs
+- Issue #6: fixes for backup/restore handling
+
 # 1.0.9
 - Update internal libraries
 - Move all datastore writes into the alarm/scheduler isolate

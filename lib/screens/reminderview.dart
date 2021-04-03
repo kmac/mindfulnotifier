@@ -9,12 +9,12 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 
 import 'package:mindfulnotifier/components/logging.dart';
+import 'package:mindfulnotifier/components/utils.dart';
 import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
 
 var logger = createLogger('reminderview');
 
 class ReminderWidgetController extends GetxController {
-  InMemoryScheduleDataStore _mds;
   final reminderList = <String>[].obs;
   final needToScroll = false.obs;
   final ScrollController scrollController = ScrollController();
@@ -37,8 +37,10 @@ class ReminderWidgetController extends GetxController {
 
   void init() async {
     logger.d("init");
-    _mds = Get.find();
-    reminderList.assignAll(_mds.reminders);
+    InMemoryScheduleDataStore mds = Get.find();
+    // TODO mds is not up to date here after restore
+    logger.d("init, reminders: ${mds.reminders}");
+    reminderList.assignAll(mds.reminders);
   }
 
   void handleNeedToScroll(bool scroll) async {
@@ -54,9 +56,10 @@ class ReminderWidgetController extends GetxController {
   }
 
   void handleReminderList(changedReminderList) {
-    _mds.reminders = changedReminderList;
+    InMemoryScheduleDataStore mds = Get.find();
+    mds.reminders = changedReminderList;
     Get.find<MindfulNotifierWidgetController>()
-        .sendToAlarmService({'update': _mds});
+        .sendToAlarmService({'update': mds});
   }
 }
 
@@ -73,6 +76,7 @@ class ReminderWidget extends StatelessWidget {
     Alert(
         context: context,
         title: "Add Reminder",
+        style: getGlobalAlertStyle(Get.isDarkMode),
         content: Column(
           children: <Widget>[
             TextFormField(
@@ -89,7 +93,7 @@ class ReminderWidget extends StatelessWidget {
             },
             child: Text(
               "Cancel",
-              style: TextStyle(color: Colors.white),
+              style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           ),
           DialogButton(
@@ -104,7 +108,7 @@ class ReminderWidget extends StatelessWidget {
             },
             child: Text(
               "Add",
-              style: TextStyle(color: Colors.white),
+              style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           )
         ]).show();
@@ -116,6 +120,7 @@ class ReminderWidget extends StatelessWidget {
     Alert(
         context: context,
         title: "Edit Reminder",
+        style: getGlobalAlertStyle(Get.isDarkMode),
         content: Column(
           children: <Widget>[
             TextFormField(
@@ -132,8 +137,7 @@ class ReminderWidget extends StatelessWidget {
             },
             child: Text(
               "Cancel",
-              // style: TextStyle(color: Colors.white, fontSize: 20),
-              style: TextStyle(color: Colors.white),
+              style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           ),
           DialogButton(
@@ -146,8 +150,7 @@ class ReminderWidget extends StatelessWidget {
             },
             child: Text(
               "Save",
-              // style: TextStyle(color: Colors.white, fontSize: 20),
-              style: TextStyle(color: Colors.white),
+              style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           )
         ]).show();
@@ -157,6 +160,7 @@ class ReminderWidget extends StatelessWidget {
     Alert(
         context: context,
         title: "Delete Reminder?",
+        style: getGlobalAlertStyle(Get.isDarkMode),
         content: Column(
           children: <Widget>[
             Text(controller.reminderList[index],
@@ -174,7 +178,7 @@ class ReminderWidget extends StatelessWidget {
             },
             child: Text(
               "Cancel",
-              style: TextStyle(color: Colors.white),
+              style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           ),
           DialogButton(
@@ -187,7 +191,7 @@ class ReminderWidget extends StatelessWidget {
             },
             child: Text(
               "Delete",
-              style: TextStyle(color: Colors.white),
+              style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           )
         ]).show();

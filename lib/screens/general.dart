@@ -36,7 +36,7 @@ class GeneralWidgetController extends GetxController {
   final _useBackgroundService = false.obs;
   final _includeDebugInfo = false.obs;
   final _useStickyNotification = true.obs;
-  final _theme = 'Default'.obs;
+  final theme = 'Default'.obs;
   final scheduleDirty = false.obs;
   bool includeBatteryOptimizationCheck = true;
 
@@ -50,7 +50,7 @@ class GeneralWidgetController extends GetxController {
       includeBatteryOptimizationCheck = false;
     }
     InMemoryScheduleDataStore ds = Get.find();
-    _theme.value = ds.theme;
+    theme.value = ds.theme;
     _includeDebugInfo.value = ds.includeDebugInfo;
     _useStickyNotification.value = ds.useStickyNotification;
     _useBackgroundService.value = ds.useBackgroundService;
@@ -61,7 +61,7 @@ class GeneralWidgetController extends GetxController {
     ever(_useBackgroundService, handleUseBackgroundService);
     ever(_useStickyNotification, handleUseStickyNotification);
     ever(_includeDebugInfo, handleIncludeDebugInfo);
-    ever(_theme, handleTheme);
+    ever(theme, handleTheme);
     super.onReady();
   }
 
@@ -99,6 +99,7 @@ class GeneralWidgetController extends GetxController {
     Get.changeTheme(allThemes[value] ?? defaultTheme);
     InMemoryScheduleDataStore mds = Get.find();
     mds.theme = value;
+    scheduleDirty.value = true;
   }
 }
 
@@ -141,11 +142,19 @@ class GeneralWidget extends StatelessWidget {
           "WARNING: this will overwrite any existing settings.\n\n" +
               "Do you want to restore using file ${backupFile.path}?")) {
         try {
-          ScheduleDataStore.restore(backupFile);
-          utils.showInfoAlert(Get.context, 'Successful Restore',
-              'The restore operation was successful.');
-          Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart(
-              await ScheduleDataStore.getInMemoryInstance());
+          InMemoryScheduleDataStore mds =
+              await ScheduleDataStore.restore(backupFile);
+          Get.find<MindfulNotifierWidgetController>()
+              .triggerSchedulerRestore(mds);
+          controller.theme.value = mds.theme;
+          utils.showInfoAlert(
+              Get.context,
+              'Successful Restore',
+              'The restore operation was successful. ' +
+                  'The scheduler needs to be manually re-enabled.',
+              alertStyle: utils.getGlobalAlertStyle(mds.theme == 'Dark'),
+              dialogTextStyle:
+                  utils.getGlobalDialogTextStyle(mds.theme == 'Dark'));
         } catch (e) {
           logger.e(
               'Restore failed, file=${result.files.first.path}, exception: $e');
@@ -175,6 +184,7 @@ class GeneralWidget extends StatelessWidget {
                 "battery optimization settings.\nFind the '${constants.appName}' " +
                 "app and turn off battery optimizations.",
             type: AlertType.warning,
+            style: utils.getGlobalAlertStyle(Get.isDarkMode),
             buttons: [
               DialogButton(
                 onPressed: () {
@@ -183,7 +193,7 @@ class GeneralWidget extends StatelessWidget {
                 },
                 child: Text(
                   "Close",
-                  style: TextStyle(color: Colors.white),
+                  style: utils.getGlobalDialogTextStyle(Get.isDarkMode),
                 ),
               ),
             ]).show();
@@ -224,9 +234,9 @@ class GeneralWidget extends StatelessWidget {
                           trailing: Container(
                               // padding: EdgeInsets.all(2.0),
                               child: DropdownButton(
-                            value: controller._theme.value,
+                            value: controller.theme.value,
                             onChanged: (value) {
-                              controller._theme.value = value;
+                              controller.theme.value = value;
                             },
                             items: allThemes.keys
                                 .map<DropdownMenuItem<String>>((String value) {

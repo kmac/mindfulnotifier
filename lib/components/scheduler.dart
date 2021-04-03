@@ -111,7 +111,7 @@ class Scheduler {
     await ScheduleDataStore.setSync(key, value);
   }
 
-  void enable({bool kickSchedule = true}) {
+  void enable() {
     logger.i("enable");
     _ds.enabled = true;
 
@@ -122,13 +122,13 @@ class Scheduler {
     // 1) reboot
     // 2) first enabled by user
     // 3) re-enable after config changes by user
-    if (kickSchedule) {
-      delegate.scheduleNext();
-      // sendInfoMessage(
-      //     'Next reminder at ${formatHHMM(delegate.queryNext())}');
-      Notifier().showInfoNotification('${constants.appName} is enabled' +
-          '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}');
-    }
+    delegate.scheduleNext();
+    // sendInfoMessage(
+    //     'Next reminder at ${formatHHMM(delegate.queryNext())}');
+    String enabledReminderText = '${constants.appName} is enabled' +
+        '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}';
+    Notifier().showInfoNotification(enabledReminderText);
+    _ds.reminderMessage = _ds.reminders[Random().nextInt(_ds.reminders.length)];
     sendDataStoreUpdate();
   }
 
@@ -149,8 +149,9 @@ class Scheduler {
     logger.i("disable");
     delegate?.cancel();
     Notifier().shutdown();
-    _ds.enabled = false;
     running = false;
+    _ds.enabled = false;
+    _ds.reminderMessage = "Disabled";
     sendDataStoreUpdate();
   }
 
@@ -158,7 +159,7 @@ class Scheduler {
     logger.i("restart");
     disable();
     sleep(Duration(seconds: 1));
-    enable(kickSchedule: true);
+    enable();
   }
 
   void playSound(var fileOrPath) {

@@ -94,7 +94,7 @@ Future<void> initializeFromAppIsolateReceivePort() async {
       case 'enable':
         String infoMessage = map.values.first;
         scheduler.updateDS('infoMessage', infoMessage);
-        enable(kickSchedule: true);
+        enable();
         break;
       case 'disable':
         String infoMessage = map.values.first;
@@ -105,6 +105,12 @@ Future<void> initializeFromAppIsolateReceivePort() async {
         InMemoryScheduleDataStore mds = map.values.first;
         scheduler.update(mds);
         scheduler.restart();
+        break;
+      case 'restore':
+        InMemoryScheduleDataStore mds = map.values.first;
+        scheduler.update(mds);
+        scheduler.updateDS('infoMessage', "Restored");
+        scheduler.disable();
         break;
       case 'syncDataStore':
         scheduler.sendDataStoreUpdate();
@@ -224,10 +230,10 @@ void disableHeartbeat() async {
   }
 }
 
-void enable({bool kickSchedule = true}) async {
+void enable() async {
   logger.i("enable");
   Scheduler scheduler = await Scheduler.getScheduler();
-  scheduler.enable(kickSchedule: kickSchedule);
+  scheduler.enable();
   enableHeartbeat();
 }
 

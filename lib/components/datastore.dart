@@ -182,31 +182,37 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   }
 
   static void backup(File backupFile) {
-    var jsonData = _toJson();
+    var jsonData = _toJson(backup: true);
     logger.d('backup, tofile:${backupFile.path}: $jsonData');
-    backupFile.writeAsStringSync(_toJson(), flush: true);
+    backupFile.writeAsStringSync(jsonData, flush: true);
   }
 
-  static void restore(File backupFile) {
+  static Future<InMemoryScheduleDataStore> restore(File backupFile) async {
     String jsonData = backupFile.readAsStringSync();
     logger.d('restore, file=${backupFile.path}: $jsonData');
     Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
-    _initFromJson(jsonMap);
+    return await _initFromJson(jsonMap);
   }
 
-  static String _toJson() {
+  static String _toJson({bool backup = false}) {
     Map<String, dynamic> toMap = Map();
     for (var key in _prefs.getKeys()) {
-      toMap[key] = _prefs.get(key);
+      if (backup && key == enabledKey) {
+        // always backup as disabled:
+        toMap[key] = false;
+      } else {
+        toMap[key] = _prefs.get(key);
+      }
     }
     return json.encoder.convert(toMap);
   }
 
-  static void _initFromJson(Map<String, dynamic> jsonMap) async {
-    //json.decoder.convert(input)
+  static Future<InMemoryScheduleDataStore> _initFromJson(
+      Map<String, dynamic> jsonMap) async {
     for (var key in jsonMap.keys) {
       setSync(key, jsonMap[key]);
     }
+    return ScheduleDataStore.getInMemoryInstance();
   }
 
   void _mergeVal(String key, var val) {
@@ -554,6 +560,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   @override
   List<String> get reminders {
     if (!_prefs.containsKey(ScheduleDataStore.remindersKey)) {
+      // First load: initialize to default reminder list
       reminders = defaultReminders;
     }
     return _prefs.getStringList(ScheduleDataStore.remindersKey);

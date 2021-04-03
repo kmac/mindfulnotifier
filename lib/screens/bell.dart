@@ -67,10 +67,10 @@ class BellWidgetController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    InMemoryScheduleDataStore ds = Get.find();
-    _bellId.value = ds.bellId;
+    InMemoryScheduleDataStore mds = Get.find();
+    _bellId.value = mds.bellId;
     _selectedBellId = _bellId.value;
-    _customBellPath.value = ds
+    _customBellPath.value = mds
         .customBellPath; // tracks the value of bellDefinitions['customBell']['path']
     bellDefinitions['customBell']['path'] = _customBellPath.value;
   }
@@ -85,17 +85,21 @@ class BellWidgetController extends GetxController {
   void handleBellId(String value) {
     logger.d("Change bell: $value");
     _selectedBellId = value;
+    InMemoryScheduleDataStore mds = Get.find();
+    mds.bellId = _selectedBellId;
     // update the alarm isolate:
     MindfulNotifierWidgetController mainUiController = Get.find();
     mainUiController.sendToAlarmService({'bellId': _selectedBellId});
   }
-}
 
-void handleCustomBellPath(String value) async {
-  logger.d("Change custom bell: $value");
-  // update the alarm isolate:
-  MindfulNotifierWidgetController mainUiController = Get.find();
-  mainUiController.sendToAlarmService({'customBellPath': value});
+  void handleCustomBellPath(String value) async {
+    logger.d("Change custom bell: $value");
+    InMemoryScheduleDataStore mds = Get.find();
+    mds.customBellPath = value;
+    // update the alarm isolate:
+    MindfulNotifierWidgetController mainUiController = Get.find();
+    mainUiController.sendToAlarmService({'customBellPath': value});
+  }
 }
 
 class BellWidget extends StatelessWidget {
