@@ -194,6 +194,14 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return await _initFromJson(jsonMap);
   }
 
+  static Future<InMemoryScheduleDataStore> restoreFromJson(
+      String jsonData) async {
+    logger.d('restore, : $jsonData');
+    Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
+    return await _initFromJson(jsonMap);
+  }
+
+  // ISSUE maybe change this to use InMemoryScheduleDataStore
   static String _toJson({bool backup = false}) {
     Map<String, dynamic> toMap = Map();
     for (var key in _prefs.getKeys()) {

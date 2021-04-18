@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:battery_optimization/battery_optimization.dart';
 import 'package:device_info/device_info.dart';
@@ -9,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
+import 'package:share/share.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -96,32 +98,21 @@ class GeneralWidget extends StatelessWidget {
   final GeneralWidgetController controller = Get.put(GeneralWidgetController());
 
   void _doBackup() async {
-    //String saveToDir = await FilePicker.platform.getDirectoryPath();
-    //Directory appDocDir =
-    //    Get.find(tag: constants.tagApplicationDocumentsDirectory);
     Directory extStoreDir =
         Get.find(tag: constants.tagExternalStorageDirectory);
-    //if (appDocDir != null) {
     if (extStoreDir != null) {
       String backupFileName =
           "${constants.appName}-backup-${utils.formatYYYYMMDDHHMM(DateTime.now())}.json";
-      // Initial backup is into our application directory, then we copy it
-      // over to the chosen directory. This is for android 10.
-      // File backupFile = File("${appDocDir.path}/$backupFileName");
       File backupFile = File("${extStoreDir.path}/$backupFileName");
       try {
         // ISSUE here: this backs up from the current shared prefs, not from the InMemoryScheduleDataStore
         // so shared prefs may not be exactly in sync
         ScheduleDataStore.backup(backupFile);
 
-        // String saveToFilePath = "${extStoreDir.path}/$backupFileName";
-        // String saveToFilePath = "/storage/emulated/0/Documents/$backupFileName";
-        // logger.i("Copying $backupFile to $saveToFilePath");
-        // File newFile = backupFile.copySync(saveToFilePath);
-        // utils.showInfoAlert(Get.context, 'Backup success',
-        //     'The backup is saved at $saveToFilePath, ${newFile.path}');
-        utils.showInfoAlert(Get.context, 'Backup success',
-            'The backup is saved at ${backupFile.path}');
+        if (await utils.showYesNoAlert(Get.context, 'Backup success',
+            'The backup is saved at ${backupFile.path}. Do you want to share it?')) {
+          await Share.shareFiles([backupFile.path], text: backupFileName);
+        }
 
         // Finally, delete the backup from our internal directory
         // backupFile.delete();
@@ -147,9 +138,15 @@ class GeneralWidget extends StatelessWidget {
               "Do you want to restore using file $backupFileName?")) {
         try {
           // Do the restore
+          Uint8List uint8list = result.files.first.bytes;
+          if ((uint8list ?? []).isEmpty) {
+            // https://github.com/miguelpruivo/flutter_file_picker/issues/616
+            final file = File.fromUri(Uri.parse(result.files.single.path));
+            uint8list = file.readAsBytesSync();
+          }
           InMemoryScheduleDataStore mds =
               await ScheduleDataStore.restoreFromJson(
-                  Utf8Decoder().convert(result.files.first.bytes));
+                  Utf8Decoder().convert(uint8list));
           Get.find<MindfulNotifierWidgetController>()
               .triggerSchedulerRestore(mds);
           controller.theme.value = mds.theme;

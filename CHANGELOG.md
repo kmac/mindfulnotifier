@@ -1,6 +1,9 @@
 # 1.0.11
-- Remove unneeded android.permission.READ_EXTERNAL_STORAGE, android.permission.WRITE_EXTERNAL_STORAGE permissions
-- Remove unneeded android:requestLegacyExternalStorage="true" to conform to Android 11
+- Backup/Restore changes (required by Google before May 5th):
+  - Remove unneeded android:requestLegacyExternalStorage="true" to conform to Android 11
+  - Remove unneeded android.permission.READ_EXTERNAL_STORAGE, android.permission.WRITE_EXTERNAL_STORAGE permissions
+  - Backup/Restore now use the application-specific external directory
+    - Option to share the backup using Android share facility
 
 # 1.0.10
 - More fixes for move to data store in alarm/scheduler isolate
@@ -10,7 +13,7 @@
 # 1.0.9
 - Update internal libraries
 - Move all datastore writes into the alarm/scheduler isolate
-    - Should fix issues with initial consistency of data
+  - Should fix issues with initial consistency of data
 
 # 1.0.8
 - Fix Issue #7 - fix bug in quiet hours end
@@ -20,8 +23,8 @@
 
 # 1.0.6
 - Fixes after testing on Android 10 / LineageOS (Issue #2)
-    - purely alarm driven
-    - tweaking notifications which happen after main UI is killed
+  - purely alarm driven
+  - tweaking notifications which happen after main UI is killed
 
 # 1.0.5
 - cleanup/document permissions

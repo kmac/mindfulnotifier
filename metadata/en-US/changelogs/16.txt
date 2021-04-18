@@ -1,0 +1,6 @@
+# 1.0.11
+- Backup/Restore changes (required by Google before May 5th):
+  - Remove unneeded android:requestLegacyExternalStorage="true" to conform to Android 11
+  - Remove unneeded android.permission.READ_EXTERNAL_STORAGE, android.permission.WRITE_EXTERNAL_STORAGE permissions
+  - Backup/Restore now use the application-specific external directory
+    - Option to share the backup using Android share facility
