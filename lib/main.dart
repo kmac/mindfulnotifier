@@ -35,9 +35,10 @@ void main() async {
   PackageInfo info = await PackageInfo.fromPlatform();
   Get.put(info);
 
-  Directory outputDir = await path_provider.getApplicationDocumentsDirectory();
-  Get.put(outputDir,
+  Get.put(await path_provider.getApplicationDocumentsDirectory(),
       permanent: true, tag: constants.tagApplicationDocumentsDirectory);
+  Get.put(await path_provider.getExternalStorageDirectory(),
+      permanent: true, tag: constants.tagExternalStorageDirectory);
 
   AndroidBuildVersion buildVersion = await getAndroidBuildVersion();
   Get.put(buildVersion, permanent: true);

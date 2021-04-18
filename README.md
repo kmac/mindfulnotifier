@@ -4,7 +4,7 @@ A mindfulness bell with configurable text notifications, schedules, and sound.
 
 ## About this app
 
-This app is a simple mindfulness-based timer which displays a 
+This app is a simple mindfulness-based timer which displays a
 notification/reminder at user-defined intervals. It is another
 take on a 'Mindfulness Bell', with the addition of accompanying text.
 The reminders are taken from a configurable list, and are chosen
@@ -45,8 +45,6 @@ This app uses the following permissions:
 - `WAKE_LOCK`: Required by the underlying alarm service to wake up at the scheduled time
 - `USE_FULL_SCREEN_INTENT`: Required to show app in foreground from the reminder notification
 - `VIBRATE`: Required to vibrate during notifications
-- `READ_EXTERNAL_STORAGE`: Required for backup. Permission is requested upon first use.
-- `WRITE_EXTERNAL_STORAGE`: Required for backup. Permission is requested upon first use.
 
 
 ### Notes on Application Settings in Android
@@ -86,3 +84,8 @@ and is licensed under the [Creative Commons Attribution License][CCA]
 ## License
 
 This project is licensed under the terms of the GNU General Public License v3.0.
+
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.kmac5dev.mindfulnotifier"><img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/images/apps/en-play-badge-border.png" height="75px"/></a>
+  <a href="https://f-droid.org/en/packages/com.kmac5dev.mindfulnotifier"><img alt="Get it on F-Droid" src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="80"/></a>
+</p>

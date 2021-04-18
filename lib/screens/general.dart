@@ -7,7 +7,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
@@ -20,17 +19,6 @@ import 'package:mindfulnotifier/theme/themes.dart';
 var logger = createLogger('reminderview');
 
 bool includeBackgroundService = false;
-
-Future<bool> _handlePermissions() async {
-  Map<Permission, PermissionStatus> statuses = await [
-    Permission.storage,
-  ].request();
-  if (!statuses[Permission.storage].isGranted) {
-    // May want to show a dialog here...
-    return false;
-  }
-  return true;
-}
 
 class GeneralWidgetController extends GetxController {
   final _useBackgroundService = false.obs;
@@ -49,11 +37,11 @@ class GeneralWidgetController extends GetxController {
     if (buildVersion.sdkInt < 23) {
       includeBatteryOptimizationCheck = false;
     }
-    InMemoryScheduleDataStore ds = Get.find();
-    theme.value = ds.theme;
-    _includeDebugInfo.value = ds.includeDebugInfo;
-    _useStickyNotification.value = ds.useStickyNotification;
-    _useBackgroundService.value = ds.useBackgroundService;
+    InMemoryScheduleDataStore mds = Get.find();
+    theme.value = mds.theme;
+    _includeDebugInfo.value = mds.includeDebugInfo;
+    _useStickyNotification.value = mds.useStickyNotification;
+    _useBackgroundService.value = mds.useBackgroundService;
   }
 
   @override
@@ -88,8 +76,8 @@ class GeneralWidgetController extends GetxController {
 
   void handleIncludeDebugInfo(bool value) {
     // todo; persist, and inform user restart required
-    InMemoryScheduleDataStore ds = Get.find();
-    ds?.includeDebugInfo = value;
+    InMemoryScheduleDataStore mds = Get.find();
+    mds?.includeDebugInfo = value;
     MindfulNotifierWidgetController mainUiController = Get.find();
     mainUiController?.showControlMessages?.value = value;
   }
@@ -107,17 +95,35 @@ class GeneralWidget extends StatelessWidget {
   final GeneralWidgetController controller = Get.put(GeneralWidgetController());
 
   void _doBackup() async {
-    if (!await _handlePermissions()) {
-      return;
-    }
-    String saveToDir = await FilePicker.platform.getDirectoryPath();
-    if (saveToDir != null) {
-      File backupFile = File(
-          "$saveToDir/${constants.appName}-backup-${utils.formatYYYYMMDDHHMM(DateTime.now())}.json");
+    //String saveToDir = await FilePicker.platform.getDirectoryPath();
+    //Directory appDocDir =
+    //    Get.find(tag: constants.tagApplicationDocumentsDirectory);
+    Directory extStoreDir =
+        Get.find(tag: constants.tagExternalStorageDirectory);
+    //if (appDocDir != null) {
+    if (extStoreDir != null) {
+      String backupFileName =
+          "${constants.appName}-backup-${utils.formatYYYYMMDDHHMM(DateTime.now())}.json";
+      // Initial backup is into our application directory, then we copy it
+      // over to the chosen directory. This is for android 10.
+      // File backupFile = File("${appDocDir.path}/$backupFileName");
+      File backupFile = File("${extStoreDir.path}/$backupFileName");
       try {
+        // ISSUE here: this backs up from the current shared prefs, not from the InMemoryScheduleDataStore
+        // so shared prefs may not be exactly in sync
         ScheduleDataStore.backup(backupFile);
+
+        // String saveToFilePath = "${extStoreDir.path}/$backupFileName";
+        // String saveToFilePath = "/storage/emulated/0/Documents/$backupFileName";
+        // logger.i("Copying $backupFile to $saveToFilePath");
+        // File newFile = backupFile.copySync(saveToFilePath);
+        // utils.showInfoAlert(Get.context, 'Backup success',
+        //     'The backup is saved at $saveToFilePath, ${newFile.path}');
         utils.showInfoAlert(Get.context, 'Backup success',
             'The backup is saved at ${backupFile.path}');
+
+        // Finally, delete the backup from our internal directory
+        // backupFile.delete();
       } catch (e) {
         logger.e('Backup failed, file=${backupFile.path}, exception: $e');
         utils.showErrorAlert(Get.context, 'Backup failed',
@@ -127,23 +133,31 @@ class GeneralWidget extends StatelessWidget {
   }
 
   void _doRestore() async {
-    if (!await _handlePermissions()) {
-      return;
-    }
     FilePickerResult result =
         await FilePicker.platform.pickFiles(allowedExtensions: [
       'json',
     ], type: FileType.custom, allowMultiple: false);
     if (result != null) {
       File backupFile = File(result.files.first.path);
+      String backupFileName = result.files.first.name;
       if (await utils.showYesNoAlert(
           Get.context,
           "Proceed with restore?",
           "WARNING: this will overwrite any existing settings.\n\n" +
-              "Do you want to restore using file ${backupFile.path}?")) {
+              "Do you want to restore using file $backupFileName?")) {
         try {
+          // For android 10, we have to copy the file into our local application
+          // directory, then do the restore from there
+          // Directory appDocDir =
+          //     Get.find(tag: constants.tagApplicationDocumentsDirectory);
+          // String saveToFilePath = "${appDocDir.path}/$backupFileName";
+          // logger.i("Copying $backupFile to $saveToFilePath");
+          // File appDocDirPath = backupFile.copySync(saveToFilePath);
+
+          // Do the restore
           InMemoryScheduleDataStore mds =
               await ScheduleDataStore.restore(backupFile);
+          //await ScheduleDataStore.restore(appDocDirPath);
           Get.find<MindfulNotifierWidgetController>()
               .triggerSchedulerRestore(mds);
           controller.theme.value = mds.theme;
@@ -155,6 +169,9 @@ class GeneralWidget extends StatelessWidget {
               alertStyle: utils.getGlobalAlertStyle(mds.theme == 'Dark'),
               dialogTextStyle:
                   utils.getGlobalDialogTextStyle(mds.theme == 'Dark'));
+
+          // Finally, remove the file from our application directory
+          // appDocDirPath.delete();
         } catch (e) {
           logger.e(
               'Restore failed, file=${result.files.first.path}, exception: $e');

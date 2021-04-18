@@ -1,3 +1,7 @@
+# 1.0.11
+- Remove unneeded android.permission.READ_EXTERNAL_STORAGE, android.permission.WRITE_EXTERNAL_STORAGE permissions
+- Remove unneeded android:requestLegacyExternalStorage="true" to conform to Android 11
+
 # 1.0.10
 - More fixes for move to data store in alarm/scheduler isolate
 - Issue #9: fix dark color scheme dialogs
