@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:battery_optimization/battery_optimization.dart';
 import 'package:device_info/device_info.dart';
@@ -136,9 +137,8 @@ class GeneralWidget extends StatelessWidget {
     FilePickerResult result =
         await FilePicker.platform.pickFiles(allowedExtensions: [
       'json',
-    ], type: FileType.custom, allowMultiple: false);
+    ], type: FileType.custom, allowMultiple: false, withData: true);
     if (result != null) {
-      File backupFile = File(result.files.first.path);
       String backupFileName = result.files.first.name;
       if (await utils.showYesNoAlert(
           Get.context,
@@ -146,18 +146,10 @@ class GeneralWidget extends StatelessWidget {
           "WARNING: this will overwrite any existing settings.\n\n" +
               "Do you want to restore using file $backupFileName?")) {
         try {
-          // For android 10, we have to copy the file into our local application
-          // directory, then do the restore from there
-          // Directory appDocDir =
-          //     Get.find(tag: constants.tagApplicationDocumentsDirectory);
-          // String saveToFilePath = "${appDocDir.path}/$backupFileName";
-          // logger.i("Copying $backupFile to $saveToFilePath");
-          // File appDocDirPath = backupFile.copySync(saveToFilePath);
-
           // Do the restore
           InMemoryScheduleDataStore mds =
-              await ScheduleDataStore.restore(backupFile);
-          //await ScheduleDataStore.restore(appDocDirPath);
+              await ScheduleDataStore.restoreFromJson(
+                  Utf8Decoder().convert(result.files.first.bytes));
           Get.find<MindfulNotifierWidgetController>()
               .triggerSchedulerRestore(mds);
           controller.theme.value = mds.theme;
@@ -169,9 +161,6 @@ class GeneralWidget extends StatelessWidget {
               alertStyle: utils.getGlobalAlertStyle(mds.theme == 'Dark'),
               dialogTextStyle:
                   utils.getGlobalDialogTextStyle(mds.theme == 'Dark'));
-
-          // Finally, remove the file from our application directory
-          // appDocDirPath.delete();
         } catch (e) {
           logger.e(
               'Restore failed, file=${result.files.first.path}, exception: $e');
