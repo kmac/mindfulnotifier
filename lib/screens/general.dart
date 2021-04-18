@@ -98,29 +98,26 @@ class GeneralWidget extends StatelessWidget {
   final GeneralWidgetController controller = Get.put(GeneralWidgetController());
 
   void _doBackup() async {
+    String backupFileName =
+        "${constants.appName}-backup-${utils.formatYYYYMMDDHHMM(DateTime.now())}.json";
     Directory extStoreDir =
         Get.find(tag: constants.tagExternalStorageDirectory);
-    if (extStoreDir != null) {
-      String backupFileName =
-          "${constants.appName}-backup-${utils.formatYYYYMMDDHHMM(DateTime.now())}.json";
-      File backupFile = File("${extStoreDir.path}/$backupFileName");
-      try {
-        // ISSUE here: this backs up from the current shared prefs, not from the InMemoryScheduleDataStore
-        // so shared prefs may not be exactly in sync
-        ScheduleDataStore.backup(backupFile);
+    File backupFile = File("${extStoreDir.path}/$backupFileName");
+    try {
+      // ISSUE here: this backs up from the current shared prefs, not from the InMemoryScheduleDataStore
+      // so shared prefs may not be exactly in sync
+      ScheduleDataStore.backup(backupFile);
 
-        if (await utils.showYesNoAlert(Get.context, 'Backup success',
-            'The backup is saved at ${backupFile.path}. Do you want to share it?')) {
-          await Share.shareFiles([backupFile.path], text: backupFileName);
-        }
-
-        // Finally, delete the backup from our internal directory
-        // backupFile.delete();
-      } catch (e) {
-        logger.e('Backup failed, file=${backupFile.path}, exception: $e');
-        utils.showErrorAlert(Get.context, 'Backup failed',
-            'The backup operation failed with an exception: $e');
+      if (await utils.showYesNoAlert(Get.context, 'Backup success',
+          'The backup is saved at ${backupFile.path}. You should now share it to another place for safe keeping in case you uninstall. Proceed?')) {
+        await Share.shareFiles([backupFile.path], text: backupFileName);
       }
+      // Finally, delete the backup from our internal directory
+      // backupFile.delete();
+    } catch (e) {
+      logger.e('Backup failed, file=${backupFile.path}, exception: $e');
+      utils.showErrorAlert(Get.context, 'Backup failed',
+          'The backup operation failed with an exception: $e');
     }
   }
 

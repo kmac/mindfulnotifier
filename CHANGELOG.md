@@ -4,6 +4,8 @@
   - Remove unneeded android.permission.READ_EXTERNAL_STORAGE, android.permission.WRITE_EXTERNAL_STORAGE permissions
   - Backup/Restore now use the application-specific external directory
     - Option to share the backup using Android share facility
+      - Share to local file system or cloud service, etc
+      - This should be done to ensure backup is preserved if you ever uninstall the app
 
 # 1.0.10
 - More fixes for move to data store in alarm/scheduler isolate
