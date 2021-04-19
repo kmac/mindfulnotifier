@@ -1,11 +1,12 @@
 # 1.0.11
-- Backup/Restore changes (required by Google before May 5th):
-  - Remove unneeded android:requestLegacyExternalStorage="true" to conform to Android 11
-  - Remove unneeded android.permission.READ_EXTERNAL_STORAGE, android.permission.WRITE_EXTERNAL_STORAGE permissions
+- External storage changes (required by Google):
+  - Remove android:requestLegacyExternalStorage="true" to conform to Android 11
+  - Remove android.permission.READ_EXTERNAL_STORAGE, android.permission.WRITE_EXTERNAL_STORAGE permissions
+- Backup/Restore changes (driven by the above):
   - Backup/Restore now use the application-specific external directory
-    - Option to share the backup using Android share facility
+    - Also given option to share the backup file using Android share facility
       - Share to local file system or cloud service, etc
-      - This should be done to ensure backup is preserved if you ever uninstall the app
+      - This should be done to ensure the backup is preserved if you ever uninstall the app
 
 # 1.0.10
 - More fixes for move to data store in alarm/scheduler isolate

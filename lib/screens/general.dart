@@ -108,8 +108,13 @@ class GeneralWidget extends StatelessWidget {
       // so shared prefs may not be exactly in sync
       ScheduleDataStore.backup(backupFile);
 
-      if (await utils.showYesNoAlert(Get.context, 'Backup success',
-          'The backup is saved at ${backupFile.path}. You should now share it to another place for safe keeping in case you uninstall. Proceed?')) {
+      if (await utils.showYesNoAlert(
+          Get.context,
+          'Backup success',
+          "The backup is saved at ${backupFile.path} but will be removed when the app is uninstalled.\n\n" +
+              "You should copy it to another place either via 'Share' or by using a file manager.",
+          yesButtonText: 'Share',
+          noButtonText: 'Close')) {
         await Share.shareFiles([backupFile.path], text: backupFileName);
       }
       // Finally, delete the backup from our internal directory
