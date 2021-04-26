@@ -2,13 +2,19 @@ import 'package:package_info/package_info.dart';
 import 'package:get/get.dart';
 
 String get appName {
-  PackageInfo info = Get.find();
-  return info.appName;
+  try {
+    PackageInfo info = Get.find();
+    return info.appName;
+  } catch (e) {}
+  return "Mindful Notifier";
 }
 
 String get appVersion {
-  PackageInfo info = Get.find();
-  return "${info.version}:${info.buildNumber}";
+  try {
+    PackageInfo info = Get.find();
+    return "${info.version}:${info.buildNumber}";
+  } catch (e) {}
+  return "undefined";
 }
 
 const bool useForegroundService = false;

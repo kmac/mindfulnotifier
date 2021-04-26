@@ -31,8 +31,12 @@ void main() async {
   InMemoryScheduleDataStore ds = await ScheduleDataStore.getInMemoryInstance();
   Get.put(ds);
 
-  PackageInfo info = await PackageInfo.fromPlatform();
-  Get.put(info);
+  try {
+    PackageInfo info = await PackageInfo.fromPlatform();
+    Get.put(info);
+  } catch (e) {
+    // throws during testing
+  }
 
   Get.put(await path_provider.getApplicationDocumentsDirectory(),
       permanent: true, tag: constants.tagApplicationDocumentsDirectory);

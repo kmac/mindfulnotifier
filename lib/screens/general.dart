@@ -27,6 +27,7 @@ class GeneralWidgetController extends GetxController {
   final _useBackgroundService = false.obs;
   final _includeDebugInfo = false.obs;
   final _useStickyNotification = true.obs;
+  final _hideNextReminder = false.obs;
   final theme = 'Default'.obs;
   final scheduleDirty = false.obs;
   bool includeBatteryOptimizationCheck = true;
@@ -45,6 +46,7 @@ class GeneralWidgetController extends GetxController {
     _includeDebugInfo.value = mds.includeDebugInfo;
     _useStickyNotification.value = mds.useStickyNotification;
     _useBackgroundService.value = mds.useBackgroundService;
+    _hideNextReminder.value = mds.hideNextReminder;
   }
 
   @override
@@ -52,6 +54,7 @@ class GeneralWidgetController extends GetxController {
     ever(_useBackgroundService, handleUseBackgroundService);
     ever(_useStickyNotification, handleUseStickyNotification);
     ever(_includeDebugInfo, handleIncludeDebugInfo);
+    ever(_hideNextReminder, handleHideNextReminder);
     ever(theme, handleTheme);
     super.onReady();
   }
@@ -69,20 +72,21 @@ class GeneralWidgetController extends GetxController {
     scheduleDirty.value = true;
   }
 
-  void handleScheduleDirty() {
-    logger.d("handleScheduleDirty");
+  void handleHideNextReminder(bool value) {
+    // todo; persist, and inform user restart required
     InMemoryScheduleDataStore mds = Get.find();
-    Get.find<MindfulNotifierWidgetController>()
-        .sendToAlarmService({'update': mds});
-    scheduleDirty.value = false;
+    mds.hideNextReminder = value;
+    Get.find<MindfulNotifierWidgetController>().hideNextReminder.value = value;
+    scheduleDirty.value = true;
   }
 
   void handleIncludeDebugInfo(bool value) {
     // todo; persist, and inform user restart required
     InMemoryScheduleDataStore mds = Get.find();
-    mds?.includeDebugInfo = value;
-    MindfulNotifierWidgetController mainUiController = Get.find();
-    mainUiController?.showControlMessages?.value = value;
+    mds.includeDebugInfo = value;
+    Get.find<MindfulNotifierWidgetController>().showControlMessages?.value =
+        value;
+    scheduleDirty.value = true;
   }
 
   void handleTheme(String value) {
@@ -91,6 +95,14 @@ class GeneralWidgetController extends GetxController {
     InMemoryScheduleDataStore mds = Get.find();
     mds.theme = value;
     scheduleDirty.value = true;
+  }
+
+  void handleScheduleDirty() {
+    logger.d("handleScheduleDirty");
+    InMemoryScheduleDataStore mds = Get.find();
+    Get.find<MindfulNotifierWidgetController>()
+        .sendToAlarmService({'update': mds});
+    scheduleDirty.value = false;
   }
 }
 
@@ -312,6 +324,17 @@ class GeneralWidget extends StatelessWidget {
                                 controller._useStickyNotification.value = value,
                           )),
                       Divider(),
+                      ListTile(
+                          leading: Icon(Icons.wysiwyg),
+                          title: Text('Hide next reminder'),
+                          subtitle: Text(
+                              "Don't show next reminder information at bottom of main screen"),
+                          trailing: Checkbox(
+                            value: controller._hideNextReminder.value,
+                            onChanged: (value) =>
+                                controller._hideNextReminder.value = value,
+                          )),
+                      Divider(),
                       if (includeBackgroundService)
                         ListTile(
                           leading: Icon(Icons.miscellaneous_services),
@@ -325,17 +348,17 @@ class GeneralWidget extends StatelessWidget {
                           ),
                         ),
                       if (includeBackgroundService) Divider(),
-                      ListTile(
-                          leading: Icon(Icons.wysiwyg),
-                          title: Text('Include debug information'),
-                          subtitle: Text(
-                              'Includes extra runtime information in the bottom status panel (for debug only).'),
-                          trailing: Checkbox(
-                            value: controller._includeDebugInfo.value,
-                            onChanged: (value) =>
-                                controller._includeDebugInfo.value = value,
-                          )),
-                      Divider(),
+                      // ListTile(
+                      //     leading: Icon(Icons.wysiwyg),
+                      //     title: Text('Include debug information'),
+                      //     subtitle: Text(
+                      //         'Includes extra runtime information in the bottom status panel (for debug only).'),
+                      //     trailing: Checkbox(
+                      //       value: controller._includeDebugInfo.value,
+                      //       onChanged: (value) =>
+                      //           controller._includeDebugInfo.value = value,
+                      //     )),
+                      // Divider(),
                     ])))));
   }
 }

@@ -26,40 +26,79 @@ void main() {
       DateTime start = delegate.getNextFireTime(fromTime: dt);
       print("start: $start");
       expect(start.minute, 15);
+      expect(start.hour, 0);
 
       dt = DateTime(2020, 1, 1, 0, 0);
       start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 15);
+      expect(start.hour, 0);
 
       dt = DateTime(2020, 1, 1, 0, 14, 59);
       start = delegate.getNextFireTime(fromTime: dt);
-      expect(start.minute, 15);
+      expect(start.minute, 30); // due to alarm padding
+      expect(start.hour, 0);
 
       dt = DateTime(2020, 1, 1, 0, 15);
       start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 30);
+      expect(start.hour, 0);
+
+      dt = DateTime(2020, 1, 1, 0, 29);
+      start = delegate.getNextFireTime(fromTime: dt);
+      expect(start.minute, 45); // due to alarm padding
+      expect(start.hour, 0);
+
+      dt = DateTime(2020, 1, 1, 0, 30, 1);
+      start = delegate.getNextFireTime(fromTime: dt);
+      expect(start.minute, 45);
+      expect(start.hour, 0);
+
+      dt = DateTime(2020, 1, 1, 23, 45, 20);
+      start = delegate.getNextFireTime(fromTime: dt);
+      expect(start.minute, 00);
+      expect(start.hour, 0);
+      expect(start.day, 2);
     });
     test('test schedule 30m', () {
       PeriodicScheduler delegate =
           PeriodicScheduler(scheduler, QuietHours.defaultQuietHours(), 0, 30);
       scheduler.delegate = delegate;
-      // scheduler.durationMinutes = 30;
       DateTime dt = DateTime(2020, 1, 1, 0, 5);
       DateTime start = delegate.getNextFireTime(fromTime: dt);
       print("start: $start");
       expect(start.minute, 30);
+      expect(start.hour, 0);
 
       dt = DateTime(2020, 1, 1, 0, 0);
       start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 30);
+      expect(start.hour, 0);
+
+      dt = DateTime(2020, 1, 1, 0, 29);
+      start = delegate.getNextFireTime(fromTime: dt);
+      expect(start.minute, 0); // due to alarm padding
+      expect(start.hour, 1);
 
       dt = DateTime(2020, 1, 1, 0, 14, 59);
       start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 30);
+      expect(start.hour, 0);
 
       dt = DateTime(2020, 1, 1, 0, 15);
       start = delegate.getNextFireTime(fromTime: dt);
       expect(start.minute, 30);
+      expect(start.hour, 0);
+
+      dt = DateTime(2020, 1, 1, 0, 30);
+      start = delegate.getNextFireTime(fromTime: dt);
+      expect(start.minute, 0);
+      expect(start.hour, 1);
+
+      dt = DateTime(2020, 1, 1, 23, 30);
+      start = delegate.getNextFireTime(fromTime: dt);
+      expect(start.minute, 0);
+      expect(start.hour, 0);
+      expect(start.day, 2);
     });
   });
 

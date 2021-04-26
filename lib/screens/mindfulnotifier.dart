@@ -31,6 +31,7 @@ class MindfulNotifierWidgetController extends GetxController {
   final _vibrate = false.obs;
   final controlMessage = ''.obs;
   final showControlMessages = false.obs;
+  final hideNextReminder = false.obs;
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
@@ -76,6 +77,7 @@ class MindfulNotifierWidgetController extends GetxController {
     _infoMessage.value = mds.infoMessage;
     controlMessage.value = mds.controlMessage;
     showControlMessages.value = mds.includeDebugInfo;
+    hideNextReminder.value = mds.hideNextReminder;
   }
 
   void initializeFromAlarmServiceReceivePort() {
@@ -196,10 +198,6 @@ class MindfulNotifierWidgetController extends GetxController {
     sendToAlarmService({'vibrate': vibrate});
   }
 
-  // void setNextNotification(DateTime dateTime) {
-  //   _infoMessage.value = "Next notification at ${formatHHMMSS(dateTime)}";
-  // }
-
   void handleScheduleOnTap() {
     Get.toNamed('/schedules');
   }
@@ -240,17 +238,16 @@ class MindfulNotifierWidget extends StatelessWidget {
           children: <Widget>[
             Expanded(
               flex: 12,
-              child: Obx(() =>
-                  /*Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15.0),
-                      ),
-                      color: Theme.of(context).cardColor,
-                      margin: EdgeInsets.only(
-                          top: 15, left: 15, right: 15, bottom: 0),
-                      elevation: 5,
-                      child: */
-                  Container(
+              child: Obx(() => Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4.0),
+                  ),
+                  // color: Theme.of(context).cardColor,
+                  color: Theme.of(context).canvasColor,
+                  margin:
+                      EdgeInsets.only(top: 15, left: 15, right: 15, bottom: 0),
+                  elevation: 1,
+                  child: Container(
                     margin: EdgeInsets.only(
                         top: 30, left: 30, right: 30, bottom: 30),
                     alignment: Alignment.center,
@@ -269,7 +266,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                       textAlign: TextAlign.center,
                       softWrap: true,
                     ),
-                  )),
+                  ))),
             ),
             Expanded(
               flex: 3,
@@ -278,9 +275,9 @@ class MindfulNotifierWidget extends StatelessWidget {
                   //   borderRadius: BorderRadius.circular(15.0),
                   // ),
                   color: Theme.of(context).cardColor,
-                  margin:
-                      EdgeInsets.only(top: 15, left: 15, right: 15, bottom: 15),
-                  elevation: 4,
+                  margin: // EdgeInsets.only(top: 5, left: 5, right: 5, bottom: 5),
+                      EdgeInsets.only(top: 10, left: 15, right: 15, bottom: 20),
+                  elevation: 5,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: <Widget>[
@@ -331,10 +328,12 @@ class MindfulNotifierWidget extends StatelessWidget {
                 flex: 1,
                 child: Obx(
                   () => Text(
-                    controller.controlMessage.value != '' &&
-                            controller.showControlMessages.value
-                        ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
-                        : '${controller._infoMessage.value}',
+                    controller.hideNextReminder.value
+                        ? ''
+                        : controller.controlMessage.value != '' &&
+                                controller.showControlMessages.value
+                            ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
+                            : '${controller._infoMessage.value}',
                     // style: TextStyle(
                     //     color: Get.isDarkMode ? mainTextColor : Colors.black38),
                     style: TextStyle(color: mainTextColor),

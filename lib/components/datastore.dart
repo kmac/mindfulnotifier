@@ -35,6 +35,7 @@ abstract class ScheduleDataStoreBase {
   bool get useBackgroundService;
   bool get useStickyNotification;
   bool get includeDebugInfo;
+  bool get hideNextReminder;
   String get scheduleTypeStr;
   int get periodicHours;
   int get periodicMinutes;
@@ -61,6 +62,7 @@ class InMemoryScheduleDataStore implements ScheduleDataStoreBase {
   bool useBackgroundService;
   bool useStickyNotification;
   bool includeDebugInfo;
+  bool hideNextReminder;
   String scheduleTypeStr;
   int periodicHours;
   int periodicMinutes;
@@ -86,6 +88,7 @@ class InMemoryScheduleDataStore implements ScheduleDataStoreBase {
         this.useBackgroundService = ds.useBackgroundService,
         this.useStickyNotification = ds.useStickyNotification,
         this.includeDebugInfo = ds.includeDebugInfo,
+        this.hideNextReminder = ds.hideNextReminder,
         this.scheduleTypeStr = ds.scheduleTypeStr,
         this.periodicHours = ds.periodicHours,
         this.periodicMinutes = ds.periodicMinutes,
@@ -112,6 +115,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String useBackgroundServiceKey = 'useBackgroundService';
   static const String useStickyNotificationKey = 'useStickyNotification';
   static const String includeDebugInfoKey = 'includeDebugInfoKey';
+  static const String hideNextReminderKey = 'hideNextReminderKey';
   static const String scheduleTypeKey = 'scheduleType';
   static const String periodicHoursKey = 'periodicDurationHours';
   static const String periodicMinutesKey = 'periodicDurationMinutes';
@@ -247,6 +251,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     _mergeVal(useBackgroundServiceKey, mds.useBackgroundService);
     _mergeVal(useStickyNotificationKey, mds.useStickyNotification);
     _mergeVal(includeDebugInfoKey, mds.includeDebugInfo);
+    _mergeVal(hideNextReminderKey, mds.hideNextReminder);
     _mergeVal(scheduleTypeKey, mds.scheduleTypeStr);
     _mergeVal(periodicHoursKey, mds.periodicHours);
     _mergeVal(periodicMinutesKey, mds.periodicMinutes);
@@ -344,10 +349,6 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     return _prefs.getBool(ScheduleDataStore.useBackgroundServiceKey);
   }
 
-  set includeDebugInfo(bool value) {
-    setSync(ScheduleDataStore.includeDebugInfoKey, value);
-  }
-
   @override
   bool get useStickyNotification {
     if (!_prefs.containsKey(ScheduleDataStore.useStickyNotificationKey)) {
@@ -366,6 +367,22 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
       includeDebugInfo = false;
     }
     return _prefs.getBool(ScheduleDataStore.includeDebugInfoKey);
+  }
+
+  set includeDebugInfo(bool value) {
+    setSync(ScheduleDataStore.includeDebugInfoKey, value);
+  }
+
+  @override
+  bool get hideNextReminder {
+    if (!_prefs.containsKey(ScheduleDataStore.hideNextReminderKey)) {
+      hideNextReminder = false;
+    }
+    return _prefs.getBool(ScheduleDataStore.hideNextReminderKey);
+  }
+
+  set hideNextReminder(bool value) {
+    setSync(ScheduleDataStore.hideNextReminderKey, value);
   }
 
   set scheduleTypeStr(String value) {

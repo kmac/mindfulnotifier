@@ -62,7 +62,7 @@ class Scheduler {
   bool running = false;
   // bool initialized = false;
 
-  ScheduleDataStore _ds;
+  ScheduleDataStore ds;
   bool alarmManagerInitialized = false;
   DelegatedScheduler delegate;
   ReceivePort fromAppIsolateReceivePort;
@@ -81,16 +81,20 @@ class Scheduler {
   Future<void> init() async {
     logger.i("Initializing scheduler ${getCurrentIsolate()}");
 
-    PackageInfo info = await PackageInfo.fromPlatform();
-    Get.put(info, permanent: true);
+    try {
+      PackageInfo info = await PackageInfo.fromPlatform();
+      Get.put(info);
+    } catch (e) {
+      // throws during testing
+    }
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     Get.delete<SharedPreferences>();
     Get.put(prefs, permanent: true);
 
-    _ds = await ScheduleDataStore.getInstance();
+    ds = await ScheduleDataStore.getInstance();
     Get.delete<ScheduleDataStore>();
-    Get.put(_ds, permanent: true);
+    Get.put(ds, permanent: true);
 
     delegate = _buildSchedulerDelegate(this);
   }
@@ -103,7 +107,7 @@ class Scheduler {
 
   void update(InMemoryScheduleDataStore mds) {
     logger.d("update, InMemoryScheduleDataStore=$mds");
-    _ds.merge(mds);
+    ds.merge(mds);
   }
 
   void updateDS(String key, var value) async {
@@ -113,7 +117,7 @@ class Scheduler {
 
   void enable() {
     logger.i("enable");
-    _ds.enabled = true;
+    ds.enabled = true;
 
     delegate = _buildSchedulerDelegate(this);
     delegate.quietHours.initializeTimers();
@@ -125,15 +129,18 @@ class Scheduler {
     delegate.scheduleNext();
     // sendInfoMessage(
     //     'Next reminder at ${formatHHMM(delegate.queryNext())}');
-    String enabledReminderText = '${constants.appName} is enabled' +
-        '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}';
+    String enabledReminderText = '${constants.appName} is enabled';
+    if (!ds.hideNextReminder) {
+      enabledReminderText +=
+          '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}';
+    }
     Notifier().showInfoNotification(enabledReminderText);
-    _ds.reminderMessage = _ds.reminders[Random().nextInt(_ds.reminders.length)];
+    ds.reminderMessage = ds.reminders[Random().nextInt(ds.reminders.length)];
     sendDataStoreUpdate();
   }
 
   // bool enableIfNecessary() {
-  //   if (_ds.enabled) {
+  //   if (ds.enabled) {
   //     if (initialNotificationTriggered) {
   //       logger.i("initialNotificationTriggered: not re-enabling on init");
   //     } else {
@@ -150,8 +157,8 @@ class Scheduler {
     delegate?.cancel();
     Notifier().shutdown();
     running = false;
-    _ds.enabled = false;
-    _ds.reminderMessage = "Disabled";
+    ds.enabled = false;
+    ds.reminderMessage = "Disabled";
     sendDataStoreUpdate();
   }
 
@@ -183,13 +190,13 @@ class Scheduler {
 
   void sendReminderMessage(String msg) async {
     // _lastUiMessage['reminderMessage'] = msg;
-    _ds.reminderMessage = msg;
+    ds.reminderMessage = msg;
     sendValueToUI('reminderMessage', msg);
   }
 
   void sendInfoMessage(String msg) async {
     // _lastUiMessage['infoMessage'] = msg;
-    _ds.infoMessage = msg;
+    ds.infoMessage = msg;
     sendValueToUI('infoMessage', msg);
   }
 
@@ -204,26 +211,26 @@ class Scheduler {
   }
 
   DelegatedScheduler _buildSchedulerDelegate(Scheduler scheduler) {
-    logger.i('Building scheduler delegate: ${_ds.scheduleTypeStr}');
+    logger.i('Building scheduler delegate: ${ds.scheduleTypeStr}');
     var scheduleType;
-    if (_ds.scheduleTypeStr == 'periodic') {
+    if (ds.scheduleTypeStr == 'periodic') {
       scheduleType = ScheduleType.PERIODIC;
     } else {
       scheduleType = ScheduleType.RANDOM;
     }
     QuietHours quietHours = new QuietHours(
         new TimeOfDay(
-            hour: _ds.quietHoursStartHour, minute: _ds.quietHoursStartMinute),
+            hour: ds.quietHoursStartHour, minute: ds.quietHoursStartMinute),
         new TimeOfDay(
-            hour: _ds.quietHoursEndHour, minute: _ds.quietHoursEndMinute),
-        _ds.notifyQuietHours);
+            hour: ds.quietHoursEndHour, minute: ds.quietHoursEndMinute),
+        ds.notifyQuietHours);
     var delegate;
     if (scheduleType == ScheduleType.PERIODIC) {
       delegate = PeriodicScheduler(
-          scheduler, quietHours, _ds.periodicHours, _ds.periodicMinutes);
+          scheduler, quietHours, ds.periodicHours, ds.periodicMinutes);
     } else {
       delegate = RandomScheduler(
-          scheduler, quietHours, _ds.randomMinMinutes, _ds.randomMaxMinutes);
+          scheduler, quietHours, ds.randomMinMinutes, ds.randomMaxMinutes);
     }
     return delegate;
   }
@@ -249,7 +256,7 @@ class Scheduler {
         sendInfoMessage("In quiet hours ${formatHHMM(now)} NA");
         return;
       }
-      String reminder = _ds.randomReminder();
+      String reminder = ds.randomReminder();
       Notifier().showReminderNotification(reminder);
       sendReminderMessage(reminder);
     } finally {
@@ -314,54 +321,67 @@ class PeriodicScheduler extends DelegatedScheduler {
   final int durationHours;
   final int durationMinutes; // minimum granularity: 15m
 
+  // Add some padding for alarm scheduling. This is to ensure we will schedule into the future
+  static Duration alarmPadding = Duration(minutes: 2);
+
   PeriodicScheduler(Scheduler scheduler, QuietHours quietHours,
       this.durationHours, this.durationMinutes)
       : super(ScheduleType.PERIODIC, scheduler, quietHours);
 
-  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet}) {
+  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet = false}) {
     fromTime ??= DateTime.now();
-    // int periodInMins = 60 * durationHours + durationMinutes;
+
+    // Algorithm:
+    // - add hours and minutes.
+    // - align to either top of hour, 30m or 15m block
+
+    // The raw next fire time. This then needs to be aligned to either the top of the hour, 30, or 15m
+    DateTime nextDateRaw =
+        fromTime.add(Duration(hours: durationHours, minutes: durationMinutes));
+    if (!adjustFromQuiet) {
+      // Add some padding for alarm scheduling. This is to ensure we will schedule into the future:
+      nextDateRaw = nextDateRaw.add(alarmPadding);
+    }
+
     DateTime nextDate;
     switch (durationMinutes) {
       case 0:
-        // case 45:
-        // schedule next for top of the next hour
-        DateTime startTimeRaw = fromTime.add(Duration(hours: 1));
-        nextDate = DateTime(startTimeRaw.year, startTimeRaw.month,
-            startTimeRaw.day, startTimeRaw.hour, 0, 0, 0, 0);
+        // Interval is in 'hours' only (1, 2, 3, ...)
+        // Truncate everything past the hour
+        nextDate = DateTime(nextDateRaw.year, nextDateRaw.month,
+            nextDateRaw.day, nextDateRaw.hour, 0, 0, 0, 0);
         break;
       case 30:
-        // schedule next for either top or bottom the hour (< 30m)
-        DateTime startTimeRaw = fromTime.add(Duration(minutes: 30));
-        if (startTimeRaw.minute < 30) {
-          // we can schedule it for the top of the next hour
-          nextDate = DateTime(startTimeRaw.year, startTimeRaw.month,
-              startTimeRaw.day, startTimeRaw.hour, 0, 0, 0, 0);
+        // Interval is one of: 0h30m, 1h30m, 2h30m, ...
+        // Schedule next for either top or bottom the hour (< 30m)
+        if (nextDateRaw.minute < 30) {
+          // Truncate to top of the hour
+          nextDate = DateTime(nextDateRaw.year, nextDateRaw.month,
+              nextDateRaw.day, nextDateRaw.hour, 0, 0, 0, 0);
         } else {
-          // schedule it for the bottom of the next
-          nextDate = DateTime(startTimeRaw.year, startTimeRaw.month,
-              startTimeRaw.day, startTimeRaw.hour, 30, 0, 0, 0);
+          // Truncate to bottom of the hour
+          nextDate = DateTime(nextDateRaw.year, nextDateRaw.month,
+              nextDateRaw.day, nextDateRaw.hour, 30, 0, 0, 0);
         }
         break;
       case 15:
-        // schedule next for < 15m
-        DateTime startTimeRaw = fromTime.add(Duration(minutes: 15));
-        int newMinute = fromTime.minute + 15;
-        int newHour = startTimeRaw.hour;
-        if (newMinute >= 60) {
-          // ++newHour;
+        int newHour = nextDateRaw.hour;
+        int newMinute = nextDateRaw.minute;
+        if (newMinute < 15) {
           newMinute = 0;
-        } else if (newMinute >= 45) {
-          newMinute = 45;
-        } else if (newMinute >= 30) {
-          newMinute = 30;
-        } else if (newMinute >= 15) {
+        } else if (newMinute < 30) {
           newMinute = 15;
+        } else if (newMinute < 45) {
+          newMinute = 30;
+        } else if (newMinute < 60) {
+          newMinute = 45;
         } else {
+          // should never hit this:
+          logger.e("Unexpected value newMinute=$newMinute");
           newMinute = 0;
         }
-        nextDate = DateTime(startTimeRaw.year, startTimeRaw.month,
-            startTimeRaw.day, newHour, newMinute, 0, 0, 0);
+        nextDate = DateTime(nextDateRaw.year, nextDateRaw.month,
+            nextDateRaw.day, newHour, newMinute, 0, 0, 0);
         break;
     }
     return nextDate;
@@ -381,9 +401,8 @@ class RandomScheduler extends DelegatedScheduler {
     scheduled = true;
   }
 
-  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet}) {
+  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet = false}) {
     fromTime ??= DateTime.now();
-    adjustFromQuiet ??= false;
     int nextMinutes;
     if ((_maxMinutes == _minMinutes) || (_minMinutes > _maxMinutes)) {
       if (adjustFromQuiet) {

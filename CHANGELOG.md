@@ -1,3 +1,7 @@
+# 1.0.12
+- Issue 18 - fix periodic scheduling > 1 hr
+- Issue 17 - add setting to hide next reminder info
+
 # 1.0.11
 - External storage changes (required by Google):
   - Remove android:requestLegacyExternalStorage="true" to conform to Android 11
