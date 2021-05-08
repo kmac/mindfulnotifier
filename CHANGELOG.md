@@ -1,3 +1,7 @@
+# 1.0.13
+- Issue #21 - ensure silent notifications in Do Not Disturb
+- Issue #16 - add sharing option (long press on main screen to share)
+
 # 1.0.12
 - Issue 18 - fix periodic scheduling > 1 hr
 - Issue 17 - add setting to hide next reminder info
