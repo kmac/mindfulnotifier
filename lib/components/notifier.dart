@@ -8,6 +8,7 @@ import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 import 'package:mindfulnotifier/components/utils.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
+import 'package:sound_mode/sound_mode.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -236,8 +237,11 @@ class Notifier {
         payload: notifText);
 
     if (useSeparateAudio && !mute) {
-      audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
-      audioPlayer.playBell();
+      String ringerStatus = await SoundMode.ringerModeStatus;
+      if (ringerStatus == "Normal Mode") {
+        audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
+        audioPlayer.playBell();
+      }
     }
   }
 

@@ -12,6 +12,7 @@ const Map<String, AndroidAudioUsage> audioChannelForNotification = {
   'notification': AndroidAudioUsage.notificationEvent,
   'media': AndroidAudioUsage.media,
   'alarm': AndroidAudioUsage.alarm,
+  // 'ringtone': AndroidAudioUsage.notificationRingtone,
 };
 
 class NotifyAudioPlayer {
@@ -29,22 +30,23 @@ class NotifyAudioPlayer {
 
   AudioSessionConfiguration _sessionConfiguration;
 
-  void selectAudioChannel(String channel) async {
-    if (audioChannelForNotification.containsKey(channel)) {
-      _audioChannelSelection = channel;
+  // // TODO remove this
+  // void selectAudioChannel(String channel) async {
+  //   if (audioChannelForNotification.containsKey(channel)) {
+  //     _audioChannelSelection = channel;
 
-      _sessionConfiguration = _sessionConfiguration.copyWith(
-          androidAudioAttributes: AndroidAudioAttributes(
-        // TODO copy this:
-        contentType: AndroidAudioContentType.music,
-        flags: AndroidAudioFlags.none,
-        usage: audioChannelForNotification[_audioChannelSelection],
-      ));
-      await _session.configure(_sessionConfiguration);
-    } else {
-      throw Exception('Unknown audio channel: $channel');
-    }
-  }
+  //     _sessionConfiguration = _sessionConfiguration.copyWith(
+  //         androidAudioAttributes: AndroidAudioAttributes(
+  //       // TODO copy this:
+  //       contentType: AndroidAudioContentType.music,
+  //       flags: AndroidAudioFlags.none,
+  //       usage: audioChannelForNotification[_audioChannelSelection],
+  //     ));
+  //     await _session.configure(_sessionConfiguration);
+  //   } else {
+  //     throw Exception('Unknown audio channel: $channel');
+  //   }
+  // }
 
   String getAudioChannelSelection() {
     return _audioChannelSelection;
@@ -56,16 +58,8 @@ class NotifyAudioPlayer {
     _session ??= await AudioSession.instance;
 
     _sessionConfiguration = AudioSessionConfiguration(
-      // avAudioSessionCategory: AVAudioSessionCategory.playback,
-      // avAudioSessionCategoryOptions:
-      //     AVAudioSessionCategoryOptions.allowBluetooth,
-      // avAudioSessionMode: AVAudioSessionMode.defaultMode,
-      // avAudioSessionRouteSharingPolicy:
-      //     AVAudioSessionRouteSharingPolicy.defaultPolicy,
-      // avSetActiveOptions: AVAudioSessionSetActiveOptions.none,
       androidAudioAttributes: AndroidAudioAttributes(
         contentType: AndroidAudioContentType.music,
-        // contentType: AndroidAudioContentType.sonification,
         flags: AndroidAudioFlags.none,
         usage: audioChannelForNotification[_audioChannelSelection],
       ),

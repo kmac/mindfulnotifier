@@ -47,9 +47,11 @@ dependencies:
   logger: ^0.9.4
 
   # For audio:
-  just_audio: ^0.7.2
+  just_audio: ^0.7.4
   audio_session: ^0.1.0
   # audio_service: ^0.15.3
+  sound_mode: ^1.0.2
+
 
   file_picker: ^3.0.1
   package_info: ^2.0.0
