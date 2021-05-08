@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share/share.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -237,36 +238,37 @@ class MindfulNotifierWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
             Expanded(
-              flex: 12,
+              flex: 15,
               child: Obx(() => Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4.0),
                   ),
-                  // color: Theme.of(context).cardColor,
                   color: Theme.of(context).canvasColor,
                   margin:
                       EdgeInsets.only(top: 15, left: 15, right: 15, bottom: 0),
                   elevation: 1,
-                  child: Container(
-                    margin: EdgeInsets.only(
-                        top: 30, left: 30, right: 30, bottom: 30),
-                    alignment: Alignment.center,
-                    // decoration: BoxDecoration(color: Colors.grey[100]),
-                    child: Text(
-                      '${controller._reminderMessage}',
-                      // style: Theme.of(context).textTheme.headline4,
-                      // style: Theme.of(context).textTheme.headline5,
-                      style: TextStyle(
-                          color: mainTextColor,
-                          fontWeight: FontWeight.w900,
-                          fontStyle: FontStyle.italic,
-                          fontFamily: 'Open Sans',
-                          fontSize: 30),
-                      // textAlign: TextAlign.left,
-                      textAlign: TextAlign.center,
-                      softWrap: true,
-                    ),
-                  ))),
+                  child: InkWell(
+                      onLongPress: () async {
+                        await Share.share(controller._reminderMessage.value,
+                            subject: appName);
+                      },
+                      child: Container(
+                        margin: EdgeInsets.only(
+                            top: 15, left: 15, right: 15, bottom: 15),
+                        alignment: Alignment.center,
+                        // decoration: BoxDecoration(color: Colors.grey[100]),
+                        child: Text(
+                          '${controller._reminderMessage}',
+                          style: TextStyle(
+                              color: mainTextColor,
+                              fontWeight: FontWeight.w900,
+                              fontStyle: FontStyle.italic,
+                              fontFamily: 'Open Sans',
+                              fontSize: 30),
+                          textAlign: TextAlign.center,
+                          softWrap: true,
+                        ),
+                      )))),
             ),
             Expanded(
               flex: 3,
@@ -276,7 +278,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                   // ),
                   color: Theme.of(context).cardColor,
                   margin: // EdgeInsets.only(top: 5, left: 5, right: 5, bottom: 5),
-                      EdgeInsets.only(top: 10, left: 15, right: 15, bottom: 20),
+                      EdgeInsets.only(top: 10, left: 15, right: 15, bottom: 15),
                   elevation: 5,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
