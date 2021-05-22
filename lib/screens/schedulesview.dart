@@ -27,6 +27,9 @@ class SchedulesWidgetController extends GetxController {
   final quietHoursStartPicked = TimeOfDay(hour: 1, minute: 0).obs;
   final quietHoursEndPicked = TimeOfDay(hour: 1, minute: 0).obs;
 
+  int trackRandomMinMinutes;
+  int trackRandomMaxMinutes;
+
   TextEditingController randomMinMinutesController = TextEditingController();
   TextEditingController randomMaxMinutesController = TextEditingController();
   TextEditingController quietHoursStartTimeController = TextEditingController();
@@ -46,8 +49,6 @@ class SchedulesWidgetController extends GetxController {
     ever(scheduleType, handleScheduleType);
     ever(periodicHours, handlePeriodicHours);
     ever(periodicMinutes, handlePeriodicMinutes);
-    ever(randomMinMinutes, handleRandomMinMinutes);
-    ever(randomMaxMinutes, handleRandomMaxMinutes);
     ever(quietHoursStartPicked, handleQuietHoursStartPicked);
     ever(quietHoursEndPicked, handleQuietHoursEndPicked);
     super.onReady();
@@ -66,6 +67,11 @@ class SchedulesWidgetController extends GetxController {
 
     periodicHours.value = mds.periodicHours;
     periodicMinutes.value = mds.periodicMinutes;
+
+    randomMaxMinutes.value = mds.randomMaxMinutes;
+    trackRandomMaxMinutes = mds.randomMaxMinutes;
+    randomMinMinutes.value = mds.randomMaxMinutes;
+    trackRandomMinMinutes = mds.randomMinMinutes;
     randomMinMinutesController.text = "${mds.randomMinMinutes}";
     randomMaxMinutesController.text = "${mds.randomMaxMinutes}";
 
@@ -112,26 +118,37 @@ class SchedulesWidgetController extends GetxController {
     }
   }
 
-  void handleRandomMinMinutes(int minutes) {
-    if (mds.randomMinMinutes != minutes) {
-      mds.randomMinMinutes = minutes;
-      // check for consistency with max value
-      if (randomMaxMinutes.value < minutes) {
-        randomMaxMinutes.value = minutes + 15;
-        randomMaxMinutesController.text = "${randomMaxMinutes.value}";
+  void trackRandomValChange(String textval, String labelText) {
+    int newval = int.tryParse(textval);
+    if (newval != null) {
+      logger.d("trackRandomValChange $labelText minutes: $textval");
+      if (labelText == 'Maximum') {
+        trackRandomMaxMinutes = newval;
+      } else {
+        trackRandomMinMinutes = newval;
       }
-      scheduleDirty.value = true;
     }
   }
 
-  void handleRandomMaxMinutes(int minutes) {
-    if (mds.randomMaxMinutes != minutes) {
-      mds.randomMaxMinutes = minutes;
-      // check for consistency with min value
-      if (randomMinMinutes.value > minutes) {
-        randomMinMinutes.value = minutes;
-        randomMinMinutesController.text = "${randomMinMinutes.value}";
-      }
+  void handleRandomValSubmit() {
+    logger.d(
+        "handleRandomValSubmit min: $trackRandomMinMinutes max: $trackRandomMaxMinutes");
+    if (trackRandomMinMinutes > trackRandomMaxMinutes) {
+      trackRandomMaxMinutes = trackRandomMinMinutes;
+    }
+    if (trackRandomMaxMinutes < trackRandomMinMinutes) {
+      trackRandomMaxMinutes = trackRandomMinMinutes;
+    }
+    if (trackRandomMinMinutes != mds.randomMinMinutes) {
+      randomMinMinutes.value = trackRandomMinMinutes;
+      randomMinMinutesController.text = "${randomMinMinutes.value}";
+      mds.randomMinMinutes = trackRandomMinMinutes;
+      scheduleDirty.value = true;
+    }
+    if (trackRandomMaxMinutes != mds.randomMaxMinutes) {
+      randomMaxMinutes.value = trackRandomMaxMinutes;
+      randomMaxMinutesController.text = "${randomMaxMinutes.value}";
+      mds.randomMaxMinutes = trackRandomMaxMinutes;
       scheduleDirty.value = true;
     }
   }
@@ -188,7 +205,7 @@ class SchedulesWidget extends StatelessWidget {
   }
 
   Widget _buildRandomMinutesWidget(
-      var context, String labelText, var textController, var obxVal) {
+      var context, String labelText, var textController) {
     return SizedBox(
         // height: 80,
         width: 120,
@@ -217,14 +234,13 @@ class SchedulesWidget extends StatelessWidget {
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.digitsOnly,
               ],
+              onChanged: (textval) {
+                logger.d("onChanged $labelText minutes, value=$textval");
+                controller.trackRandomValChange(textval, labelText);
+              },
               onSubmitted: (textval) {
-                int newval = int.tryParse(textval);
-                if (newval != null) {
-                  obxVal.value = newval;
-                } else {
-                  // revert it back to the old value
-                  textController.text = "${controller.randomMinMinutes.value}";
-                }
+                logger.d("onSubmitted $labelText minutes, value=$textval");
+                controller.handleRandomValSubmit();
               },
             )));
   }
@@ -333,16 +349,10 @@ class SchedulesWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
                 _buildRandomMinutesWidget(
-                    context,
-                    'Minimum',
-                    controller.randomMinMinutesController,
-                    controller.randomMinMinutes),
+                    context, 'Minimum', controller.randomMinMinutesController),
                 // Text('to'),
                 _buildRandomMinutesWidget(
-                    context,
-                    'Maximum',
-                    controller.randomMaxMinutesController,
-                    controller.randomMaxMinutes),
+                    context, 'Maximum', controller.randomMaxMinutesController),
               ]),
         ]),
       ));
