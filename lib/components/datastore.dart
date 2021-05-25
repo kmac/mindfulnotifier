@@ -7,23 +7,28 @@ import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = createLogger('datastore');
 
-// TODO need to support some way of updating this list/merging with user-defined entries
-const List<String> defaultReminderList = [
-  '''Are you aware?''',
-  '''Breathe deeply. This is the present moment.''',
-  '''Take a moment to pause, and come back to the present.''',
-  '''Bring awareness into this moment.''',
-  '''Let go of greed, aversion, and delusion.''',
-  '''Respond, not react.''',
-  '''All of this is impermanent.''',
-  '''Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.''',
-  // '''RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion''',
-  '''Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.''',
-  '''What is the attitude in the mind right now?''',
-  '''May you be happy. May you be healthy. May you be free from harm. May you be peaceful.''',
-  '''"Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want." -- Joseph Goldstein''',
-  '''"Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself." -- Bashō''',
-];
+// A json list. Each entry has keys: text, enabled, tag, weight
+// Note: be sure to use " " to quote the json
+// NOTE: tags are not implemented yet but are included because it is in the roadmap
+// Idea: add optional weight to support weighing reminders differently
+const String defaultJsonReminders = '''
+  [
+    {"text": "Are you aware?", "enabled": true, "tag": "default"},
+    {"text": "Breathe deeply. This is the present moment.", "enabled": true, "tag": "default"},
+    {"text": "Take a moment to pause, and come back to the present.", "enabled": true, "tag": "default"},
+    {"text": "Bring awareness into this moment.", "enabled": true, "tag": "default"},
+    {"text": "Let go of greed, aversion, and delusion.", "enabled": true, "tag": "default"},
+    {"text": "Respond, not react.", "enabled": true, "tag": "default"},
+    {"text": "All of this is impermanent.", "enabled": true, "tag": "default"},
+    {"text": "Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.", "enabled": true, "tag": "default"},
+    {"text": "RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion", "enabled": false, "tag": "default"},
+    {"text": "Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.", "enabled": true, "tag": "default"},
+    {"text": "What is the attitude in the mind right now?", "enabled": true, "tag": "default"},
+    {"text": "May you be happy. May you be healthy. May you be free from harm. May you be peaceful.", "enabled": true, "tag": "default"},
+    {"text": "\"Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.\" -- Joseph Goldstein", "enabled": true, "tag": "default"},
+    {"text": "\"Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself.\" -- Bashō", "enabled": true, "tag": "default"},
+  ]
+''';
 
 // ISSUE sharing data across the UI and the alarm/scheduler isolate:
 //  https://github.com/flutter/flutter/issues/61529
@@ -47,15 +52,27 @@ abstract class ScheduleDataStoreBase {
   int get quietHoursEndMinute;
   bool get notifyQuietHours;
   String get reminderMessage;
+  @deprecated
   List<String> get reminders;
+  String get jsonReminders;
   String get infoMessage;
   String get controlMessage;
   String get theme;
   String get bellId;
   String get customBellPath;
+
+  bool reminderExists(String reminderText, {List jsonReminderList}) {
+    jsonReminderList ??= jsonDecode(jsonReminders);
+    for (Map reminder in jsonReminderList) {
+      if (reminder.containsKey('text') && reminder['text'] == reminderText) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
-class InMemoryScheduleDataStore implements ScheduleDataStoreBase {
+class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
   bool enabled;
   bool mute;
   bool vibrate;
@@ -75,6 +92,7 @@ class InMemoryScheduleDataStore implements ScheduleDataStoreBase {
   bool notifyQuietHours;
   String reminderMessage;
   List<String> reminders;
+  String jsonReminders;
   String infoMessage;
   String controlMessage;
   String theme;
@@ -100,7 +118,7 @@ class InMemoryScheduleDataStore implements ScheduleDataStoreBase {
         this.quietHoursEndMinute = ds.quietHoursEndMinute,
         this.notifyQuietHours = ds.notifyQuietHours,
         this.reminderMessage = ds.reminderMessage,
-        this.reminders = ds.reminders,
+        this.jsonReminders = ds.jsonReminders,
         this.infoMessage = ds.infoMessage,
         this.controlMessage = ds.controlMessage,
         this.theme = ds.theme,
@@ -108,7 +126,7 @@ class InMemoryScheduleDataStore implements ScheduleDataStoreBase {
         this.customBellPath = ds.customBellPath;
 }
 
-class ScheduleDataStore implements ScheduleDataStoreBase {
+class ScheduleDataStore extends ScheduleDataStoreBase {
   static const String enabledKey = 'enabled';
   static const String muteKey = 'mute';
   static const String vibrateKey = 'vibrate';
@@ -127,7 +145,9 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const String quietHoursEndMinuteKey = 'quietHoursEndMinute';
   static const String notifyQuietHoursKey = 'notifyQuietHours';
   static const String reminderMessageKey = 'reminderMessage';
+  @deprecated
   static const String remindersKey = 'reminders';
+  static const String jsonRemindersKey = 'jsonReminders';
   static const String infoMessageKey = 'infoMessage';
   static const String controlMessageKey = 'controlMessage';
   static const String themeKey = 'theme';
@@ -147,7 +167,6 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
   static const int defaultQuietHoursEndMinute = 0;
   static const bool defaultNotifyQuietHours = false;
   static const String defaultReminderMessage = 'Not Enabled';
-  static const List<String> defaultReminders = defaultReminderList;
   static const String defaultInfoMessage = 'Uninitialized';
   static const String defaultControlMessage = '';
   static const String defaultTheme = 'Default';
@@ -189,6 +208,18 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     var jsonData = _toJson(backup: true);
     logger.d('backup, tofile:${backupFile.path}: $jsonData');
     backupFile.writeAsStringSync(jsonData, flush: true);
+  }
+
+  static void exportReminders(File toFile) {
+    var jsonData = _prefs.getString(ScheduleDataStore.jsonRemindersKey);
+    logger.d('export, tofile:${toFile.path}: $jsonData');
+    toFile.writeAsStringSync(jsonData, flush: true);
+  }
+
+  static void importReminders(File importFile) async {
+    String jsonData = importFile.readAsStringSync();
+    logger.d('restore, file=${importFile.path}: $jsonData');
+    _prefs.setString(ScheduleDataStore.jsonRemindersKey, jsonData);
   }
 
   static Future<InMemoryScheduleDataStore> restore(File backupFile) async {
@@ -264,6 +295,7 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
     _mergeVal(notifyQuietHoursKey, mds.notifyQuietHours);
     _mergeVal(reminderMessageKey, mds.reminderMessage);
     _mergeVal(remindersKey, mds.reminders);
+    _mergeVal(jsonRemindersKey, mds.jsonReminders);
     _mergeVal(infoMessageKey, mds.infoMessage);
     _mergeVal(controlMessageKey, mds.controlMessage);
     _mergeVal(themeKey, mds.theme);
@@ -584,16 +616,242 @@ class ScheduleDataStore implements ScheduleDataStoreBase {
 
   @override
   List<String> get reminders {
-    if (!_prefs.containsKey(ScheduleDataStore.remindersKey)) {
-      // First load: initialize to default reminder list
-      reminders = defaultReminders;
+    if (_prefs.containsKey(ScheduleDataStore.remindersKey)) {
+      return _prefs.getStringList(ScheduleDataStore.remindersKey);
     }
-    return _prefs.getStringList(ScheduleDataStore.remindersKey);
+    return [];
   }
 
-  String randomReminder() {
-    List<String> shuffled = List.from(reminders);
-    shuffled.shuffle();
-    return shuffled.first;
+  set jsonReminders(String jsonString) {
+    setSync(jsonRemindersKey, jsonString);
+  }
+
+  @override
+  String get jsonReminders {
+    if (_prefs.containsKey(ScheduleDataStore.remindersKey)) {
+      // old reminders list is still here: convert it to json and remove it
+      logger.i("Migrating reminders to json");
+      List<Map> conversionList = [];
+      for (String rawReminder in reminders) {
+        Map<String, dynamic> mapForJson = Map();
+        mapForJson['text'] = rawReminder;
+        mapForJson['enabled'] = true;
+        mapForJson['tag'] = "default";
+        conversionList.add(mapForJson);
+      }
+      // save the string pretty-printed so it will also be exported in this format
+      JsonEncoder encoder = new JsonEncoder.withIndent('  ');
+      jsonReminders = encoder.convert(conversionList);
+      _prefs.remove(ScheduleDataStore.remindersKey);
+      logger.i("Finished reminder migration to json: $jsonReminders");
+      return jsonReminders;
+    }
+
+    if (!_prefs.containsKey(ScheduleDataStore.jsonRemindersKey)) {
+      // First load: initialize to default reminder list
+      jsonReminders = defaultJsonReminders;
+    }
+    return _prefs.getString(ScheduleDataStore.jsonRemindersKey);
+  }
+
+  // In future it's probably worth moving json reminders into their own class
+  String randomReminder({String tag}) {
+    List jsonReminderList = jsonDecode(jsonReminders);
+    jsonReminderList.shuffle();
+    for (Map<String, dynamic> reminder in jsonReminderList) {
+      if (tag != null) {
+        if (!reminder.containsKey('tag') || reminder['tag'] != tag) {
+          continue;
+        }
+      }
+      // enabled entry is optional
+      if (!reminder.containsKey('enabled') || reminder['enabled']) {
+        return reminder['text'];
+      }
+    }
+    return tag == null
+        ? "No reminders are enabled"
+        : "No reminders are enabled for tag '$tag'";
+  }
+}
+
+class Reminder {
+  final int index;
+  String text;
+  bool enabled;
+  String tag;
+
+  Reminder(this.index, this.text, this.tag, this.enabled);
+
+  Reminder.fromJson(int index, Map<String, dynamic> jsonMapEntry)
+      : index = index,
+        text = jsonMapEntry['text'],
+        tag = jsonMapEntry['tag'],
+        enabled = jsonMapEntry['enabled'];
+
+  Map<String, dynamic> toJsonMapEntry() => {
+        'index': index,
+        'text': text,
+        'tag': tag,
+        'enabled': enabled,
+      };
+
+  @override
+  String toString() {
+    return "Reminder: index=$index, tag=$tag, enabled=$enabled, text=$text";
+  }
+}
+
+class Reminders {
+  final List<Reminder> allReminders;
+  Reminders(this.allReminders);
+
+  // ReminderList.fromJson(List<Map<String, dynamic>> json)
+  //     : reminders = json.map((e) => Reminder.fromJson(index++, e));
+
+  Reminders.fromDecodedJson(List<Map<String, dynamic>> decodedJson)
+      : allReminders = [] {
+    int index = 0;
+    for (Map<String, dynamic> jsonMapEntry in decodedJson) {
+      Reminder reminder = Reminder.fromJson(index++, jsonMapEntry);
+      allReminders.add(reminder);
+    }
+  }
+
+  Reminders.fromJsonString(String jsonData) : allReminders = [] {
+    // List<Map<String, dynamic>> jsonReminderList = jsonDecode(jsonData);
+    List jsonReminderList = jsonDecode(jsonData);
+    int index = 0;
+    for (Map<String, dynamic> jsonMapEntry in jsonReminderList) {
+      Reminder reminder = Reminder.fromJson(index++, jsonMapEntry);
+      allReminders.add(reminder);
+    }
+  }
+
+  Map<String, List<Reminder>> buildGroupedReminders() {
+    // A map of reminders grouped by tag
+    final Map<String, List<Reminder>> groupedReminders = Map();
+
+    // Build groupedReminders from json data
+    for (Reminder reminder in allReminders) {
+      List<Reminder> group;
+      if (!groupedReminders.containsKey(reminder.tag)) {
+        group = [];
+        groupedReminders[reminder.tag] = group;
+      }
+      groupedReminders[reminder.tag].add(reminder);
+    }
+    return groupedReminders;
+  }
+
+  List<Reminder> getFilteredReminderList({String tag}) {
+    if (tag == null || tag == '') {
+      return allReminders;
+    }
+    Map<String, List<Reminder>> groupedReminders = buildGroupedReminders();
+    if (!groupedReminders.containsKey(tag)) {
+      logger.e("tag '$tag' not in reminderGroups");
+      return [];
+    }
+    return groupedReminders[tag];
+  }
+
+  // void rebuildFromGroupedReminders(Map<String,List<Reminder>> groupedReminders, String tag) {
+  //   Map<String, List<Reminder>> currentGrouped = buildGroupedReminders();
+  //   if (tag == '') {
+  //     currentGrouped = groupedReminders;
+  //   } else {
+  //     // rebuild using filtered
+  //     currentGrouped[tag] = groupedReminders;
+  //     for (Reminder reminder in reminders.value.allReminders) {
+  //     }
+  // }
+  // }
+
+  // void rebuildAllReminders(List<Reminder> reminders, String tag) {
+  //   if (tag == '') {
+  //     // using allReminders
+  //   } else {
+  //     // rebuild using filtered
+  //     for (Reminder reminder in reminders.value.allReminders) {
+  //     }
+  // }
+
+  void createReminder(Reminder reminder) {
+    allReminders.add(reminder);
+  }
+
+  void updateReminder(Reminder changedReminder) {
+    allReminders[changedReminder.index] = changedReminder;
+    // for (Reminder reminder in allReminders) {
+    //   if (reminder.index == changedReminder.index) {
+    //     allReminders.replaceRange(reminder.index, reminder.index, [
+    //       changedReminder,
+    //     ]);
+    //     return;
+    //   }
+    // }
+    // throw Exception("updateReminder: not found: changedReminder");
+  }
+
+  void deleteReminder(int index) {
+    allReminders.removeAt(index);
+    // for (Reminder reminder in allReminders) {
+    //   if (reminder.index == index) {
+    //     allReminders.removeAt(index);
+    //     return;
+    //   }
+    // }
+    // throw Exception("updateReminder: not found: changedReminder");
+  }
+
+  String toJson() {
+    List<Map<String, dynamic>> conversionList = [];
+    for (Reminder reminder in allReminders) {
+      conversionList.add(reminder.toJsonMapEntry());
+    }
+    String jsonReminders;
+    // save the string pretty-printed so it will also be exported in this format
+    JsonEncoder encoder = new JsonEncoder.withIndent('  ');
+    jsonReminders = encoder.convert(conversionList);
+    logger.d("Reminders toJson: $jsonReminders");
+    return jsonReminders;
+  }
+
+  static String migrateToJson(List<String> reminderList) {
+    // old reminders list is still here: convert it to json and remove it
+    logger.i("Migrating reminders to json");
+    List<Map> conversionList = [];
+    for (String rawReminder in reminderList) {
+      Map<String, dynamic> mapForJson = Map();
+      mapForJson['text'] = rawReminder;
+      mapForJson['enabled'] = true;
+      mapForJson['tag'] = "default";
+      conversionList.add(mapForJson);
+    }
+    String jsonReminders;
+    // save the string pretty-printed so it will also be exported in this format
+    JsonEncoder encoder = new JsonEncoder.withIndent('  ');
+    jsonReminders = encoder.convert(conversionList);
+    logger.i("Finished reminder migration to json: $jsonReminders");
+    return jsonReminders;
+  }
+
+  String randomReminder({String tag}) {
+    allReminders.shuffle();
+    for (Reminder reminder in allReminders) {
+      if (tag != null) {
+        if (reminder.tag != tag) {
+          continue;
+        }
+      }
+      // enabled entry is optional
+      if (reminder.enabled) {
+        return reminder.text;
+      }
+    }
+    return tag == null
+        ? "No reminders are enabled"
+        : "No reminders are enabled for tag '$tag'";
   }
 }

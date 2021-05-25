@@ -109,47 +109,104 @@ class GeneralWidgetController extends GetxController {
 class GeneralWidget extends StatelessWidget {
   final GeneralWidgetController controller = Get.put(GeneralWidgetController());
 
-  void _doBackup() async {
-    String backupFileName =
-        "${constants.appName}-backup-${utils.formatYYYYMMDDHHMM(DateTime.now())}.json";
+  void _exportReminders() async {
+    String exportFileName =
+        "${constants.appName}-reminders-${utils.formatYYYYMMDDHHMM(DateTime.now())}.json";
     Directory extStoreDir =
         Get.find(tag: constants.tagExternalStorageDirectory);
-    File backupFile = File("${extStoreDir.path}/$backupFileName");
+    File exportFile = File("${extStoreDir.path}/$exportFileName");
     try {
-      // ISSUE here: this backs up from the current shared prefs, not from the InMemoryScheduleDataStore
-      // so shared prefs may not be exactly in sync
-      ScheduleDataStore.backup(backupFile);
+      InMemoryScheduleDataStore mds = Get.find();
+      String jsonData = mds.jsonReminders;
+      logger.d('export, tofile:${exportFile.path}: $jsonData');
+      exportFile.writeAsStringSync(jsonData, flush: true);
 
       if (await utils.showYesNoAlert(
           Get.context,
-          'Backup success',
-          "The backup is saved at ${backupFile.path} but will be removed when the app is uninstalled.\n\n" +
+          'Export success',
+          "The exported reminders are saved at ${exportFile.path} but will be removed when the app is uninstalled.\n\n" +
               "You should copy it to another place either via 'Share' or by using a file manager.",
           yesButtonText: 'Share',
           noButtonText: 'Close')) {
-        await Share.shareFiles([backupFile.path], text: backupFileName);
+        await Share.shareFiles([exportFile.path], text: exportFileName);
       }
       // Finally, delete the backup from our internal directory
       // backupFile.delete();
     } catch (e) {
-      logger.e('Backup failed, file=${backupFile.path}, exception: $e');
-      utils.showErrorAlert(Get.context, 'Backup failed',
-          'The backup operation failed with an exception: $e');
+      logger.e('Backup failed, file=${exportFile.path}, exception: $e');
+      utils.showErrorAlert(Get.context, 'Export failed',
+          'The export operation failed with an exception: $e');
     }
   }
 
-  void _doRestore() async {
+  Future<Map<String, bool>> showImportAlert(
+      BuildContext context, String title, String alertText) async {
+    bool answer = false;
+    bool merge = false;
+    await Alert(
+        context: context,
+        title: title,
+        desc:
+            'Replace: replace existing reminders. Merge: merge with existing reminders',
+        type: AlertType.warning,
+        style: utils.getGlobalAlertStyle(Get.isDarkMode),
+        content: Column(
+          children: <Widget>[
+            Text(alertText,
+                style: TextStyle(
+                  fontSize: 16.0,
+                )),
+          ],
+        ),
+        buttons: [
+          DialogButton(
+            onPressed: () {
+              answer = false;
+              Navigator.pop(context);
+            },
+            child: Text(
+              'Cancel',
+              style: utils.getGlobalDialogTextStyle(Get.isDarkMode),
+            ),
+          ),
+          DialogButton(
+            onPressed: () {
+              answer = true;
+              Navigator.pop(context);
+            },
+            child: Text(
+              'Replace',
+              style: utils.getGlobalDialogTextStyle(Get.isDarkMode),
+            ),
+          ),
+          DialogButton(
+            onPressed: () {
+              answer = true;
+              merge = true;
+              Navigator.pop(context);
+            },
+            child: Text(
+              'Merge',
+              style: utils.getGlobalDialogTextStyle(Get.isDarkMode),
+            ),
+          )
+        ]).show();
+    return {'answer': answer, 'merge': merge};
+  }
+
+  void _importReminders() async {
     FilePickerResult result =
         await FilePicker.platform.pickFiles(allowedExtensions: [
       'json',
     ], type: FileType.custom, allowMultiple: false, withData: true);
     if (result != null) {
-      String backupFileName = result.files.first.name;
-      if (await utils.showYesNoAlert(
+      String importFileName = result.files.first.name;
+      Map<String, bool> alertResult = await showImportAlert(
           Get.context,
-          "Proceed with restore?",
-          "WARNING: this will overwrite any existing settings.\n\n" +
-              "Do you want to restore using file $backupFileName?")) {
+          "Proceed with import?",
+          "WARNING: this will overwrite any existing reminders.\n\n" +
+              "Do you want to import using file $importFileName?");
+      if (alertResult['answer']) {
         try {
           // Do the restore
           Uint8List uint8list = result.files.first.bytes;
@@ -158,25 +215,49 @@ class GeneralWidget extends StatelessWidget {
             final file = File.fromUri(Uri.parse(result.files.single.path));
             uint8list = file.readAsBytesSync();
           }
-          InMemoryScheduleDataStore mds =
-              await ScheduleDataStore.restoreFromJson(
-                  Utf8Decoder().convert(uint8list));
+          InMemoryScheduleDataStore mds = Get.find();
+          String importedString = Utf8Decoder().convert(uint8list);
+          if (importedString.contains("scheduleType")) {
+            // this is an old 'backup' file, not an exported reminder list
+            Map<String, dynamic> importedJson = jsonDecode(importedString);
+            List<String> remindersList = [];
+            for (String reminder in importedJson['reminders']) {
+              if (alertResult['merge'] && mds.reminderExists(reminder)) {
+                continue;
+              }
+              remindersList.add(reminder);
+            }
+            mds.reminders = remindersList;
+          } else {
+            if (alertResult['merge']) {
+              List newJsonReminders = jsonDecode(importedString);
+              List existingJsonReminders = jsonDecode(mds.jsonReminders);
+              for (Map newReminder in newJsonReminders) {
+                if (newReminder.containsKey('text') &&
+                    !mds.reminderExists(newReminder['text'],
+                        jsonReminderList: existingJsonReminders)) {
+                  existingJsonReminders.add(newReminder);
+                }
+              }
+              mds.jsonReminders = jsonEncode(existingJsonReminders);
+            } else {
+              mds.jsonReminders = importedString;
+            }
+          }
+
           Get.find<MindfulNotifierWidgetController>()
               .triggerSchedulerRestore(mds);
           controller.theme.value = mds.theme;
-          utils.showInfoAlert(
-              Get.context,
-              'Successful Restore',
-              'The restore operation was successful. ' +
-                  'The scheduler needs to be manually re-enabled.',
+          utils.showInfoAlert(Get.context, 'Successful Import',
+              'The reminders import operation was successful.',
               alertStyle: utils.getGlobalAlertStyle(mds.theme == 'Dark'),
               dialogTextStyle:
                   utils.getGlobalDialogTextStyle(mds.theme == 'Dark'));
         } catch (e) {
           logger.e(
-              'Restore failed, file=${result.files.first.path}, exception: $e');
+              'Reminder import failed, file=${result.files.first.path}, exception: $e');
           utils.showErrorAlert(Get.context, 'Restore Failed',
-              'The restore operation failed with an exception: $e');
+              'The reminder import operation failed with an exception: $e');
         }
       }
     }
@@ -266,34 +347,36 @@ class GeneralWidget extends StatelessWidget {
                       Divider(),
                       ListTile(
                           leading: Icon(Icons.backup),
-                          title: Text('Backup'),
-                          subtitle: Text('Backup settings to file'),
+                          title: Text('Export Reminders'),
+                          subtitle: Text('Export reminders to file'),
                           trailing: Container(
                             // padding: EdgeInsets.all(2.0),
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),
-                              child: Text("Save..."),
+                              child: Text("Export..."),
                               onPressed: () {
-                                _doBackup();
+                                _exportReminders();
                               },
                             ),
                           )),
                       Divider(),
                       ListTile(
                           leading: Icon(Icons.restore_page),
-                          title: Text('Restore'),
-                          subtitle: Text('Restore settings from file'),
+                          title: Text('Import Reminders'),
+                          subtitle: Text(
+                              'Import reminders from file, with option to either ' +
+                                  ' replace or merge existing reminder list.'),
                           trailing: Container(
                             // padding: EdgeInsets.all(2.0),
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),
-                              child: Text("Load..."),
+                              child: Text("Import..."),
                               onPressed: () {
-                                _doRestore();
+                                _importReminders();
                               },
                             ),
                           )),
