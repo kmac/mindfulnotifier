@@ -756,53 +756,24 @@ class Reminders {
     return groupedReminders[tag];
   }
 
-  // void rebuildFromGroupedReminders(Map<String,List<Reminder>> groupedReminders, String tag) {
-  //   Map<String, List<Reminder>> currentGrouped = buildGroupedReminders();
-  //   if (tag == '') {
-  //     currentGrouped = groupedReminders;
-  //   } else {
-  //     // rebuild using filtered
-  //     currentGrouped[tag] = groupedReminders;
-  //     for (Reminder reminder in reminders.value.allReminders) {
-  //     }
-  // }
-  // }
-
-  // void rebuildAllReminders(List<Reminder> reminders, String tag) {
-  //   if (tag == '') {
-  //     // using allReminders
-  //   } else {
-  //     // rebuild using filtered
-  //     for (Reminder reminder in reminders.value.allReminders) {
-  //     }
-  // }
-
-  void createReminder(Reminder reminder) {
-    allReminders.add(reminder);
+  void addReminder(Reminder reminder) {
+    // apply new index, which is at the end of the list
+    allReminders.add(Reminder(
+        allReminders.length, reminder.text, reminder.tag, reminder.enabled));
   }
 
   void updateReminder(Reminder changedReminder) {
     allReminders[changedReminder.index] = changedReminder;
-    // for (Reminder reminder in allReminders) {
-    //   if (reminder.index == changedReminder.index) {
-    //     allReminders.replaceRange(reminder.index, reminder.index, [
-    //       changedReminder,
-    //     ]);
-    //     return;
-    //   }
-    // }
-    // throw Exception("updateReminder: not found: changedReminder");
   }
 
   void deleteReminder(int index) {
     allReminders.removeAt(index);
-    // for (Reminder reminder in allReminders) {
-    //   if (reminder.index == index) {
-    //     allReminders.removeAt(index);
-    //     return;
-    //   }
-    // }
-    // throw Exception("updateReminder: not found: changedReminder");
+    // Now re-index all the reminders
+    index = 0;
+    for (int index = 0; index < allReminders.length; index++) {
+      allReminders[index] = Reminder(index, allReminders[index].text,
+          allReminders[index].tag, allReminders[index].enabled);
+    }
   }
 
   String toJson() {

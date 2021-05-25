@@ -23,6 +23,7 @@ class ReminderWidgetController extends GetxController {
   final selectedIndex = 0.obs;
   final selectedTag = ''.obs;
   final scrollToBottom = false.obs;
+  final submitButtonEnabled = true.obs;
   final ScrollController scrollController = ScrollController();
   final Map<String, List<Reminder>> groupedReminders =
       <String, List<Reminder>>{}.obs;
@@ -152,12 +153,6 @@ class ReminderWidget extends StatelessWidget {
             ],
           ),
         ),
-        // floatingActionButton: FloatingActionButton(
-        //     child: Icon(Icons.add),
-        //     onPressed: () {
-        //       _showAddDialog(context);
-        //     }),
-        // floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
         bottomNavigationBar: new BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           onTap: (index) {
@@ -291,22 +286,99 @@ class ReminderWidget extends StatelessWidget {
                 ))));
   }
 
+  Column _buildAddEditColumn(
+      BuildContext context,
+      TextEditingController editingController,
+      final editedTag,
+      final editedEnabled) {
+    String label = editedTag.value;
+    return Column(
+      children: <Widget>[
+        TextFormField(
+          controller: editingController,
+          maxLines: formMaxLines,
+          maxLength: formMaxLength,
+          // style: TextStyle(fontSize: 18),
+        ),
+        Row(children: <Widget>[
+          Expanded(
+              flex: 1, child: Text('Tag:', style: TextStyle(fontSize: 14))),
+          Expanded(
+              flex: 3,
+              // IT DOESN'T LIKE THIS Obx:
+              // child: Obx(() => TextField(
+              child: TextField(
+                decoration: InputDecoration(
+                  // border: OutlineInputBorder(),
+                  labelText: label,
+                  // floatingLabelBehavior: FloatingLabelBehavior.never,
+                ),
+                // textAlign: TextAlign.center,
+                autofillHints: controller.groupedReminders.keys.toList(),
+                //onTap: () {
+                //  controller.submitButtonEnabled.value = false;
+                //},
+                // onChanged: (value) {
+                //   currentTag = value;
+                // },
+                // onEditingComplete: () {
+                //   editedTag.value = currentTag;
+                // },
+                onSubmitted: (value) {
+                  //  controller.submitButtonEnabled.value = true;
+                  editedTag.value = value;
+                },
+              )),
+        ]),
+        Row(children: <Widget>[
+          Text('Enabled: ', style: TextStyle(fontSize: 14)),
+          Obx(
+            () => Checkbox(
+                value: editedEnabled.value,
+                onChanged: (value) {
+                  // logger.d("Enabled onChanged value: $value");
+                  editedEnabled.value = value;
+                }),
+          )
+        ]),
+      ],
+    );
+  }
+
   void _showAddDialog(BuildContext context) {
+    final editedTag = "default".obs;
+    final editedEnabled = true.obs;
+
     TextEditingController editingController = new TextEditingController();
+    DialogButton submitButton = DialogButton(
+      onPressed: controller.submitButtonEnabled.value
+          ? () {
+              Reminder reminder = Reminder(
+                  -1, // will be changed
+                  editingController.text,
+                  editedTag.value,
+                  editedEnabled.value);
+              controller.reminders.value.addReminder(reminder);
+              controller.filteredReminderListDirty.value = true;
+
+              controller.scrollToBottom.value = true;
+              // _selectedIndex = controller.reminderList.length - 1;
+              Navigator.pop(context);
+            }
+          : null,
+      child: Text(
+        "Add",
+        style: getGlobalDialogTextStyle(Get.isDarkMode),
+      ),
+    );
     Alert(
         context: context,
         title: "Add Reminder",
         style: getGlobalAlertStyle(Get.isDarkMode),
-        content: Column(
-          children: <Widget>[
-            TextFormField(
-              controller: editingController,
-              maxLines: formMaxLines,
-              maxLength: formMaxLength,
-              style: TextStyle(fontSize: 16),
-            ),
-          ],
-        ),
+        content: Obx(() => _buildAddEditColumn(
+            context, editingController, editedTag, editedEnabled)),
+        // content: _buildAddEditColumn(
+        //     context, editingController, editedTag, editedEnabled),
         buttons: [
           DialogButton(
             onPressed: () {
@@ -317,21 +389,7 @@ class ReminderWidget extends StatelessWidget {
               style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           ),
-          DialogButton(
-            onPressed: () {
-              // controller.reminderStringList.add(editingController.text);
-              // TODO HOW TO ADD AN ENTRY??
-              // controller.reminderStringList.add(editingController.text);
-
-              controller.scrollToBottom.value = true;
-              // _selectedIndex = controller.reminderList.length - 1;
-              Navigator.pop(context);
-            },
-            child: Text(
-              "Add",
-              style: getGlobalDialogTextStyle(Get.isDarkMode),
-            ),
-          )
+          submitButton,
         ]).show();
   }
 
@@ -339,65 +397,12 @@ class ReminderWidget extends StatelessWidget {
     final editedTag = controller.filteredReminderList[index].tag.obs;
     final editedText = controller.filteredReminderList[index].text.obs;
     final editedEnabled = controller.filteredReminderList[index].enabled.obs;
+
     TextEditingController editingController =
         new TextEditingController(text: editedText.value);
-    Alert(
-        context: context,
-        title: "Edit Reminder",
-        style: getGlobalAlertStyle(Get.isDarkMode),
-        content: Obx(() => Column(
-              children: <Widget>[
-                TextFormField(
-                  controller: editingController,
-                  maxLines: formMaxLines,
-                  maxLength: formMaxLength,
-                  // style: TextStyle(fontSize: 18),
-                ),
-                Row(children: <Widget>[
-                  Expanded(
-                      flex: 1,
-                      child: Text('Tag:', style: TextStyle(fontSize: 14))),
-                  Expanded(
-                      flex: 3,
-                      child: TextField(
-                        decoration: InputDecoration(
-                          // border: OutlineInputBorder(),
-                          labelText: editedTag.value,
-                          // floatingLabelBehavior: FloatingLabelBehavior.never,
-                        ),
-                        // textAlign: TextAlign.center,
-                        autofillHints:
-                            controller.groupedReminders.keys.toList(),
-                        onSubmitted: (value) {
-                          editedTag.value = value;
-                        },
-                      )),
-                ]),
-                Row(children: <Widget>[
-                  Text('Enabled: ', style: TextStyle(fontSize: 14)),
-                  Obx(
-                    () => Checkbox(
-                        value: editedEnabled.value,
-                        onChanged: (value) {
-                          // logger.d("Enabled onChanged value: $value");
-                          editedEnabled.value = value;
-                        }),
-                  )
-                ]),
-              ],
-            )),
-        buttons: [
-          DialogButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(
-              "Cancel",
-              style: getGlobalDialogTextStyle(Get.isDarkMode),
-            ),
-          ),
-          DialogButton(
-            onPressed: () {
+    DialogButton submitButton = DialogButton(
+      onPressed: controller.submitButtonEnabled.value
+          ? () {
               Reminder currentReminder = controller.filteredReminderList[index];
               Reminder reminder = Reminder(
                   currentReminder.index, // stays the same
@@ -407,12 +412,30 @@ class ReminderWidget extends StatelessWidget {
               controller.reminders.value.updateReminder(reminder);
               controller.filteredReminderListDirty.value = true;
               Navigator.pop(context);
+            }
+          : null,
+      child: Text(
+        "Save",
+        style: getGlobalDialogTextStyle(Get.isDarkMode),
+      ),
+    );
+    Alert(
+        context: context,
+        title: "Edit Reminder",
+        style: getGlobalAlertStyle(Get.isDarkMode),
+        content: Obx(() => _buildAddEditColumn(
+            context, editingController, editedTag, editedEnabled)),
+        buttons: [
+          DialogButton(
+            onPressed: () {
+              Navigator.pop(context);
             },
             child: Text(
-              "Save",
+              "Cancel",
               style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
-          )
+          ),
+          submitButton,
         ]).show();
   }
 
