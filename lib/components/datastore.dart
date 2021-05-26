@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -112,6 +111,7 @@ abstract class ScheduleDataStoreBase {
   String get bellId;
   String get customBellPath;
 
+  // this is only here to support old reminders format
   bool reminderExists(String reminderText, {List jsonReminderList}) {
     jsonReminderList ??= json.decode(jsonReminders);
     for (Map reminder in jsonReminderList) {
@@ -256,59 +256,59 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     await _prefs.reload();
   }
 
-  static void backup(File backupFile) {
-    var jsonData = _toJson(backup: true);
-    logger.d('backup, tofile:${backupFile.path}: $jsonData');
-    backupFile.writeAsStringSync(jsonData, flush: true);
-  }
+  // static void backup(File backupFile) {
+  //   var jsonData = _toJson(backup: true);
+  //   logger.d('backup, tofile:${backupFile.path}: $jsonData');
+  //   backupFile.writeAsStringSync(jsonData, flush: true);
+  // }
 
-  static void exportReminders(File toFile) {
-    var jsonData = _prefs.getString(ScheduleDataStore.jsonRemindersKey);
-    logger.d('export, tofile:${toFile.path}: $jsonData');
-    toFile.writeAsStringSync(jsonData, flush: true);
-  }
+  // static void exportReminders(File toFile) {
+  //   var jsonData = _prefs.getString(ScheduleDataStore.jsonRemindersKey);
+  //   logger.d('export, tofile:${toFile.path}: $jsonData');
+  //   toFile.writeAsStringSync(jsonData, flush: true);
+  // }
 
-  static void importReminders(File importFile) async {
-    String jsonData = importFile.readAsStringSync();
-    logger.d('restore, file=${importFile.path}: $jsonData');
-    _prefs.setString(ScheduleDataStore.jsonRemindersKey, jsonData);
-  }
+  // static void importReminders(File importFile) async {
+  //   String jsonData = importFile.readAsStringSync();
+  //   logger.d('import, file=${importFile.path}: $jsonData');
+  //   _prefs.setString(ScheduleDataStore.jsonRemindersKey, jsonData);
+  // }
 
-  static Future<InMemoryScheduleDataStore> restore(File backupFile) async {
-    String jsonData = backupFile.readAsStringSync();
-    logger.d('restore, file=${backupFile.path}: $jsonData');
-    Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
-    return await _initFromJson(jsonMap);
-  }
+  // static Future<InMemoryScheduleDataStore> restore(File backupFile) async {
+  //   String jsonData = backupFile.readAsStringSync();
+  //   logger.d('restore, file=${backupFile.path}: $jsonData');
+  //   Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
+  //   return await _initFromJson(jsonMap);
+  // }
 
-  static Future<InMemoryScheduleDataStore> restoreFromJson(
-      String jsonData) async {
-    logger.d('restore, : $jsonData');
-    Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
-    return await _initFromJson(jsonMap);
-  }
+  // static Future<InMemoryScheduleDataStore> restoreFromJson(
+  //     String jsonData) async {
+  //   logger.d('restoreFromJson, : $jsonData');
+  //   Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
+  //   return await _initFromJson(jsonMap);
+  // }
 
   // ISSUE maybe change this to use InMemoryScheduleDataStore
-  static String _toJson({bool backup = false}) {
-    Map<String, dynamic> toMap = Map();
-    for (var key in _prefs.getKeys()) {
-      if (backup && key == enabledKey) {
-        // always backup as disabled:
-        toMap[key] = false;
-      } else {
-        toMap[key] = _prefs.get(key);
-      }
-    }
-    return json.encoder.convert(toMap);
-  }
+  // static String _toJson({bool backup = false}) {
+  //   Map<String, dynamic> toMap = Map();
+  //   for (var key in _prefs.getKeys()) {
+  //     if (backup && key == enabledKey) {
+  //       // always backup as disabled:
+  //       toMap[key] = false;
+  //     } else {
+  //       toMap[key] = _prefs.get(key);
+  //     }
+  //   }
+  //   return json.encoder.convert(toMap);
+  // }
 
-  static Future<InMemoryScheduleDataStore> _initFromJson(
-      Map<String, dynamic> jsonMap) async {
-    for (var key in jsonMap.keys) {
-      setSync(key, jsonMap[key]);
-    }
-    return ScheduleDataStore.getInMemoryInstance();
-  }
+  // static Future<InMemoryScheduleDataStore> _initFromJson(
+  //     Map<String, dynamic> jsonMap) async {
+  //   for (var key in jsonMap.keys) {
+  //     setSync(key, jsonMap[key]);
+  //   }
+  //   return ScheduleDataStore.getInMemoryInstance();
+  // }
 
   void _mergeVal(String key, var val) {
     bool dirty = false;
@@ -356,9 +356,9 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     _mergeVal(customBellPathKey, mds.customBellPath);
   }
 
-  void dumpToLog() {
-    logger.d("ScheduleDataStore: ${_toJson()}");
-  }
+  // void dumpToLog() {
+  //   logger.d("ScheduleDataStore: ${_toJson()}");
+  // }
 
   static Future<void> setSync(String key, dynamic val) async {
     if (val is bool) {
@@ -664,6 +664,9 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
   }
 
   set jsonReminders(String jsonString) {
+    // Validate. This will throw an exception if it doesn't parse
+    Reminders.fromJson(jsonString);
+
     setSync(jsonRemindersKey, jsonString);
   }
 
@@ -674,7 +677,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
       // old reminders list is still here: convert it to json and remove it
       List<String> remindersOrig =
           _prefs.getStringList(ScheduleDataStore.remindersKeyDeprecated);
-      jsonReminders = Reminders.migrateToJson(remindersOrig);
+      jsonReminders = Reminders.migrateRemindersToJson(remindersOrig);
       _prefs.remove(ScheduleDataStore.remindersKeyDeprecated);
       return jsonReminders;
     }
@@ -686,24 +689,9 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     return _prefs.getString(ScheduleDataStore.jsonRemindersKey);
   }
 
-  // In future it's probably worth moving json reminders into their own class
   String randomReminder({String tag}) {
-    List jsonReminderList = json.decode(jsonReminders);
-    jsonReminderList.shuffle();
-    for (Map<String, dynamic> reminder in jsonReminderList) {
-      if (tag != null) {
-        if (!reminder.containsKey('tag') || reminder['tag'] != tag) {
-          continue;
-        }
-      }
-      // enabled entry is optional
-      if (!reminder.containsKey('enabled') || reminder['enabled']) {
-        return reminder['text'];
-      }
-    }
-    return tag == null
-        ? "No reminders are enabled"
-        : "No reminders are enabled for tag '$tag'";
+    Reminders reminders = Reminders.fromJson(jsonReminders);
+    return reminders.randomReminder(tag: tag);
   }
 }
 
@@ -739,21 +727,20 @@ class Reminders {
 
   Reminders.empty() : allReminders = [];
 
-  Reminders.fromDecodedJson(List<Map<String, dynamic>> decodedJson)
-      : allReminders = [] {
+  Reminders.fromJson(String jsonReminders) : allReminders = [] {
+    List jsonReminderList = json.decode(jsonReminders);
     int index = 0;
-    for (Map<String, dynamic> jsonMapEntry in decodedJson) {
+    for (Map<String, dynamic> jsonMapEntry in jsonReminderList) {
       Reminder reminder = Reminder.fromJson(index++, jsonMapEntry);
       allReminders.add(reminder);
     }
     _sortAllByText();
   }
 
-  Reminders.fromJsonString(String jsonData) : allReminders = [] {
-    // List<Map<String, dynamic>> jsonReminderList = jsonDecode(jsonData);
-    List jsonReminderList = json.decode(jsonData);
+  Reminders.fromDecodedJson(List<Map<String, dynamic>> decodedJson)
+      : allReminders = [] {
     int index = 0;
-    for (Map<String, dynamic> jsonMapEntry in jsonReminderList) {
+    for (Map<String, dynamic> jsonMapEntry in decodedJson) {
       Reminder reminder = Reminder.fromJson(index++, jsonMapEntry);
       allReminders.add(reminder);
     }
@@ -797,6 +784,19 @@ class Reminders {
     _reindexAll();
   }
 
+  // Filters out either enabled or disabled, and optionally by tag
+  List<Reminder> filter({bool enabled = true, String tag}) {
+    List<Reminder> result = [];
+    for (Reminder reminder in allReminders) {
+      if (reminder.enabled == enabled) {
+        if (tag == null || reminder.tag == tag) {
+          result.add(reminder);
+        }
+      }
+    }
+    return result;
+  }
+
   List<Reminder> _sortByEnabled(List<Reminder> unsorted) {
     List<Reminder> enabled = [];
     List<Reminder> disabled = [];
@@ -836,6 +836,15 @@ class Reminders {
     _sortAllByText();
   }
 
+  void addReminders(List<Reminder> reminders) {
+    // apply new index, which is at the end of the list
+    for (Reminder newReminder in reminders) {
+      allReminders.add(Reminder(allReminders.length, newReminder.text,
+          newReminder.tag, newReminder.enabled));
+    }
+    _sortAllByText();
+  }
+
   void updateReminder(Reminder changedReminder) {
     allReminders[changedReminder.index] = changedReminder;
     _sortAllByText();
@@ -846,6 +855,15 @@ class Reminders {
     _sortAllByText();
   }
 
+  bool reminderExists(Reminder r) {
+    for (Reminder reminder in allReminders) {
+      if (reminder.text == r.text) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   int findReminderIndex(String reminderText) {
     for (Reminder reminder in allReminders) {
       if (reminderText == reminder.text) {
@@ -853,6 +871,17 @@ class Reminders {
       }
     }
     throw Exception("Reminder not found: $reminderText");
+  }
+
+  String randomReminder({String tag}) {
+    List<Reminder> filteredList = filter(enabled: true, tag: tag);
+    if (filteredList.isEmpty) {
+      return tag == null
+          ? "No reminders are enabled"
+          : "No reminders are enabled for tag '$tag'";
+    }
+    filteredList.shuffle();
+    return filteredList.first.text;
   }
 
   String toJson() {
@@ -868,7 +897,7 @@ class Reminders {
     return jsonReminders;
   }
 
-  static String migrateToJson(List<String> reminderList) {
+  static String migrateRemindersToJson(List<String> reminderList) {
     // old reminders list is still here: convert it to json and remove it
     logger.i("Migrating reminders to json");
     List<Map> conversionList = [];
@@ -885,23 +914,5 @@ class Reminders {
     jsonReminders = encoder.convert(conversionList);
     logger.i("Finished reminder migration to json: $jsonReminders");
     return jsonReminders;
-  }
-
-  String randomReminder({String tag}) {
-    allReminders.shuffle();
-    for (Reminder reminder in allReminders) {
-      if (tag != null) {
-        if (reminder.tag != tag) {
-          continue;
-        }
-      }
-      // enabled entry is optional
-      if (reminder.enabled) {
-        return reminder.text;
-      }
-    }
-    return tag == null
-        ? "No reminders are enabled"
-        : "No reminders are enabled for tag '$tag'";
   }
 }

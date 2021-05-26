@@ -30,24 +30,6 @@ class NotifyAudioPlayer {
 
   AudioSessionConfiguration _sessionConfiguration;
 
-  // // TODO remove this
-  // void selectAudioChannel(String channel) async {
-  //   if (audioChannelForNotification.containsKey(channel)) {
-  //     _audioChannelSelection = channel;
-
-  //     _sessionConfiguration = _sessionConfiguration.copyWith(
-  //         androidAudioAttributes: AndroidAudioAttributes(
-  //       // TODO copy this:
-  //       contentType: AndroidAudioContentType.music,
-  //       flags: AndroidAudioFlags.none,
-  //       usage: audioChannelForNotification[_audioChannelSelection],
-  //     ));
-  //     await _session.configure(_sessionConfiguration);
-  //   } else {
-  //     throw Exception('Unknown audio channel: $channel');
-  //   }
-  // }
-
   String getAudioChannelSelection() {
     return _audioChannelSelection;
   }

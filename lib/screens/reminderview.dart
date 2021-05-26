@@ -48,7 +48,7 @@ class ReminderWidgetController extends GetxController {
 
     // TODO mds is not up to date here after restore
     InMemoryScheduleDataStore mds = Get.find();
-    reminders.value = Reminders.fromJsonString(mds.jsonReminders);
+    reminders.value = Reminders.fromJson(mds.jsonReminders);
     filteredReminderList.value = reminders.value
         .getFilteredReminderList(tag: selectedTag.value, sorted: true);
     groupedReminders.clear();
@@ -151,6 +151,9 @@ class ReminderWidget extends StatelessWidget {
                   children: <Widget>[
                     Row(
                       children: [
+                        /*controller.groupedReminders.length <= 1
+                            ? Container()
+                            :*/
                         Expanded(
                             child: Container(
                                 padding: EdgeInsets.all(8),
@@ -160,7 +163,7 @@ class ReminderWidget extends StatelessWidget {
                                   showSelectedItem: true,
                                   items:
                                       controller.groupedReminders.keys.toList(),
-                                  label: "Filter: ",
+                                  label: "Filter by tag: ",
                                   hint: "Select tag:",
                                   showClearButton: true,
                                   onChanged: (value) {
@@ -179,6 +182,7 @@ class ReminderWidget extends StatelessWidget {
                         // )
                       ],
                     ),
+                    //Divider(),
                     Expanded(
                         child: ListView.builder(
                       shrinkWrap: true,

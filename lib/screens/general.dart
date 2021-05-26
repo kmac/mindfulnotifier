@@ -227,21 +227,33 @@ class GeneralWidget extends StatelessWidget {
               }
               remindersList.add(reminder);
             }
-            mds.jsonReminders = Reminders.migrateToJson(remindersList);
+            mds.jsonReminders = Reminders.migrateRemindersToJson(remindersList);
           } else {
             if (alertResult['merge']) {
-              // TODO use new Reminders classes
-              List newJsonReminders = json.decode(importedString);
-              List existingJsonReminders = json.decode(mds.jsonReminders);
-              for (Map newReminder in newJsonReminders) {
-                if (newReminder.containsKey('text') &&
-                    !mds.reminderExists(newReminder['text'],
-                        jsonReminderList: existingJsonReminders)) {
-                  existingJsonReminders.add(newReminder);
+              Reminders importedReminders = Reminders.fromJson(importedString);
+              Reminders existingReminders =
+                  Reminders.fromJson(mds.jsonReminders);
+              List<Reminder> toImport = [];
+              for (Reminder newReminder in importedReminders.allReminders) {
+                if (!existingReminders.reminderExists(newReminder)) {
+                  toImport.add(newReminder);
                 }
               }
-              mds.jsonReminders = json.encode(existingJsonReminders);
+              existingReminders.addReminders(toImport);
+              mds.jsonReminders = existingReminders.toJson();
+
+              // List newJsonReminders = json.decode(importedString);
+              // List existingJsonReminders = json.decode(mds.jsonReminders);
+              // for (Map newReminder in newJsonReminders) {
+              //   if (newReminder.containsKey('text') &&
+              //       !mds.reminderExists(newReminder['text'],
+              //           jsonReminderList: existingJsonReminders)) {
+              //     existingJsonReminders.add(newReminder);
+              //   }
+              // }
+              // mds.jsonReminders = json.encode(existingJsonReminders);
             } else {
+              // This is a replace operation
               mds.jsonReminders = importedString;
             }
           }
@@ -257,7 +269,7 @@ class GeneralWidget extends StatelessWidget {
         } catch (e) {
           logger.e(
               'Reminder import failed, file=${result.files.first.path}, exception: $e');
-          utils.showErrorAlert(Get.context, 'Restore Failed',
+          utils.showErrorAlert(Get.context, 'Import Failed',
               'The reminder import operation failed with an exception: $e');
         }
       }
