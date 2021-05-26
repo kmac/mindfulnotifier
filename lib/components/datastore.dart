@@ -7,28 +7,81 @@ import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = createLogger('datastore');
 
-// A json list. Each entry has keys: text, enabled, tag, weight
-// Note: be sure to use " " to quote the json
-// NOTE: tags are not implemented yet but are included because it is in the roadmap
+const defaultTag = 'default';
+const customTag = 'custom';
+
+// A list for the initial json string. Each entry has keys: text, enabled, tag, weight
 // Idea: add optional weight to support weighing reminders differently
-const String defaultJsonReminders = '''
-  [
-    {"text": "Are you aware?", "enabled": true, "tag": "default"},
-    {"text": "Breathe deeply. This is the present moment.", "enabled": true, "tag": "default"},
-    {"text": "Take a moment to pause, and come back to the present.", "enabled": true, "tag": "default"},
-    {"text": "Bring awareness into this moment.", "enabled": true, "tag": "default"},
-    {"text": "Let go of greed, aversion, and delusion.", "enabled": true, "tag": "default"},
-    {"text": "Respond, not react.", "enabled": true, "tag": "default"},
-    {"text": "All of this is impermanent.", "enabled": true, "tag": "default"},
-    {"text": "Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.", "enabled": true, "tag": "default"},
-    {"text": "RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion", "enabled": false, "tag": "default"},
-    {"text": "Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.", "enabled": true, "tag": "default"},
-    {"text": "What is the attitude in the mind right now?", "enabled": true, "tag": "default"},
-    {"text": "May you be happy. May you be healthy. May you be free from harm. May you be peaceful.", "enabled": true, "tag": "default"},
-    {"text": "\"Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.\" -- Joseph Goldstein", "enabled": true, "tag": "default"},
-    {"text": "\"Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself.\" -- Bashō", "enabled": true, "tag": "default"},
-  ]
-''';
+const List<Map<String, dynamic>> defaultJsonReminderMap = [
+  {"text": "Are you aware?", "enabled": true, "tag": "$defaultTag"},
+  {
+    "text": "Breathe deeply. This is the present moment.",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text": "Take a moment to pause, and come back to the present.",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text": "Bring awareness into this moment.",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text": "Let go of greed, aversion, and delusion.",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {"text": "Respond, not react.", "enabled": true, "tag": "$defaultTag"},
+  {
+    "text": "All of this is impermanent.",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text":
+        "Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text":
+        "RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion",
+    "enabled": false,
+    "tag": "$defaultTag"
+  },
+  {
+    "text":
+        "Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text": "What is the attitude in the mind right now?",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text":
+        "May you be happy. May you be healthy. May you be free from harm. May you be peaceful.",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text":
+        "\"Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.\" -- Joseph Goldstein",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+  {
+    "text":
+        "\"Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself.\" -- Bashō",
+    "enabled": true,
+    "tag": "$defaultTag"
+  },
+];
 
 // ISSUE sharing data across the UI and the alarm/scheduler isolate:
 //  https://github.com/flutter/flutter/issues/61529
@@ -52,8 +105,8 @@ abstract class ScheduleDataStoreBase {
   int get quietHoursEndMinute;
   bool get notifyQuietHours;
   String get reminderMessage;
-  @deprecated
-  List<String> get reminders;
+  // @deprecated
+  // List<String> get remindersDeprecated;
   String get jsonReminders;
   String get infoMessage;
   String get controlMessage;
@@ -91,7 +144,8 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
   int quietHoursEndMinute;
   bool notifyQuietHours;
   String reminderMessage;
-  List<String> reminders;
+  // @deprecated
+  // List<String> remindersDeprecated;
   String jsonReminders;
   String infoMessage;
   String controlMessage;
@@ -145,8 +199,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
   static const String quietHoursEndMinuteKey = 'quietHoursEndMinute';
   static const String notifyQuietHoursKey = 'notifyQuietHours';
   static const String reminderMessageKey = 'reminderMessage';
-  @deprecated
-  static const String remindersKey = 'reminders';
+  static const String remindersKeyDeprecated = 'reminders';
   static const String jsonRemindersKey = 'jsonReminders';
   static const String infoMessageKey = 'infoMessage';
   static const String controlMessageKey = 'controlMessage';
@@ -294,7 +347,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     _mergeVal(quietHoursEndMinuteKey, mds.quietHoursEndMinute);
     _mergeVal(notifyQuietHoursKey, mds.notifyQuietHours);
     _mergeVal(reminderMessageKey, mds.reminderMessage);
-    _mergeVal(remindersKey, mds.reminders);
+    // _mergeVal(remindersKey, mds.reminders);
     _mergeVal(jsonRemindersKey, mds.jsonReminders);
     _mergeVal(infoMessageKey, mds.infoMessage);
     _mergeVal(controlMessageKey, mds.controlMessage);
@@ -610,17 +663,18 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     return _prefs.getString(ScheduleDataStore.customBellPathKey);
   }
 
-  set reminders(List<String> value) {
-    setSync(remindersKey, value);
-  }
+  // @deprecated
+  // set remindersDeprecated(List<String> value) {
+  //   setSync(remindersKeyDeprecated, value);
+  // }
 
-  @override
-  List<String> get reminders {
-    if (_prefs.containsKey(ScheduleDataStore.remindersKey)) {
-      return _prefs.getStringList(ScheduleDataStore.remindersKey);
-    }
-    return [];
-  }
+  // @override
+  // List<String> get remindersDeprecated {
+  //   if (_prefs.containsKey(ScheduleDataStore.remindersKeyDeprecated)) {
+  //     return _prefs.getStringList(ScheduleDataStore.remindersKeyDeprecated);
+  //   }
+  //   return [];
+  // }
 
   set jsonReminders(String jsonString) {
     setSync(jsonRemindersKey, jsonString);
@@ -628,35 +682,26 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
 
   @override
   String get jsonReminders {
-    if (_prefs.containsKey(ScheduleDataStore.remindersKey)) {
+    // Check for migration to new format:
+    if (_prefs.containsKey(ScheduleDataStore.remindersKeyDeprecated)) {
       // old reminders list is still here: convert it to json and remove it
-      logger.i("Migrating reminders to json");
-      List<Map> conversionList = [];
-      for (String rawReminder in reminders) {
-        Map<String, dynamic> mapForJson = Map();
-        mapForJson['text'] = rawReminder;
-        mapForJson['enabled'] = true;
-        mapForJson['tag'] = "default";
-        conversionList.add(mapForJson);
-      }
-      // save the string pretty-printed so it will also be exported in this format
-      JsonEncoder encoder = new JsonEncoder.withIndent('  ');
-      jsonReminders = encoder.convert(conversionList);
-      _prefs.remove(ScheduleDataStore.remindersKey);
-      logger.i("Finished reminder migration to json: $jsonReminders");
+      List<String> remindersOrig =
+          _prefs.getStringList(ScheduleDataStore.remindersKeyDeprecated);
+      jsonReminders = Reminders.migrateToJson(remindersOrig);
+      _prefs.remove(ScheduleDataStore.remindersKeyDeprecated);
       return jsonReminders;
     }
-
     if (!_prefs.containsKey(ScheduleDataStore.jsonRemindersKey)) {
-      // First load: initialize to default reminder list
-      jsonReminders = defaultJsonReminders;
+      // save the string pretty-printed so it will also be exported in this format
+      JsonEncoder encoder = new JsonEncoder.withIndent('  ');
+      jsonReminders = encoder.convert(defaultJsonReminderMap);
     }
     return _prefs.getString(ScheduleDataStore.jsonRemindersKey);
   }
 
   // In future it's probably worth moving json reminders into their own class
   String randomReminder({String tag}) {
-    List jsonReminderList = jsonDecode(jsonReminders);
+    List jsonReminderList = json.decode(jsonReminders);
     jsonReminderList.shuffle();
     for (Map<String, dynamic> reminder in jsonReminderList) {
       if (tag != null) {
@@ -720,7 +765,7 @@ class Reminders {
 
   Reminders.fromJsonString(String jsonData) : allReminders = [] {
     // List<Map<String, dynamic>> jsonReminderList = jsonDecode(jsonData);
-    List jsonReminderList = jsonDecode(jsonData);
+    List jsonReminderList = json.decode(jsonData);
     int index = 0;
     for (Map<String, dynamic> jsonMapEntry in jsonReminderList) {
       Reminder reminder = Reminder.fromJson(index++, jsonMapEntry);
@@ -785,7 +830,7 @@ class Reminders {
     // save the string pretty-printed so it will also be exported in this format
     JsonEncoder encoder = new JsonEncoder.withIndent('  ');
     jsonReminders = encoder.convert(conversionList);
-    logger.d("Reminders toJson: $jsonReminders");
+    // logger.d("Reminders toJson: $jsonReminders");
     return jsonReminders;
   }
 

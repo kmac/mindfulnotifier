@@ -219,7 +219,7 @@ class GeneralWidget extends StatelessWidget {
           String importedString = Utf8Decoder().convert(uint8list);
           if (importedString.contains("scheduleType")) {
             // this is an old 'backup' file, not an exported reminder list
-            Map<String, dynamic> importedJson = jsonDecode(importedString);
+            Map<String, dynamic> importedJson = json.decode(importedString);
             List<String> remindersList = [];
             for (String reminder in importedJson['reminders']) {
               if (alertResult['merge'] && mds.reminderExists(reminder)) {
@@ -227,11 +227,11 @@ class GeneralWidget extends StatelessWidget {
               }
               remindersList.add(reminder);
             }
-            mds.reminders = remindersList;
+            mds.jsonReminders = Reminders.migrateToJson(remindersList);
           } else {
             if (alertResult['merge']) {
-              List newJsonReminders = jsonDecode(importedString);
-              List existingJsonReminders = jsonDecode(mds.jsonReminders);
+              List newJsonReminders = json.decode(importedString);
+              List existingJsonReminders = json.decode(mds.jsonReminders);
               for (Map newReminder in newJsonReminders) {
                 if (newReminder.containsKey('text') &&
                     !mds.reminderExists(newReminder['text'],
@@ -239,7 +239,7 @@ class GeneralWidget extends StatelessWidget {
                   existingJsonReminders.add(newReminder);
                 }
               }
-              mds.jsonReminders = jsonEncode(existingJsonReminders);
+              mds.jsonReminders = json.encode(existingJsonReminders);
             } else {
               mds.jsonReminders = importedString;
             }

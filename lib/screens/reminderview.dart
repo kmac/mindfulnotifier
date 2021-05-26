@@ -23,7 +23,6 @@ class ReminderWidgetController extends GetxController {
   final selectedIndex = 0.obs;
   final selectedTag = ''.obs;
   final scrollToBottom = false.obs;
-  final submitButtonEnabled = true.obs;
   final ScrollController scrollController = ScrollController();
   final Map<String, List<Reminder>> groupedReminders =
       <String, List<Reminder>>{}.obs;
@@ -39,10 +38,9 @@ class ReminderWidgetController extends GetxController {
 
   @override
   void onReady() {
-    //ever(reminderStringList, handleReminderList);
     ever(selectedIndex, handleSelectedIndex);
     ever(selectedTag, handleSelectedTag);
-    ever(filteredReminderList, handleReminderList);
+    // ever(filteredReminderList, handleReminderList);
     ever(filteredReminderListDirty, handleReminderListDirty);
     ever(scrollToBottom, handleScrollToBottom);
     super.onReady();
@@ -50,16 +48,6 @@ class ReminderWidgetController extends GetxController {
 
   Future<void> init() async {
     logger.d("init");
-
-    // TODO mds is not up to date here after restore
-    // TODO this is just temporary to display the reminders. The rest of this file needs to deal with the json formatted stuff.
-    // InMemoryScheduleDataStore mds = Get.find();
-    //List decodedReminderList = jsonDecode(mds.jsonReminders);
-    //List<String> reminders = [];
-    //for (Map mapEntry in decodedReminderList) {
-    //  reminders.add(mapEntry['text']);
-    //}
-    // reminderStringList.assignAll(reminders);
 
     // TODO mds is not up to date here after restore
     InMemoryScheduleDataStore mds = Get.find();
@@ -72,13 +60,11 @@ class ReminderWidgetController extends GetxController {
 
   void handleSelectedIndex(int index) async {
     logger.d("handleSelectedIndex: $index");
-    // refresh();
   }
 
   void handleSelectedTag(String tag) async {
     logger.d("handleSelectedTag: $tag");
     init();
-    // refresh();
   }
 
   void handleScrollToBottom(bool scroll) async {
@@ -100,30 +86,10 @@ class ReminderWidgetController extends GetxController {
     filteredReminderListDirty.value = false;
     Get.find<MindfulNotifierWidgetController>()
         .sendToAlarmService({'update': mds});
-
-    //   if (selectedTag.value == '') {
-    //     // using allReminders
-    //   } else {
-    //     // rebuild using filtered
-
-    //     for (Reminder reminder in reminders.value.allReminders) {}
-    //   }
-
-    //   InMemoryScheduleDataStore mds = Get.find();
-    //   mds.jsonReminders = reminders.toJson();
   }
 
-  void handleReminderList(changedReminderList) {
-    if (false) {
-      InMemoryScheduleDataStore mds = Get.find();
-
-      // TODO THIS IS WRONG NOW
-      mds.reminders = changedReminderList;
-
-      Get.find<MindfulNotifierWidgetController>()
-          .sendToAlarmService({'update': mds});
-    }
-  }
+  // void handleReminderList(changedReminderList) {
+  // }
 }
 
 class ReminderWidget extends StatelessWidget {
@@ -315,17 +281,7 @@ class ReminderWidget extends StatelessWidget {
                 ),
                 // textAlign: TextAlign.center,
                 autofillHints: controller.groupedReminders.keys.toList(),
-                //onTap: () {
-                //  controller.submitButtonEnabled.value = false;
-                //},
-                // onChanged: (value) {
-                //   currentTag = value;
-                // },
-                // onEditingComplete: () {
-                //   editedTag.value = currentTag;
-                // },
                 onSubmitted: (value) {
-                  //  controller.submitButtonEnabled.value = true;
                   editedTag.value = value;
                 },
               )),
@@ -346,26 +302,26 @@ class ReminderWidget extends StatelessWidget {
   }
 
   void _showAddDialog(BuildContext context) {
-    final editedTag = "default".obs;
+    final editedTag = controller.selectedTag.value != ''
+        ? controller.selectedTag.value.obs
+        : customTag.obs;
     final editedEnabled = true.obs;
 
     TextEditingController editingController = new TextEditingController();
     DialogButton submitButton = DialogButton(
-      onPressed: controller.submitButtonEnabled.value
-          ? () {
-              Reminder reminder = Reminder(
-                  -1, // will be changed
-                  editingController.text,
-                  editedTag.value,
-                  editedEnabled.value);
-              controller.reminders.value.addReminder(reminder);
-              controller.filteredReminderListDirty.value = true;
+      onPressed: () {
+        Reminder reminder = Reminder(
+            -1, // will be changed
+            editingController.text,
+            editedTag.value,
+            editedEnabled.value);
+        controller.reminders.value.addReminder(reminder);
+        controller.filteredReminderListDirty.value = true;
 
-              controller.scrollToBottom.value = true;
-              // _selectedIndex = controller.reminderList.length - 1;
-              Navigator.pop(context);
-            }
-          : null,
+        controller.scrollToBottom.value = true;
+        // _selectedIndex = controller.reminderList.length - 1;
+        Navigator.pop(context);
+      },
       child: Text(
         "Add",
         style: getGlobalDialogTextStyle(Get.isDarkMode),
@@ -401,19 +357,17 @@ class ReminderWidget extends StatelessWidget {
     TextEditingController editingController =
         new TextEditingController(text: editedText.value);
     DialogButton submitButton = DialogButton(
-      onPressed: controller.submitButtonEnabled.value
-          ? () {
-              Reminder currentReminder = controller.filteredReminderList[index];
-              Reminder reminder = Reminder(
-                  currentReminder.index, // stays the same
-                  editingController.text,
-                  editedTag.value,
-                  editedEnabled.value);
-              controller.reminders.value.updateReminder(reminder);
-              controller.filteredReminderListDirty.value = true;
-              Navigator.pop(context);
-            }
-          : null,
+      onPressed: () {
+        Reminder currentReminder = controller.filteredReminderList[index];
+        Reminder reminder = Reminder(
+            currentReminder.index, // stays the same
+            editingController.text,
+            editedTag.value,
+            editedEnabled.value);
+        controller.reminders.value.updateReminder(reminder);
+        controller.filteredReminderListDirty.value = true;
+        Navigator.pop(context);
+      },
       child: Text(
         "Save",
         style: getGlobalDialogTextStyle(Get.isDarkMode),
@@ -492,60 +446,3 @@ class ReminderWidget extends StatelessWidget {
         ]).show();
   }
 }
-
-// DISMISSABLE:
-// @override
-// Widget build(BuildContext context) {
-//   return Scaffold(
-//       appBar: AppBar(
-//         centerTitle: true,
-//         title: Text('Configure Reminders'),
-//       ),
-//       body: Center(
-//           child: Obx(() => ListView.builder(
-//                 itemCount: controller.reminderList.length,
-//                 itemBuilder: (context, index) {
-//                   return Dismissible(
-//                     // Show a red background as the item is swiped away.
-//                     background: Container(color: Colors.red),
-//                     // Each Dismissible must contain a Key. Keys allow Flutter to
-//                     // uniquely identify widgets.
-//                     key: Key(controller.reminderList[index]),
-//                     // Provide a function that tells the app
-//                     // what to do after an item has been swiped away.
-//                     onDismissed: (direction) {
-//                       { direction == DismissDirection.endToStart ? _.${2:remove}() : _.${3:edit}() }
-//                       // Remove the item from the data source.
-//                       // setState(() {
-//                       //   items.removeAt(index);
-//                       // }
-//                       //  );
-
-//                       // Show a snackbar. This snackbar could also contain "Undo" actions.
-//                       Scaffold.of(context).showSnackBar(SnackBar(
-//                           content: Text(
-//                               "${controller.reminderList[index]} dismissed")));
-//                     },
-//                     child: ListTile(
-//                         title: Text('${controller.reminderList[index]}')),
-//                   );
-//                 },
-//               ))));
-// }
-
-//           ListView.builder(
-//                 itemCount: 10,
-//                 itemBuilder: (BuildContext context, int index) {
-//                   return ListTile(
-//                     title: Text('Item $index'),
-//                     selected: index == _selectedIndex,
-//                     onTap: () {
-//                       controller.reminderList[_selectedIndex] =
-//                       // setState(() {
-//                       //   _selectedIndex = index;
-//                       // });
-//                     },
-//                   );
-//                 },
-//               ))));
-// }
