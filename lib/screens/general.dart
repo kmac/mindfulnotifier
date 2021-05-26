@@ -230,6 +230,7 @@ class GeneralWidget extends StatelessWidget {
             mds.jsonReminders = Reminders.migrateToJson(remindersList);
           } else {
             if (alertResult['merge']) {
+              // TODO use new Reminders classes
               List newJsonReminders = json.decode(importedString);
               List existingJsonReminders = json.decode(mds.jsonReminders);
               for (Map newReminder in newJsonReminders) {

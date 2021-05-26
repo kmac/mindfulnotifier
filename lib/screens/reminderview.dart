@@ -16,13 +16,11 @@ import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
 var logger = createLogger('reminderview');
 
 class ReminderWidgetController extends GetxController {
-  // final reminderStringList = <String>[].obs;
-  final reminders = Reminders([]).obs;
+  final reminders = Reminders.empty().obs;
   final filteredReminderList = <Reminder>[].obs;
   final filteredReminderListDirty = false.obs;
   final selectedIndex = 0.obs;
   final selectedTag = ''.obs;
-  final scrollToBottom = false.obs;
   final ScrollController scrollController = ScrollController();
   final Map<String, List<Reminder>> groupedReminders =
       <String, List<Reminder>>{}.obs;
@@ -42,7 +40,6 @@ class ReminderWidgetController extends GetxController {
     ever(selectedTag, handleSelectedTag);
     // ever(filteredReminderList, handleReminderList);
     ever(filteredReminderListDirty, handleReminderListDirty);
-    ever(scrollToBottom, handleScrollToBottom);
     super.onReady();
   }
 
@@ -52,8 +49,8 @@ class ReminderWidgetController extends GetxController {
     // TODO mds is not up to date here after restore
     InMemoryScheduleDataStore mds = Get.find();
     reminders.value = Reminders.fromJsonString(mds.jsonReminders);
-    filteredReminderList.value =
-        reminders.value.getFilteredReminderList(tag: selectedTag.value);
+    filteredReminderList.value = reminders.value
+        .getFilteredReminderList(tag: selectedTag.value, sorted: true);
     groupedReminders.clear();
     groupedReminders.addAll(reminders.value.buildGroupedReminders());
   }
@@ -65,18 +62,6 @@ class ReminderWidgetController extends GetxController {
   void handleSelectedTag(String tag) async {
     logger.d("handleSelectedTag: $tag");
     init();
-  }
-
-  void handleScrollToBottom(bool scroll) async {
-    if (scrollToBottom.value) {
-      logger.i("scrollToBottom");
-      // WidgetsBinding.instance.addPostFrameCallback((_) =>
-      //     scrollController.animateTo(scrollController.position.maxScrollExtent,
-      //         duration: Duration(milliseconds: 200), curve: Curves.easeInOut));
-      scrollController.animateTo(scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 200), curve: Curves.easeInOut);
-      scrollToBottom.value = false;
-    }
   }
 
   void handleReminderListDirty(dirty) async {
@@ -167,17 +152,31 @@ class ReminderWidget extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                            child: DropdownSearch<String>(
-                          mode: Mode.MENU,
-                          showSelectedItem: true,
-                          items: controller.groupedReminders.keys.toList(),
-                          label: "Tag: ",
-                          showClearButton: true,
-                          onChanged: (value) {
-                            controller.selectedTag.value =
-                                value == null ? '' : value;
-                          },
-                        )),
+                            child: Container(
+                                padding: EdgeInsets.all(8),
+                                margin: EdgeInsets.only(top: 8, bottom: 8),
+                                child: DropdownSearch<String>(
+                                  mode: Mode.MENU,
+                                  showSelectedItem: true,
+                                  items:
+                                      controller.groupedReminders.keys.toList(),
+                                  label: "Filter: ",
+                                  hint: "Select tag:",
+                                  showClearButton: true,
+                                  onChanged: (value) {
+                                    controller.selectedTag.value =
+                                        value == null ? '' : value;
+                                  },
+                                ))),
+                        // Text('Hide Disabled: ', style: TextStyle(fontSize: 12)),
+                        // Obx(
+                        //   () => Checkbox(
+                        //       value: controller.hideDisabled.value,
+                        //       onChanged: (value) {
+                        //         // logger.d("Enabled onChanged value: $value");
+                        //         controller.hideDisabled.value = value;
+                        //       }),
+                        // )
                       ],
                     ),
                     Expanded(
@@ -223,23 +222,25 @@ class ReminderWidget extends StatelessWidget {
                                   style: controller
                                           .filteredReminderList[index].enabled
                                       ? TextStyle(
-                                          fontSize: 16,
+                                          // fontSize: 16,
                                           fontWeight: FontWeight.normal)
                                       : TextStyle(
-                                          fontSize: 16,
+                                          // fontSize: 16,
                                           // fontStyle: FontStyle.italic,
                                           fontWeight: FontWeight.w300),
                                 ),
+                                leading: index == controller.selectedIndex.value
+                                    //? Icon(Icons.keyboard_arrow_right)
+                                    ? Icon(Icons.arrow_right)
+                                    : null,
                                 trailing: controller
                                         .filteredReminderList[index].enabled
                                     ? null
                                     : Icon(Icons.alarm_off /*, size: 14*/),
-                                leading: index == controller.selectedIndex.value
-                                    ? Icon(Icons.keyboard_arrow_right)
-                                    : null,
+                                // : Icon(Icons.no_accounts /*, size: 14*/),
+                                // : Icon(Icons.voice_over_off /*, size: 14*/),
                                 onTap: () {
                                   controller.selectedIndex.value = index;
-                                  // _showEditDialog(context, index);
                                 },
                                 onLongPress: () {
                                   controller.selectedIndex.value = index;
@@ -317,9 +318,6 @@ class ReminderWidget extends StatelessWidget {
             editedEnabled.value);
         controller.reminders.value.addReminder(reminder);
         controller.filteredReminderListDirty.value = true;
-
-        controller.scrollToBottom.value = true;
-        // _selectedIndex = controller.reminderList.length - 1;
         Navigator.pop(context);
       },
       child: Text(
@@ -432,7 +430,6 @@ class ReminderWidget extends StatelessWidget {
           ),
           DialogButton(
             onPressed: () {
-              // controller.filteredReminderList.removeAt(index);
               controller.reminders.value
                   .deleteReminder(controller.filteredReminderList[index].index);
               controller.filteredReminderListDirty.value = true;

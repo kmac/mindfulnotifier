@@ -105,8 +105,6 @@ abstract class ScheduleDataStoreBase {
   int get quietHoursEndMinute;
   bool get notifyQuietHours;
   String get reminderMessage;
-  // @deprecated
-  // List<String> get remindersDeprecated;
   String get jsonReminders;
   String get infoMessage;
   String get controlMessage;
@@ -115,7 +113,7 @@ abstract class ScheduleDataStoreBase {
   String get customBellPath;
 
   bool reminderExists(String reminderText, {List jsonReminderList}) {
-    jsonReminderList ??= jsonDecode(jsonReminders);
+    jsonReminderList ??= json.decode(jsonReminders);
     for (Map reminder in jsonReminderList) {
       if (reminder.containsKey('text') && reminder['text'] == reminderText) {
         return true;
@@ -144,8 +142,6 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
   int quietHoursEndMinute;
   bool notifyQuietHours;
   String reminderMessage;
-  // @deprecated
-  // List<String> remindersDeprecated;
   String jsonReminders;
   String infoMessage;
   String controlMessage;
@@ -199,8 +195,11 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
   static const String quietHoursEndMinuteKey = 'quietHoursEndMinute';
   static const String notifyQuietHoursKey = 'notifyQuietHours';
   static const String reminderMessageKey = 'reminderMessage';
+
+  // replaced by jsonReminders :
   static const String remindersKeyDeprecated = 'reminders';
   static const String jsonRemindersKey = 'jsonReminders';
+
   static const String infoMessageKey = 'infoMessage';
   static const String controlMessageKey = 'controlMessage';
   static const String themeKey = 'theme';
@@ -322,7 +321,8 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
       dirty = true;
     }
     if (dirty) {
-      logger.i("merging $key => $val");
+      logger.i("merging $key");
+      // logger.d("merging $key => $val");
       setSync(key, val);
     }
   }
@@ -663,19 +663,6 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     return _prefs.getString(ScheduleDataStore.customBellPathKey);
   }
 
-  // @deprecated
-  // set remindersDeprecated(List<String> value) {
-  //   setSync(remindersKeyDeprecated, value);
-  // }
-
-  // @override
-  // List<String> get remindersDeprecated {
-  //   if (_prefs.containsKey(ScheduleDataStore.remindersKeyDeprecated)) {
-  //     return _prefs.getStringList(ScheduleDataStore.remindersKeyDeprecated);
-  //   }
-  //   return [];
-  // }
-
   set jsonReminders(String jsonString) {
     setSync(jsonRemindersKey, jsonString);
   }
@@ -749,10 +736,8 @@ class Reminder {
 
 class Reminders {
   final List<Reminder> allReminders;
-  Reminders(this.allReminders);
 
-  // ReminderList.fromJson(List<Map<String, dynamic>> json)
-  //     : reminders = json.map((e) => Reminder.fromJson(index++, e));
+  Reminders.empty() : allReminders = [];
 
   Reminders.fromDecodedJson(List<Map<String, dynamic>> decodedJson)
       : allReminders = [] {
@@ -761,6 +746,7 @@ class Reminders {
       Reminder reminder = Reminder.fromJson(index++, jsonMapEntry);
       allReminders.add(reminder);
     }
+    _sortAllByText();
   }
 
   Reminders.fromJsonString(String jsonData) : allReminders = [] {
@@ -771,6 +757,7 @@ class Reminders {
       Reminder reminder = Reminder.fromJson(index++, jsonMapEntry);
       allReminders.add(reminder);
     }
+    _sortAllByText();
   }
 
   Map<String, List<Reminder>> buildGroupedReminders() {
@@ -789,14 +776,55 @@ class Reminders {
     return groupedReminders;
   }
 
-  List<Reminder> getFilteredReminderList({String tag}) {
+  void _reindexAll() {
+    for (int index = 0; index < allReminders.length; index++) {
+      allReminders[index] = Reminder(index, allReminders[index].text,
+          allReminders[index].tag, allReminders[index].enabled);
+    }
+  }
+
+  String _stripFirstQuote(String s) {
+    String firstChar = s.substring(0, 1);
+    if (firstChar == '"' || firstChar == "'") {
+      return s.substring(1);
+    }
+    return s;
+  }
+
+  void _sortAllByText() {
+    allReminders.sort(
+        (a, b) => _stripFirstQuote(a.text).compareTo(_stripFirstQuote(b.text)));
+    _reindexAll();
+  }
+
+  List<Reminder> _sortByEnabled(List<Reminder> unsorted) {
+    List<Reminder> enabled = [];
+    List<Reminder> disabled = [];
+    for (Reminder reminder in unsorted) {
+      if (reminder.enabled) {
+        enabled.add(reminder);
+      } else {
+        disabled.add(reminder);
+      }
+    }
+    enabled.addAll(disabled);
+    return enabled;
+  }
+
+  List<Reminder> getFilteredReminderList({String tag, bool sorted = true}) {
     if (tag == null || tag == '') {
+      if (sorted) {
+        return _sortByEnabled(allReminders);
+      }
       return allReminders;
     }
     Map<String, List<Reminder>> groupedReminders = buildGroupedReminders();
     if (!groupedReminders.containsKey(tag)) {
       logger.e("tag '$tag' not in reminderGroups");
       return [];
+    }
+    if (sorted) {
+      return _sortByEnabled(groupedReminders[tag]);
     }
     return groupedReminders[tag];
   }
@@ -805,20 +833,26 @@ class Reminders {
     // apply new index, which is at the end of the list
     allReminders.add(Reminder(
         allReminders.length, reminder.text, reminder.tag, reminder.enabled));
+    _sortAllByText();
   }
 
   void updateReminder(Reminder changedReminder) {
     allReminders[changedReminder.index] = changedReminder;
+    _sortAllByText();
   }
 
   void deleteReminder(int index) {
     allReminders.removeAt(index);
-    // Now re-index all the reminders
-    index = 0;
-    for (int index = 0; index < allReminders.length; index++) {
-      allReminders[index] = Reminder(index, allReminders[index].text,
-          allReminders[index].tag, allReminders[index].enabled);
+    _sortAllByText();
+  }
+
+  int findReminderIndex(String reminderText) {
+    for (Reminder reminder in allReminders) {
+      if (reminderText == reminder.text) {
+        return reminder.index;
+      }
     }
+    throw Exception("Reminder not found: $reminderText");
   }
 
   String toJson() {
