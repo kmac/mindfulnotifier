@@ -135,7 +135,7 @@ class Scheduler {
           '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}';
     }
     Notifier().showInfoNotification(enabledReminderText);
-    ds.reminderMessage = ds.reminders[Random().nextInt(ds.reminders.length)];
+    ds.reminderMessage = ds.randomReminder();
     sendDataStoreUpdate();
   }
 

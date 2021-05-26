@@ -1,6 +1,6 @@
 #!/bin/bash
 # vim: set filetype=sh:
-# shellcheck disable=SC2236  # prefer [ ! -z ] for readability over [ -n ]
+# shellcheck disable=SC2155
 set -o nounset;  # Do not allow use of undefined vars. Use ${VAR:-} to use an undefined VAR
 set -o pipefail; # Catch the error in case a piped command fails
 # set -o errexit;  # Exit on error. Append "|| true" if you expect an error. Same as 'set -e'
@@ -11,7 +11,8 @@ set -o pipefail; # Catch the error in case a piped command fails
 # Helpers
 
 readonly SCRIPTNAME=$(basename "$0")
-#readonly SCRIPTDIR=$(readlink -m "$(dirname "$0")")
+readonly SCRIPTDIR=$(readlink -m "$(dirname "$0")")
+readonly DESTDIR="$HOME"/sync/scratch-mobile
 
 DEBUG=
 
@@ -71,18 +72,18 @@ build_clean() {
 }
 
 build_apk() {
-  rm -f ~/sync/scratch-mobile/app-arm64-v8a-*.apk
+  rm -f "$DESTDIR"/app-arm64-v8a-*.apk
   log_progress "building apk --split-per-abi $arg_debug"
-  #flutter build apk --target-platform android-arm64 --split-per-abi && cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ~/sync/scratch-mobile/
+  #flutter build apk --target-platform android-arm64 --split-per-abi && cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$DESTDIR"/
   #shellcheck disable=SC2086
   if flutter build apk --split-per-abi $arg_debug; then
-    cp build/app/outputs/flutter-apk/app-arm64-v8a-*.apk ~/sync/scratch-mobile/
+    cp "$SCRIPTDIR"/build/app/outputs/flutter-apk/app-arm64-v8a-*.apk "$DESTDIR"/
     log_progress "Successful build"
   fi
 }
 
 build_appbundle() {
-  flutter build appbundle
+  flutter build appbundle && xdg-open "$SCRIPTDIR"/build/app/outputs/bundle/release
 }
 
 
