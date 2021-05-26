@@ -256,60 +256,6 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     await _prefs.reload();
   }
 
-  // static void backup(File backupFile) {
-  //   var jsonData = _toJson(backup: true);
-  //   logger.d('backup, tofile:${backupFile.path}: $jsonData');
-  //   backupFile.writeAsStringSync(jsonData, flush: true);
-  // }
-
-  // static void exportReminders(File toFile) {
-  //   var jsonData = _prefs.getString(ScheduleDataStore.jsonRemindersKey);
-  //   logger.d('export, tofile:${toFile.path}: $jsonData');
-  //   toFile.writeAsStringSync(jsonData, flush: true);
-  // }
-
-  // static void importReminders(File importFile) async {
-  //   String jsonData = importFile.readAsStringSync();
-  //   logger.d('import, file=${importFile.path}: $jsonData');
-  //   _prefs.setString(ScheduleDataStore.jsonRemindersKey, jsonData);
-  // }
-
-  // static Future<InMemoryScheduleDataStore> restore(File backupFile) async {
-  //   String jsonData = backupFile.readAsStringSync();
-  //   logger.d('restore, file=${backupFile.path}: $jsonData');
-  //   Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
-  //   return await _initFromJson(jsonMap);
-  // }
-
-  // static Future<InMemoryScheduleDataStore> restoreFromJson(
-  //     String jsonData) async {
-  //   logger.d('restoreFromJson, : $jsonData');
-  //   Map<String, dynamic> jsonMap = json.decoder.convert(jsonData);
-  //   return await _initFromJson(jsonMap);
-  // }
-
-  // ISSUE maybe change this to use InMemoryScheduleDataStore
-  // static String _toJson({bool backup = false}) {
-  //   Map<String, dynamic> toMap = Map();
-  //   for (var key in _prefs.getKeys()) {
-  //     if (backup && key == enabledKey) {
-  //       // always backup as disabled:
-  //       toMap[key] = false;
-  //     } else {
-  //       toMap[key] = _prefs.get(key);
-  //     }
-  //   }
-  //   return json.encoder.convert(toMap);
-  // }
-
-  // static Future<InMemoryScheduleDataStore> _initFromJson(
-  //     Map<String, dynamic> jsonMap) async {
-  //   for (var key in jsonMap.keys) {
-  //     setSync(key, jsonMap[key]);
-  //   }
-  //   return ScheduleDataStore.getInMemoryInstance();
-  // }
-
   void _mergeVal(String key, var val) {
     bool dirty = false;
     // check list equality differently:
@@ -355,10 +301,6 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     _mergeVal(bellIdKey, mds.bellId);
     _mergeVal(customBellPathKey, mds.customBellPath);
   }
-
-  // void dumpToLog() {
-  //   logger.d("ScheduleDataStore: ${_toJson()}");
-  // }
 
   static Future<void> setSync(String key, dynamic val) async {
     if (val is bool) {
@@ -578,17 +520,9 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     return _prefs.getInt(ScheduleDataStore.quietHoursEndMinuteKey);
   }
 
-  // set notifyQuietHours(bool value) {
-  //   setSync(notifyQuietHoursKey, value);
-  // }
-
   @override
   bool get notifyQuietHours {
     return defaultNotifyQuietHours;
-    // if (!_prefs.containsKey(ScheduleDataStore.notifyQuietHoursKey)) {
-    //   notifyQuietHours = defaultNotifyQuietHours;
-    // }
-    // return _prefs.getBool(ScheduleDataStore.notifyQuietHoursKey);
   }
 
   set reminderMessage(String value) {

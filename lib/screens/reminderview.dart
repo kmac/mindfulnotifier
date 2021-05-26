@@ -46,7 +46,7 @@ class ReminderWidgetController extends GetxController {
   Future<void> init() async {
     logger.d("init");
 
-    // TODO mds is not up to date here after restore
+    // TODO mds is not up to date here after import? Not sure - this may be fine now
     InMemoryScheduleDataStore mds = Get.find();
     reminders.value = Reminders.fromJson(mds.jsonReminders);
     filteredReminderList.value = reminders.value
@@ -403,7 +403,7 @@ class ReminderWidget extends StatelessWidget {
         currentReminder.tag,
         currentReminder.enabled ? false : true);
     controller.reminders.value.updateReminder(reminder);
-    logger.d("_toggleEnabled: $reminder");
+    // logger.d("_toggleEnabled: $reminder");
     controller.filteredReminderListDirty.value = true;
   }
 
