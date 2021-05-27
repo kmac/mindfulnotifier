@@ -9,7 +9,10 @@ This app is a simple mindfulness-based timer which displays a notification/remin
 selected interval. The reminder interval can either be periodic (in intervals down to a 15 minute granularity) or random (between a selected
 range of minutes).
 
-Some default reminders are provided as examples. You can add, edit, or remove these default reminders as you like.
+Some default reminders are provided as examples.
+- You can add, edit, or remove these default reminders as you like.
+- Reminders can be enabled or disabled.
+- Reminders can be assigned a 'tag', and the reminder list can be filtered by tag.
 
 There are 5 bells included, and you can also configure a custom bell from your phone's local storage.
 
@@ -24,10 +27,12 @@ The app is built using [Flutter](https://flutter.dev/).  It currently only runs 
 - Configure either a periodic or random reminder interval.
     - e.g. hourly, or every 15 minutes, or randomly between 30 minutes and an hour
     - periodic intervals are aligned from the top of the hour
-- Edit or add your own reminder messages.
-    - Choose from a set of default bells, or provide your own.
-- Separate controls for 'mute' and 'vibrate'.
+- Edit or add your own reminder messages:
+    - Organize/group by tag
+    - Enable/disable reminders
 - Define a time range for daily quiet hours.
+- Choose from a set of default bells, or provide your own.
+- Separate controls for 'mute' and 'vibrate'.
 
 ### Permissions
 
@@ -67,30 +72,35 @@ See https://dontkillmyapp.com/ for your phone type and android version for more 
 [CCA]: https://creativecommons.org/licenses/by/3.0/        "Creative Commons Attribution License"
 
 
-### Backup / Restore
+### Reminder Import/Export
 
-This app provides basic backup and restore functionality. All of the preferences are exported to a file, which can then be restored on this
-device, or another device. Note that if you ever uninstall the app, you will lose all of your customizations, including any
-added/changed/removed reminders, so you should take a backup before uninstalling.
+This app provides basic backup and restore functionality for the customized reminder list. Reminders can exported to a file (in JSON
+format), which can then be restored on this device, or another device. Note that if you ever uninstall the app, you will lose all of your
+customized reminders, so you may want to take a backup before uninstalling.
 
-#### Backup:
+#### Export:
 
-The app saves a file called `Mindful Notifier-backup-<date>.json` in the app's external storage directory, which is located in your devices
-internal storage in the folder `<Internal Storage>/Android/data/com.kmac5dev.mindfulnotifier/files`.  It also offers you a chance to 'share'
-the file via the standard Android share menu (i.e. copy it to another location on your device, to Google Drive, to Dropbox, etc).
+On export, the app saves a file called `Mindful Notifier-reminders-<date>.json` in the app's external storage directory, which is located in
+your devices internal storage in the folder `<Internal Storage>/Android/data/com.kmac5dev.mindfulnotifier/files`.  It also offers you a
+chance to 'share' the file via the standard Android share menu (i.e. copy it to another location on your device, to Google Drive, to
+Dropbox, etc).
 
 The 'share' step is important if:
-- You uninstall the app. The app's storage directory is automatically removed when you uninstall the app.  You want to share the settings
-- between devices.
+- You uninstall the app. The app's storage directory is automatically removed when you uninstall the app.
+- You want to share the settings between devices.
 
 You can also use a file browser to access the `<Internal Storage>/Android/data/com.kmac5dev.mindfulnotifier/files` location.
 
-Note: the backup file is a 'json' text file. It is possible to edit the contents, but if you mess it up that's on you ;-).
+Note: the exported file is a 'json' text file. It is possible to edit the contents, but if you mess it up that's on you ;-).
 
-#### Restore:
+#### Import:
 
-The restore operation allows you to choose the backup file using the system's file chooser. The app's settings will be restored from this
+The import operation allows you to choose an exported backup file using the system's file chooser. The reminders will be restored from this
 file. You should then restart the app, and re-enable the reminder service.
+
+> Note: Previous 'backup/restore' functionality used a different file format. If you have an older backup file (named like `Mindful
+> Notifier-backup-<date>.json`), you can still import this file. The reminders will be pulled from it; however, the other settings in the
+> file will not be restored.
 
 
 ## License
