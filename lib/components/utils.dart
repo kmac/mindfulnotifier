@@ -54,16 +54,21 @@ bool isDark(var context) {
   return brightnessValue == Brightness.dark;
 }
 
-TextStyle getGlobalDialogTextStyle(bool isDark) {
+TextStyle getGlobalDialogTextStyle(bool isDark, {double fontSize}) {
+  TextStyle defaultTextStyle = TextStyle();
+  fontSize ??= defaultTextStyle.fontSize;
   return isDark
-      ? TextStyle(color: Colors.blue[900])
-      : TextStyle(color: Colors.white);
+      ? TextStyle(color: Colors.blue[900], fontSize: fontSize)
+      : TextStyle(color: Colors.white, fontSize: fontSize);
 }
 
 AlertStyle getGlobalAlertStyle(bool isDark) {
   return isDark
-      ? AlertStyle(titleStyle: TextStyle(color: Colors.white))
-      : AlertStyle();
+      ? AlertStyle(
+          titleStyle: TextStyle(color: Colors.white),
+          descStyle: TextStyle(color: Colors.white, fontSize: 18),
+        )
+      : AlertStyle(descStyle: TextStyle(fontSize: 18));
 }
 
 void showInfoAlert(BuildContext context, String title, String alertText,

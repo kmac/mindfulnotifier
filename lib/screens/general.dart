@@ -147,11 +147,12 @@ class GeneralWidget extends StatelessWidget {
         context: context,
         title: title,
         desc:
-            'Replace: replace existing reminders. Merge: merge with existing reminders',
+            "Select either 'Replace' to replace all existing reminders, or\n'Merge' to merge with existing reminders",
         type: AlertType.warning,
         style: utils.getGlobalAlertStyle(Get.isDarkMode),
         content: Column(
           children: <Widget>[
+            Divider(),
             Text(alertText,
                 style: TextStyle(
                   fontSize: 16.0,
@@ -204,7 +205,7 @@ class GeneralWidget extends StatelessWidget {
       Map<String, bool> alertResult = await showImportAlert(
           Get.context,
           "Proceed with import?",
-          "WARNING: this will overwrite any existing reminders.\n\n" +
+          "WARNING: 'Replace' will overwrite all existing reminders.\n\n" +
               "Do you want to import using file $importFileName?");
       if (alertResult['answer']) {
         try {
