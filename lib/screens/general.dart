@@ -242,17 +242,6 @@ class GeneralWidget extends StatelessWidget {
               }
               existingReminders.addReminders(toImport);
               mds.jsonReminders = existingReminders.toJson();
-
-              // List newJsonReminders = json.decode(importedString);
-              // List existingJsonReminders = json.decode(mds.jsonReminders);
-              // for (Map newReminder in newJsonReminders) {
-              //   if (newReminder.containsKey('text') &&
-              //       !mds.reminderExists(newReminder['text'],
-              //           jsonReminderList: existingJsonReminders)) {
-              //     existingJsonReminders.add(newReminder);
-              //   }
-              // }
-              // mds.jsonReminders = json.encode(existingJsonReminders);
             } else {
               // This is a replace operation
               mds.jsonReminders = importedString;

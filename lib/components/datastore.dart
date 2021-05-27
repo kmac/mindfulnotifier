@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:equatable/equatable.dart';
 
 import 'package:mindfulnotifier/components/logging.dart';
 
@@ -629,30 +630,30 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
   }
 }
 
-class Reminder {
-  final int index;
-  String text;
-  bool enabled;
-  String tag;
+class Reminder extends Equatable {
+  final String text;
+  final bool enabled;
+  final String tag;
 
-  Reminder(this.index, this.text, this.tag, this.enabled);
+  Reminder(this.text, this.tag, this.enabled);
 
   Reminder.fromJson(int index, Map<String, dynamic> jsonMapEntry)
-      : index = index,
-        text = jsonMapEntry['text'],
+      : text = jsonMapEntry['text'],
         tag = jsonMapEntry['tag'],
         enabled = jsonMapEntry['enabled'];
 
   Map<String, dynamic> toJsonMapEntry() => {
-        'index': index,
         'text': text,
         'tag': tag,
         'enabled': enabled,
       };
 
   @override
+  List<Object> get props => [text];
+
+  @override
   String toString() {
-    return "Reminder: index=$index, tag=$tag, enabled=$enabled, text=$text";
+    return "Reminder: text=$text, tag=$tag, enabled=$enabled";
   }
 }
 
@@ -681,143 +682,6 @@ class Reminders {
     _sortAllByText();
   }
 
-  Map<String, List<Reminder>> buildGroupedReminders() {
-    // A map of reminders grouped by tag
-    final Map<String, List<Reminder>> groupedReminders = Map();
-
-    // Build groupedReminders from json data
-    for (Reminder reminder in allReminders) {
-      List<Reminder> group;
-      if (!groupedReminders.containsKey(reminder.tag)) {
-        group = [];
-        groupedReminders[reminder.tag] = group;
-      }
-      groupedReminders[reminder.tag].add(reminder);
-    }
-    return groupedReminders;
-  }
-
-  void _reindexAll() {
-    for (int index = 0; index < allReminders.length; index++) {
-      allReminders[index] = Reminder(index, allReminders[index].text,
-          allReminders[index].tag, allReminders[index].enabled);
-    }
-  }
-
-  String _stripFirstQuote(String s) {
-    String firstChar = s.substring(0, 1);
-    if (firstChar == '"' || firstChar == "'") {
-      return s.substring(1);
-    }
-    return s;
-  }
-
-  void _sortAllByText() {
-    allReminders.sort(
-        (a, b) => _stripFirstQuote(a.text).compareTo(_stripFirstQuote(b.text)));
-    _reindexAll();
-  }
-
-  // Filters out either enabled or disabled, and optionally by tag
-  List<Reminder> filter({bool enabled = true, String tag}) {
-    List<Reminder> result = [];
-    for (Reminder reminder in allReminders) {
-      if (reminder.enabled == enabled) {
-        if (tag == null || reminder.tag == tag) {
-          result.add(reminder);
-        }
-      }
-    }
-    return result;
-  }
-
-  List<Reminder> _sortByEnabled(List<Reminder> unsorted) {
-    List<Reminder> enabled = [];
-    List<Reminder> disabled = [];
-    for (Reminder reminder in unsorted) {
-      if (reminder.enabled) {
-        enabled.add(reminder);
-      } else {
-        disabled.add(reminder);
-      }
-    }
-    enabled.addAll(disabled);
-    return enabled;
-  }
-
-  List<Reminder> getFilteredReminderList({String tag, bool sorted = true}) {
-    if (tag == null || tag == '') {
-      if (sorted) {
-        return _sortByEnabled(allReminders);
-      }
-      return allReminders;
-    }
-    Map<String, List<Reminder>> groupedReminders = buildGroupedReminders();
-    if (!groupedReminders.containsKey(tag)) {
-      logger.e("tag '$tag' not in reminderGroups");
-      return [];
-    }
-    if (sorted) {
-      return _sortByEnabled(groupedReminders[tag]);
-    }
-    return groupedReminders[tag];
-  }
-
-  void addReminder(Reminder reminder) {
-    // apply new index, which is at the end of the list
-    allReminders.add(Reminder(
-        allReminders.length, reminder.text, reminder.tag, reminder.enabled));
-    _sortAllByText();
-  }
-
-  void addReminders(List<Reminder> reminders) {
-    // apply new index, which is at the end of the list
-    for (Reminder newReminder in reminders) {
-      allReminders.add(Reminder(allReminders.length, newReminder.text,
-          newReminder.tag, newReminder.enabled));
-    }
-    _sortAllByText();
-  }
-
-  void updateReminder(Reminder changedReminder) {
-    allReminders[changedReminder.index] = changedReminder;
-    _sortAllByText();
-  }
-
-  void deleteReminder(int index) {
-    allReminders.removeAt(index);
-    _sortAllByText();
-  }
-
-  bool reminderExists(Reminder r) {
-    for (Reminder reminder in allReminders) {
-      if (reminder.text == r.text) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  int findReminderIndex(String reminderText) {
-    for (Reminder reminder in allReminders) {
-      if (reminderText == reminder.text) {
-        return reminder.index;
-      }
-    }
-    throw Exception("Reminder not found: $reminderText");
-  }
-
-  String randomReminder({String tag}) {
-    List<Reminder> filteredList = filter(enabled: true, tag: tag);
-    if (filteredList.isEmpty) {
-      return tag == null
-          ? "No reminders are enabled"
-          : "No reminders are enabled for tag '$tag'";
-    }
-    filteredList.shuffle();
-    return filteredList.first.text;
-  }
-
   String toJson() {
     List<Map<String, dynamic>> conversionList = [];
     for (Reminder reminder in allReminders) {
@@ -827,7 +691,6 @@ class Reminders {
     // save the string pretty-printed so it will also be exported in this format
     JsonEncoder encoder = new JsonEncoder.withIndent('  ');
     jsonReminders = encoder.convert(conversionList);
-    // logger.d("Reminders toJson: $jsonReminders");
     return jsonReminders;
   }
 
@@ -848,5 +711,151 @@ class Reminders {
     jsonReminders = encoder.convert(conversionList);
     logger.i("Finished reminder migration to json: $jsonReminders");
     return jsonReminders;
+  }
+
+  Map<String, List<Reminder>> buildGroupedReminders() {
+    // A map of reminders grouped by tag
+    final Map<String, List<Reminder>> groupedReminders = Map();
+
+    // Build groupedReminders from json data
+    for (Reminder reminder in allReminders) {
+      List<Reminder> group;
+      if (!groupedReminders.containsKey(reminder.tag)) {
+        group = [];
+        groupedReminders[reminder.tag] = group;
+      }
+      groupedReminders[reminder.tag].add(reminder);
+    }
+    return groupedReminders;
+  }
+
+  String _stripFirstQuote(String s) {
+    String firstChar = s.substring(0, 1);
+    if (firstChar == '"' || firstChar == "'") {
+      return s.substring(1);
+    }
+    return s;
+  }
+
+  void _sortAllByText() {
+    /// Sorts the allReminders list
+    allReminders.sort(
+        (a, b) => _stripFirstQuote(a.text).compareTo(_stripFirstQuote(b.text)));
+  }
+
+  List<Reminder> _sortByEnabled(List<Reminder> unsorted) {
+    /// Sorts the *given* list, enabled first, then disabled
+    List<Reminder> enabled = [];
+    List<Reminder> disabled = [];
+    for (Reminder reminder in unsorted) {
+      if (reminder.enabled) {
+        enabled.add(reminder);
+      } else {
+        disabled.add(reminder);
+      }
+    }
+    enabled.addAll(disabled);
+    return enabled;
+  }
+
+  List<Reminder> filter({bool enabled = true, String tag}) {
+    /// Filters out either enabled or disabled, and optionally by tag
+    List<Reminder> result = [];
+    for (Reminder reminder in allReminders) {
+      if (reminder.enabled == enabled) {
+        if (tag == null || reminder.tag == tag) {
+          result.add(reminder);
+        }
+      }
+    }
+    return result;
+  }
+
+  List<Reminder> getFilteredReminderList({String tag, bool sorted = true}) {
+    if (tag == null || tag == '') {
+      if (sorted) {
+        return _sortByEnabled(allReminders);
+      }
+      return allReminders;
+    }
+    Map<String, List<Reminder>> groupedReminders = buildGroupedReminders();
+    if (!groupedReminders.containsKey(tag)) {
+      logger.e("tag '$tag' not in reminderGroups");
+      return [];
+    }
+    if (sorted) {
+      return _sortByEnabled(groupedReminders[tag]);
+    }
+    return groupedReminders[tag];
+  }
+
+  bool reminderExists(Reminder reminder) {
+    return allReminders.contains(reminder);
+  }
+
+  void addReminder(Reminder reminder) {
+    if (reminderExists(reminder)) {
+      throw Exception("Reminder already exists: $reminder");
+    }
+
+    /// Add reminder to end of list
+    allReminders.add(Reminder(reminder.text, reminder.tag, reminder.enabled));
+    _sortAllByText();
+  }
+
+  void addReminders(List<Reminder> reminders) {
+    /// Add all reminders to end of list
+    for (Reminder newReminder in reminders) {
+      if (!reminderExists(newReminder)) {
+        allReminders.add(
+            Reminder(newReminder.text, newReminder.tag, newReminder.enabled));
+      }
+    }
+    _sortAllByText();
+  }
+
+  void updateReminder(int index, Reminder changedReminder) {
+    logger.d("updateReminder: $index: ${allReminders[index]}");
+    allReminders[index] = changedReminder;
+    _sortAllByText();
+  }
+
+  void deleteReminder(Reminder reminder) {
+    logger.d("deleteReminder: $reminder");
+    if (!allReminders.remove(reminder)) {
+      logger.e("deleteReminder: reminder not removed: $reminder");
+    }
+    _sortAllByText();
+  }
+
+  int findReminderIndex(Reminder reminder) {
+    return allReminders.indexOf(reminder);
+  }
+
+  int findReminderIndexByText(String reminderText) {
+    int index = 0;
+    while (index < allReminders.length) {
+      if (reminderText == allReminders[index].text) {
+        return index;
+      }
+      ++index;
+    }
+    throw Exception("Reminder not found: $reminderText");
+  }
+
+  String randomReminder({String tag}) {
+    List<Reminder> filteredList = filter(enabled: true, tag: tag);
+    if (filteredList.isEmpty) {
+      return tag == null
+          ? "No reminders are enabled"
+          : "No reminders are enabled for tag '$tag'";
+    }
+    filteredList.shuffle();
+    return filteredList.first.text;
+  }
+
+  @override
+  String toString() {
+    return allReminders.toString();
   }
 }

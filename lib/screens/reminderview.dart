@@ -31,7 +31,7 @@ class ReminderWidgetController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    init();
+    _updateReminders();
   }
 
   @override
@@ -43,12 +43,13 @@ class ReminderWidgetController extends GetxController {
     super.onReady();
   }
 
-  Future<void> init() async {
-    logger.d("init");
-
+  void _updateReminders({InMemoryScheduleDataStore mds}) {
     // TODO mds is not up to date here after import? Not sure - this may be fine now
-    InMemoryScheduleDataStore mds = Get.find();
+    mds ??= Get.find();
+    logger.d("_updateReminders");
     reminders.value = Reminders.fromJson(mds.jsonReminders);
+
+    // NOTE: the index for filteredReminderList.value is different from the allReminders index!
     filteredReminderList.value = reminders.value
         .getFilteredReminderList(tag: selectedTag.value, sorted: true);
     groupedReminders.clear();
@@ -61,20 +62,20 @@ class ReminderWidgetController extends GetxController {
 
   void handleSelectedTag(String tag) async {
     logger.d("handleSelectedTag: $tag");
-    init();
+    _updateReminders();
   }
 
   void handleReminderListDirty(dirty) async {
+    // write to memory store
     InMemoryScheduleDataStore mds = Get.find();
     mds.jsonReminders = reminders.value.toJson();
-    await init();
+    _updateReminders(mds: mds);
     filteredReminderListDirty.value = false;
+
+    // update alarm service with new memory store:
     Get.find<MindfulNotifierWidgetController>()
         .sendToAlarmService({'update': mds});
   }
-
-  // void handleReminderList(changedReminderList) {
-  // }
 }
 
 class ReminderWidget extends StatelessWidget {
@@ -162,13 +163,16 @@ class ReminderWidget extends StatelessWidget {
                                   mode: Mode.MENU,
                                   showSelectedItem: true,
                                   items:
-                                      controller.groupedReminders.keys.toList(),
+                                      controller.groupedReminders.keys.toList()
+                                        ..sort(),
                                   label: "Filter by tag: ",
                                   hint: "Select tag:",
                                   showClearButton: true,
                                   onChanged: (value) {
                                     controller.selectedTag.value =
                                         value == null ? '' : value;
+                                    // reset the selectedIndex
+                                    controller.selectedIndex.value = 0;
                                   },
                                 ))),
                         // Text('Hide Disabled: ', style: TextStyle(fontSize: 12)),
@@ -299,28 +303,11 @@ class ReminderWidget extends StatelessWidget {
 
   void _showAddDialog(BuildContext context) {
     final editedEnabled = true.obs;
-
     TextEditingController editingControllerText = new TextEditingController();
     TextEditingController editingControllerTag = new TextEditingController(
         text: controller.selectedTag.value != ''
             ? controller.selectedTag.value
             : customTag);
-    DialogButton submitButton = DialogButton(
-      onPressed: () {
-        Reminder reminder = Reminder(
-            -1, // will be changed
-            editingControllerText.text,
-            editingControllerTag.text,
-            editedEnabled.value);
-        controller.reminders.value.addReminder(reminder);
-        controller.filteredReminderListDirty.value = true;
-        Navigator.pop(context);
-      },
-      child: Text(
-        "Add",
-        style: getGlobalDialogTextStyle(Get.isDarkMode),
-      ),
-    );
     Alert(
         context: context,
         title: "Add Reminder",
@@ -337,35 +324,33 @@ class ReminderWidget extends StatelessWidget {
               style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           ),
-          submitButton,
+          DialogButton(
+            onPressed: () {
+              Reminder reminder = Reminder(editingControllerText.text,
+                  editingControllerTag.text, editedEnabled.value);
+              controller.reminders.value.addReminder(reminder);
+              controller.filteredReminderListDirty.value = true;
+              Navigator.pop(context);
+            },
+            child: Text(
+              "Add",
+              style: getGlobalDialogTextStyle(Get.isDarkMode),
+            ),
+          )
         ]).show();
   }
 
-  void _showEditDialog(BuildContext context, int index) {
-    final editedText = controller.filteredReminderList[index].text.obs;
-    final editedEnabled = controller.filteredReminderList[index].enabled.obs;
+  void _showEditDialog(BuildContext context, int filterIndex) {
+    final editedText = controller.filteredReminderList[filterIndex].text.obs;
+    final editedEnabled =
+        controller.filteredReminderList[filterIndex].enabled.obs;
+    final reminderIndex = controller.reminders.value.findReminderIndexByText(
+        controller.filteredReminderList[filterIndex].text);
 
     TextEditingController editingControllerText =
         new TextEditingController(text: editedText.value);
     TextEditingController editingControllerTag = new TextEditingController(
-        text: controller.filteredReminderList[index].tag);
-    DialogButton submitButton = DialogButton(
-      onPressed: () {
-        Reminder currentReminder = controller.filteredReminderList[index];
-        Reminder reminder = Reminder(
-            currentReminder.index, // stays the same
-            editingControllerText.text,
-            editingControllerTag.text,
-            editedEnabled.value);
-        controller.reminders.value.updateReminder(reminder);
-        controller.filteredReminderListDirty.value = true;
-        Navigator.pop(context);
-      },
-      child: Text(
-        "Save",
-        style: getGlobalDialogTextStyle(Get.isDarkMode),
-      ),
-    );
+        text: controller.filteredReminderList[filterIndex].tag);
     Alert(
         context: context,
         title: "Edit Reminder",
@@ -382,30 +367,42 @@ class ReminderWidget extends StatelessWidget {
               style: getGlobalDialogTextStyle(Get.isDarkMode),
             ),
           ),
-          submitButton,
+          DialogButton(
+            onPressed: () {
+              Reminder reminder = Reminder(editingControllerText.text,
+                  editingControllerTag.text, editedEnabled.value);
+              controller.reminders.value
+                  .updateReminder(reminderIndex, reminder);
+              controller.filteredReminderListDirty.value = true;
+              Navigator.pop(context);
+            },
+            child: Text(
+              "Save",
+              style: getGlobalDialogTextStyle(Get.isDarkMode),
+            ),
+          )
         ]).show();
   }
 
-  void _toggleEnabled(BuildContext context, int index) {
-    Reminder currentReminder = controller.filteredReminderList[index];
-    Reminder reminder = Reminder(
-        currentReminder.index, // stays the same
-        currentReminder.text,
-        currentReminder.tag,
+  void _toggleEnabled(BuildContext context, int filterIndex) {
+    Reminder currentReminder = controller.filteredReminderList[filterIndex];
+    int currentReminderIndex =
+        controller.reminders.value.findReminderIndex(currentReminder);
+    Reminder reminder = Reminder(currentReminder.text, currentReminder.tag,
         currentReminder.enabled ? false : true);
-    controller.reminders.value.updateReminder(reminder);
-    // logger.d("_toggleEnabled: $reminder");
+    controller.reminders.value.updateReminder(currentReminderIndex, reminder);
     controller.filteredReminderListDirty.value = true;
   }
 
-  void _showDeleteDialog(BuildContext context, int index) {
+  void _showDeleteDialog(BuildContext context, int filterIndex) {
+    Reminder reminder = controller.filteredReminderList[filterIndex];
     Alert(
         context: context,
         title: "Delete Reminder?",
         style: getGlobalAlertStyle(Get.isDarkMode),
         content: Column(
           children: <Widget>[
-            Text(controller.filteredReminderList[index].text,
+            Text(reminder.text,
                 maxLines: 10,
                 style: TextStyle(
                     fontSize: 12.0,
@@ -425,8 +422,7 @@ class ReminderWidget extends StatelessWidget {
           ),
           DialogButton(
             onPressed: () {
-              controller.reminders.value
-                  .deleteReminder(controller.filteredReminderList[index].index);
+              controller.reminders.value.deleteReminder(reminder);
               controller.filteredReminderListDirty.value = true;
               Navigator.pop(context);
             },
