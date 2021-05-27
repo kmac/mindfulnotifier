@@ -21,7 +21,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #              This number is used only to determine whether one version is more recent than another,
 #              with higher numbers indicating more recent versions
 # versionName: Customer-visible version string
-version: 1.0.13+21
+version: 1.0.14+24
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -36,15 +36,16 @@ dependencies:
 
   # https://pub.dev/packages/<package>
 
-  android_alarm_manager: ^2.0.0
-  flutter_local_notifications: ^5.0.0
-  date_format: ^1.0.9
-  device_info: ^0.4.2+4
+  android_alarm_manager: ^2.0.1
+  flutter_local_notifications: ^6.0.0
+  date_format: ^2.0.2
+  device_info: ^2.0.1
   rxdart: ^0.26.0
-  flutter_native_timezone: ^1.0.4
-  shared_preferences: ^2.0.5
+  flutter_native_timezone: ^1.1.0
+  shared_preferences: ^2.0.6
   get: ^4.1.4
-  logger: ^0.9.4
+  logger: ^1.0.0
+  equatable: ^2.0.2
 
   # For audio:
   just_audio: ^0.7.4
@@ -53,18 +54,18 @@ dependencies:
   sound_mode: ^1.0.2
 
 
-  file_picker: ^3.0.1
-  package_info: ^2.0.0
-  path_provider: ^2.0.1
-  share: ^2.0.1
+  file_picker: ^3.0.2+2
+  package_info: ^2.0.1
+  path_provider: ^2.0.2
+  share: ^2.0.2
   dropdown_search: ^0.6.1
   # flutter_treeview: ^1.0.3+2
 
   # permission_handler: ^6.1.3
   # flutter_background_service: ^0.0.1+19
   rflutter_alert: ^2.0.2
-  flutter_markdown: ^0.6.1
-  url_launcher: ^6.0.3
+  flutter_markdown: ^0.6.2
+  url_launcher: ^6.0.4
   battery_optimization: ^0.1.0
 
 dev_dependencies:

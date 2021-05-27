@@ -1,3 +1,22 @@
+# 1.0.14
+- Rework reminder list UI and features for Issue #15 (tagging) and Issue #20
+    - Ability to enable/disable individual reminders
+    - Supports simple 'tag' field to categorize groups of reminders
+    - Reminder list can be filtered by tag
+    - Reminder list is always automatically sorted:
+        - Alphabetical
+        - Disabled reminders are moved to end of list
+- Backup/Restore changed to Reminder Export/Import:
+    - No longer does full backup/restore of all settings
+        - NOTE: Existing backup files will still work - however, only the reminders will be restored.
+    - Core function is changed to provide only reminder export/import
+    - Reminder list export/import via JSON file format.
+        - See: Issue #20 (simpler file format for reminder sharing)
+    - New 'Merge' when importing reminder list:
+        - 'Merge' will preserve existing reminders in list; only new reminders are added
+        - 'Replace' completely replaces existing reminders list
+- Fix issue #11, issue when updating schedule min/max values
+
 # 1.0.13
 - Issue #21 - ensure silent notifications in Do Not Disturb
 - Issue #16 - add sharing option (long press on main screen to share)
