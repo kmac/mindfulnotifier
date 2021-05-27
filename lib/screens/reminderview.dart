@@ -259,14 +259,13 @@ class ReminderWidget extends StatelessWidget {
 
   Column _buildAddEditColumn(
       BuildContext context,
-      TextEditingController editingController,
-      final editedTag,
+      TextEditingController editingControllerText,
+      TextEditingController editingControllerTag,
       final editedEnabled) {
-    String label = editedTag.value;
     return Column(
       children: <Widget>[
         TextFormField(
-          controller: editingController,
+          controller: editingControllerText,
           maxLines: formMaxLines,
           maxLength: formMaxLength,
           // style: TextStyle(fontSize: 18),
@@ -276,19 +275,11 @@ class ReminderWidget extends StatelessWidget {
               flex: 1, child: Text('Tag:', style: TextStyle(fontSize: 14))),
           Expanded(
               flex: 3,
-              // IT DOESN'T LIKE THIS Obx:
-              // child: Obx(() => TextField(
-              child: TextField(
-                decoration: InputDecoration(
-                  // border: OutlineInputBorder(),
-                  labelText: label,
-                  // floatingLabelBehavior: FloatingLabelBehavior.never,
-                ),
-                // textAlign: TextAlign.center,
-                autofillHints: controller.groupedReminders.keys.toList(),
-                onSubmitted: (value) {
-                  editedTag.value = value;
-                },
+              child: TextFormField(
+                controller: editingControllerTag,
+                maxLines: 1,
+                maxLength: 32,
+                // style: TextStyle(fontSize: 18),
               )),
         ]),
         Row(children: <Widget>[
@@ -307,18 +298,19 @@ class ReminderWidget extends StatelessWidget {
   }
 
   void _showAddDialog(BuildContext context) {
-    final editedTag = controller.selectedTag.value != ''
-        ? controller.selectedTag.value.obs
-        : customTag.obs;
     final editedEnabled = true.obs;
 
-    TextEditingController editingController = new TextEditingController();
+    TextEditingController editingControllerText = new TextEditingController();
+    TextEditingController editingControllerTag = new TextEditingController(
+        text: controller.selectedTag.value != ''
+            ? controller.selectedTag.value
+            : customTag);
     DialogButton submitButton = DialogButton(
       onPressed: () {
         Reminder reminder = Reminder(
             -1, // will be changed
-            editingController.text,
-            editedTag.value,
+            editingControllerText.text,
+            editingControllerTag.text,
             editedEnabled.value);
         controller.reminders.value.addReminder(reminder);
         controller.filteredReminderListDirty.value = true;
@@ -333,10 +325,8 @@ class ReminderWidget extends StatelessWidget {
         context: context,
         title: "Add Reminder",
         style: getGlobalAlertStyle(Get.isDarkMode),
-        content: Obx(() => _buildAddEditColumn(
-            context, editingController, editedTag, editedEnabled)),
-        // content: _buildAddEditColumn(
-        //     context, editingController, editedTag, editedEnabled),
+        content: _buildAddEditColumn(context, editingControllerText,
+            editingControllerTag, editedEnabled),
         buttons: [
           DialogButton(
             onPressed: () {
@@ -352,19 +342,20 @@ class ReminderWidget extends StatelessWidget {
   }
 
   void _showEditDialog(BuildContext context, int index) {
-    final editedTag = controller.filteredReminderList[index].tag.obs;
     final editedText = controller.filteredReminderList[index].text.obs;
     final editedEnabled = controller.filteredReminderList[index].enabled.obs;
 
-    TextEditingController editingController =
+    TextEditingController editingControllerText =
         new TextEditingController(text: editedText.value);
+    TextEditingController editingControllerTag = new TextEditingController(
+        text: controller.filteredReminderList[index].tag);
     DialogButton submitButton = DialogButton(
       onPressed: () {
         Reminder currentReminder = controller.filteredReminderList[index];
         Reminder reminder = Reminder(
             currentReminder.index, // stays the same
-            editingController.text,
-            editedTag.value,
+            editingControllerText.text,
+            editingControllerTag.text,
             editedEnabled.value);
         controller.reminders.value.updateReminder(reminder);
         controller.filteredReminderListDirty.value = true;
@@ -379,8 +370,8 @@ class ReminderWidget extends StatelessWidget {
         context: context,
         title: "Edit Reminder",
         style: getGlobalAlertStyle(Get.isDarkMode),
-        content: Obx(() => _buildAddEditColumn(
-            context, editingController, editedTag, editedEnabled)),
+        content: _buildAddEditColumn(context, editingControllerText,
+            editingControllerTag, editedEnabled),
         buttons: [
           DialogButton(
             onPressed: () {
