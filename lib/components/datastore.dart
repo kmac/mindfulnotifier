@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:equatable/equatable.dart';
@@ -7,79 +8,86 @@ import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = createLogger('datastore');
 
-const defaultTag = 'default';
-const customTag = 'custom';
+final Random random = Random();
 
 // A list for the initial json string. Each entry has keys: text, enabled, tag, weight
 // Idea: add optional weight to support weighing reminders differently
 const List<Map<String, dynamic>> defaultJsonReminderMap = [
-  {"text": "Are you aware?", "enabled": true, "tag": "$defaultTag"},
+  {
+    "text": "Are you aware?",
+    "enabled": true,
+    "tag": "${Reminder.defaultTagName}"
+  },
   {
     "text": "Breathe deeply. This is the present moment.",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text": "Take a moment to pause, and come back to the present.",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text": "Bring awareness into this moment.",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text": "Let go of greed, aversion, and delusion.",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
-  {"text": "Respond, not react.", "enabled": true, "tag": "$defaultTag"},
+  {
+    "text": "Respond, not react.",
+    "enabled": true,
+    "tag": "${Reminder.defaultTagName}"
+  },
   {
     "text": "All of this is impermanent.",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text":
         "Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text":
         "RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion",
     "enabled": false,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text":
         "Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text": "What is the attitude in the mind right now?",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text":
         "May you be happy. May you be healthy. May you be free from harm. May you be peaceful.",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text":
         "\"Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.\" -- Joseph Goldstein",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
   {
     "text":
         "\"Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself.\" -- Bashō",
     "enabled": true,
-    "tag": "$defaultTag"
+    "tag": "${Reminder.defaultTagName}"
   },
 ];
 
@@ -631,6 +639,11 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
 }
 
 class Reminder extends Equatable {
+  static const maxLength = 2048;
+  static const truncLength = 256;
+  static const truncLines = 5;
+  static const defaultTagName = 'default';
+  static const defaultCustomTagName = 'custom';
   final String text;
   final bool enabled;
   final String tag;
@@ -650,6 +663,27 @@ class Reminder extends Equatable {
 
   @override
   List<Object> get props => [text];
+
+  static String truncateLines(String input, [int maxLines = truncLines]) {
+    LineSplitter ls = new LineSplitter();
+    List<String> lines = ls.convert(input);
+    if (lines.length < maxLines) {
+      return input;
+    }
+    return lines.sublist(0, maxLines).join("\n") + "...";
+  }
+
+  static String truncate(String input,
+      [int length = maxLength, int maxLines = truncLines]) {
+    if (input.length < truncLength) {
+      return truncateLines(input, maxLines);
+    }
+    return truncateLines(input.substring(0, truncLength - 4) + '...');
+  }
+
+  String get truncated {
+    return truncate(text);
+  }
 
   @override
   String toString() {
@@ -702,7 +736,7 @@ class Reminders {
       Map<String, dynamic> mapForJson = Map();
       mapForJson['text'] = rawReminder;
       mapForJson['enabled'] = true;
-      mapForJson['tag'] = "default";
+      mapForJson['tag'] = Reminder.defaultTagName;
       conversionList.add(mapForJson);
     }
     String jsonReminders;
@@ -850,8 +884,7 @@ class Reminders {
           ? "No reminders are enabled"
           : "No reminders are enabled for tag '$tag'";
     }
-    filteredList.shuffle();
-    return filteredList.first.text;
+    return filteredList[random.nextInt(filteredList.length - 1)].text;
   }
 
   @override

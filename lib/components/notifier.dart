@@ -20,6 +20,7 @@ import 'package:mindfulnotifier/components/logging.dart';
 var logger = createLogger('notifier');
 
 const bool useSeparateAudio = true;
+const int maxNotificationBodyLength = 1024;
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -175,6 +176,8 @@ class Notifier {
     final String notifTitle = constants.appName;
     DateTime now = DateTime.now();
 
+    String notifTrunc = Reminder.truncate(notifText, maxNotificationBodyLength);
+
     AndroidNotificationSound notifSound;
     if (!useSeparateAudio) {
       if (customSoundFile == null) {
@@ -200,7 +203,7 @@ class Notifier {
         "[$now] showNotification [channelId=$channelId]: title=$notifTitle " +
             "text=$notifText mute=$mute vibrate=$vibrate");
 
-    var styleInfo = BigTextStyleInformation('');
+    var styleInfo = BigTextStyleInformation(notifTrunc);
     AndroidBuildVersion buildVersion = await getAndroidBuildVersion();
     if (buildVersion.sdkInt <= 23) {
       styleInfo = null;
@@ -233,7 +236,7 @@ class Notifier {
       await flutterLocalNotificationsPlugin.cancel(notifId);
     }
     await flutterLocalNotificationsPlugin.show(
-        notifId, notifTitle, notifText, platformChannelSpecifics,
+        notifId, notifTitle, notifTrunc, platformChannelSpecifics,
         payload: notifText);
 
     if (useSeparateAudio && !mute) {

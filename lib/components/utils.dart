@@ -62,11 +62,13 @@ TextStyle getGlobalDialogTextStyle(bool isDark, {double fontSize}) {
       : TextStyle(color: Colors.white, fontSize: fontSize);
 }
 
-AlertStyle getGlobalAlertStyle(bool isDark) {
+AlertStyle getGlobalAlertStyle(bool isDark,
+    {EdgeInsets alertPadding = const EdgeInsets.all(6.0)}) {
   return isDark
       ? AlertStyle(
           titleStyle: TextStyle(color: Colors.white),
           descStyle: TextStyle(color: Colors.white, fontSize: 18),
+          alertPadding: alertPadding,
         )
       : AlertStyle(descStyle: TextStyle(fontSize: 18));
 }

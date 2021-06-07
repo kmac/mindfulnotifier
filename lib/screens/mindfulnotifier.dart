@@ -247,28 +247,37 @@ class MindfulNotifierWidget extends StatelessWidget {
                   margin:
                       EdgeInsets.only(top: 15, left: 15, right: 15, bottom: 0),
                   elevation: 1,
-                  child: InkWell(
-                      onLongPress: () async {
-                        await Share.share(controller._reminderMessage.value,
-                            subject: appName);
-                      },
-                      child: Container(
-                        margin: EdgeInsets.only(
-                            top: 15, left: 15, right: 15, bottom: 15),
-                        alignment: Alignment.center,
-                        // decoration: BoxDecoration(color: Colors.grey[100]),
-                        child: Text(
-                          '${controller._reminderMessage}',
-                          style: TextStyle(
-                              color: mainTextColor,
-                              fontWeight: FontWeight.w900,
-                              fontStyle: FontStyle.italic,
-                              fontFamily: 'Open Sans',
-                              fontSize: 30),
-                          textAlign: TextAlign.center,
-                          softWrap: true,
-                        ),
-                      )))),
+                  child: Container(
+                      // margin: EdgeInsets.only(
+                      //     top: 15, left: 15, right: 15, bottom: 15),
+                      alignment: Alignment.center,
+                      child: InkWell(
+                          onLongPress: () async {
+                            await Share.share(controller._reminderMessage.value,
+                                subject: appName);
+                          },
+                          // decoration: BoxDecoration(color: Colors.grey[100]),
+                          child: Scrollbar(
+                            isAlwaysShown: false,
+                            child: SingleChildScrollView(
+                                padding: EdgeInsets.only(
+                                    top: 15, left: 15, right: 15, bottom: 15),
+                                child: Text(
+                                  '${controller._reminderMessage}',
+                                  style: TextStyle(
+                                      color: mainTextColor,
+                                      fontWeight: FontWeight.w900,
+                                      fontStyle: FontStyle.italic,
+                                      fontFamily: 'Open Sans',
+                                      fontSize: controller._reminderMessage
+                                                  .value.length <
+                                              Reminder.truncLength
+                                          ? 30
+                                          : 22),
+                                  textAlign: TextAlign.center,
+                                  softWrap: true,
+                                )),
+                          ))))),
             ),
             Expanded(
               flex: 3,
@@ -390,7 +399,7 @@ class MindfulNotifierWidget extends StatelessWidget {
               onTap: controller.handleGeneralOnTap,
             ),
             Divider(),
-            AppAboutListTile(),
+            AppAboutListTile(context),
           ],
         ),
       ),

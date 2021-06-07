@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -82,8 +83,8 @@ class ReminderWidget extends StatelessWidget {
   final ReminderWidgetController controller =
       Get.put(ReminderWidgetController());
 
-  final formMaxLines = 7;
-  final formMaxLength = 256;
+  final formMaxLines = 10;
+  final formMaxLength = Reminder.maxLength;
 
   @override
   Widget build(BuildContext context) {
@@ -226,7 +227,8 @@ class ReminderWidget extends StatelessWidget {
                                 selected:
                                     index == controller.selectedIndex.value,
                                 title: Text(
-                                  '${controller.filteredReminderList[index].text}',
+                                  controller
+                                      .filteredReminderList[index].truncated,
                                   style: controller
                                           .filteredReminderList[index].enabled
                                       ? TextStyle(
@@ -266,25 +268,62 @@ class ReminderWidget extends StatelessWidget {
       TextEditingController editingControllerText,
       TextEditingController editingControllerTag,
       final editedEnabled) {
+    List<String> sortedTags = controller.groupedReminders.keys.toList()..sort();
     return Column(
       children: <Widget>[
-        TextFormField(
+        Scrollbar(
+            child: TextFormField(
+          keyboardType: TextInputType.multiline,
           controller: editingControllerText,
+          minLines: formMaxLines ~/ 2 + 1,
           maxLines: formMaxLines,
           maxLength: formMaxLength,
           // style: TextStyle(fontSize: 18),
-        ),
+        )),
         Row(children: <Widget>[
           Expanded(
-              flex: 1, child: Text('Tag:', style: TextStyle(fontSize: 14))),
+              child: Text('Tag (Select / Edit / Create New):',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold))),
+        ]),
+        Row(children: <Widget>[
+          // Expanded(
+          //     flex: 1, child: Text('Tag:', style: TextStyle(fontSize: 14))),
+          DropdownButton<String>(
+              // value: controller.selectedTag.value,
+              items: [
+                for (var tag in sortedTags)
+                  DropdownMenuItem(
+                    value: tag,
+                    child: Text(
+                      tag,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+              ],
+              style: TextStyle(fontSize: 14),
+              isDense: true,
+              // isExpanded: true,
+              onChanged: (String value) {
+                editingControllerTag.text = value;
+              },
+              hint: Text("Select existing"))
+        ]),
+        Row(children: <Widget>[
           Expanded(
-              flex: 3,
+              // flex: 6,
+              // TODO need to call dispose on TextFormField!!
               child: TextFormField(
-                controller: editingControllerTag,
-                maxLines: 1,
-                maxLength: 32,
-                // style: TextStyle(fontSize: 18),
-              )),
+            controller: editingControllerTag,
+            maxLines: 1,
+            maxLength: 32,
+            // initialValue: null,
+            autofillHints: sortedTags,
+            // style: TextStyle(fontSize: 14),
+            enableInteractiveSelection: true,
+            textAlign: TextAlign.right,
+            // style: TextStyle(fontSize: 18),
+          )),
         ]),
         Row(children: <Widget>[
           Text('Enabled: ', style: TextStyle(fontSize: 14)),
@@ -307,11 +346,12 @@ class ReminderWidget extends StatelessWidget {
     TextEditingController editingControllerTag = new TextEditingController(
         text: controller.selectedTag.value != ''
             ? controller.selectedTag.value
-            : customTag);
+            : Reminder.defaultCustomTagName);
     Alert(
         context: context,
         title: "Add Reminder",
-        style: getGlobalAlertStyle(Get.isDarkMode),
+        style: getGlobalAlertStyle(Get.isDarkMode,
+            alertPadding: EdgeInsets.all(4.0)),
         content: _buildAddEditColumn(context, editingControllerText,
             editingControllerTag, editedEnabled),
         buttons: [
@@ -354,7 +394,8 @@ class ReminderWidget extends StatelessWidget {
     Alert(
         context: context,
         title: "Edit Reminder",
-        style: getGlobalAlertStyle(Get.isDarkMode),
+        style: getGlobalAlertStyle(Get.isDarkMode,
+            alertPadding: EdgeInsets.all(4.0)),
         content: _buildAddEditColumn(context, editingControllerText,
             editingControllerTag, editedEnabled),
         buttons: [
@@ -399,7 +440,8 @@ class ReminderWidget extends StatelessWidget {
     Alert(
         context: context,
         title: "Delete Reminder?",
-        style: getGlobalAlertStyle(Get.isDarkMode),
+        style: getGlobalAlertStyle(Get.isDarkMode,
+            alertPadding: EdgeInsets.all(4.0)),
         content: Column(
           children: <Widget>[
             Text(reminder.text,
