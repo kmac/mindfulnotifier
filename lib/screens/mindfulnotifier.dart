@@ -274,7 +274,11 @@ class MindfulNotifierWidget extends StatelessWidget {
                                               Reminder.truncLength
                                           ? 30
                                           : 22),
-                                  textAlign: TextAlign.center,
+                                  textAlign:
+                                      controller._reminderMessage.value.length <
+                                              Reminder.truncLength
+                                          ? TextAlign.center
+                                          : TextAlign.left,
                                   softWrap: true,
                                 )),
                           ))))),

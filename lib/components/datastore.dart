@@ -89,6 +89,18 @@ const List<Map<String, dynamic>> defaultJsonReminderMap = [
     "enabled": true,
     "tag": "${Reminder.defaultTagName}"
   },
+  {
+    "text":
+        "Two is very two, two is very too. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long.",
+    "enabled": true,
+    "tag": "${Reminder.defaultTagName}"
+  },
+  {
+    "text":
+        "This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long.",
+    "enabled": true,
+    "tag": "${Reminder.defaultTagName}"
+  },
 ];
 
 // ISSUE sharing data across the UI and the alarm/scheduler isolate:
@@ -639,7 +651,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
 }
 
 class Reminder extends Equatable {
-  static const maxLength = 2048;
+  static const maxLength = 4096;
   static const truncLength = 256;
   static const truncLines = 5;
   static const defaultTagName = 'default';

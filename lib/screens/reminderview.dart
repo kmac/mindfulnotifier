@@ -97,8 +97,6 @@ class ReminderWidget extends StatelessWidget {
           centerTitle: true,
           // title: Text('Configure Reminders'),
           title: Column(
-            // mainAxisAlignment: MainAxisAlignment.center,
-            // crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
                 'Configure Reminders',
@@ -286,10 +284,7 @@ class ReminderWidget extends StatelessWidget {
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold))),
         ]),
         Row(children: <Widget>[
-          // Expanded(
-          //     flex: 1, child: Text('Tag:', style: TextStyle(fontSize: 14))),
           DropdownButton<String>(
-              // value: controller.selectedTag.value,
               items: [
                 for (var tag in sortedTags)
                   DropdownMenuItem(
@@ -307,9 +302,7 @@ class ReminderWidget extends StatelessWidget {
               onChanged: (String value) {
                 editingControllerTag.text = value;
               },
-              hint: Text("Select existing"))
-        ]),
-        Row(children: <Widget>[
+              hint: Text("Select existing")),
           Expanded(
               // flex: 6,
               // TODO need to call dispose on TextFormField!!
@@ -321,7 +314,7 @@ class ReminderWidget extends StatelessWidget {
             autofillHints: sortedTags,
             // style: TextStyle(fontSize: 14),
             enableInteractiveSelection: true,
-            textAlign: TextAlign.right,
+            textAlign: TextAlign.center,
             // style: TextStyle(fontSize: 18),
           )),
         ]),

@@ -1,3 +1,12 @@
+# 1.0.15
+- Issue 26: allow to select from existing tags on add/edit
+    - Can also add new tag via manual text
+- Issue 25: Increase maximum characters per reminder
+    - Increased from 256 to 4096 characters
+    - Reminders are truncated in notifications. Will be
+      shown in full on main screen via scrolling
+- Issue 24: slight change to randomize function
+
 # 1.0.14
 - Rework reminder list UI and features for Issue #15 (tagging) and Issue #20
     - Ability to enable/disable individual reminders
