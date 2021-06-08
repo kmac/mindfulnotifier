@@ -884,7 +884,7 @@ class Reminders {
           ? "No reminders are enabled"
           : "No reminders are enabled for tag '$tag'";
     }
-    return filteredList[random.nextInt(filteredList.length - 1)].text;
+    return filteredList[random.nextInt(filteredList.length)].text;
   }
 
   @override
