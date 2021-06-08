@@ -110,7 +110,7 @@ Future<void> initializeFromAppIsolateReceivePort() async {
         InMemoryScheduleDataStore mds = map.values.first;
         scheduler.update(mds);
         scheduler.updateDS('infoMessage', "Restored");
-        scheduler.disable();
+        // scheduler.disable();
         break;
       case 'syncDataStore':
         scheduler.sendDataStoreUpdate();
