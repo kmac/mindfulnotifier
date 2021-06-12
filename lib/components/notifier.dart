@@ -19,7 +19,6 @@ import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = createLogger('notifier');
 
-const bool useSeparateAudio = true;
 const int maxNotificationBodyLength = 1024;
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -123,19 +122,6 @@ class Notifier {
     await flutterLocalNotificationsPlugin.cancelAll();
   }
 
-  // Future<void> _startAudioService() async {
-  //   if (useSeparateAudio) {
-  //     audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
-  //   }
-  // }
-
-  // void _stopAudioService() {
-  //   if (useSeparateAudio) {
-  //     audioPlayer?.dispose();
-  //     audioPlayer = null;
-  //   }
-  // }
-
   void showQuietHoursNotification(bool start) async {
     final String notifText =
         start ? 'In Quiet Hours' : 'Quiet Hours have ended';
@@ -179,21 +165,6 @@ class Notifier {
     String notifTrunc = Reminder.truncate(notifText, maxNotificationBodyLength);
 
     AndroidNotificationSound notifSound;
-    if (!useSeparateAudio) {
-      if (customSoundFile == null) {
-        channelId += '-tibetan_bell_ding_b';
-        notifSound = RawResourceAndroidNotificationSound(channelId);
-      } else {
-        // todo this will have to be shortened to the file name no extension:
-        channelId += '-' + customSoundFile.path;
-        notifSound = UriAndroidNotificationSound(customSoundFile.path);
-      }
-      // Use another channelId if mute is enabled (because of android):
-      if (mute) {
-        channelId += '-muted';
-        channelDescription += '/muted';
-      }
-    }
     // Use another channelId if vibrate is enabled (because of android):
     if (vibrate) {
       channelId += '-vibration';
@@ -223,7 +194,7 @@ class Notifier {
             importance: Importance.max,
             priority: Priority.high,
             enableVibration: vibrate,
-            playSound: !useSeparateAudio && !mute,
+            playSound: false,
             sound: notifSound,
             ongoing: false,
             autoCancel: !sticky,
@@ -239,7 +210,7 @@ class Notifier {
         notifId, notifTitle, notifTrunc, platformChannelSpecifics,
         payload: notifText);
 
-    if (useSeparateAudio && !mute) {
+    if (!mute) {
       String ringerStatus = await SoundMode.ringerModeStatus;
       if (ringerStatus == "Normal Mode") {
         audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
