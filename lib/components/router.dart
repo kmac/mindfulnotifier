@@ -20,8 +20,8 @@ class Router {
       page: () => ReminderWidget(),
     ),
     GetPage(
-      name: '/bell',
-      page: () => BellWidget(),
+      name: '/sound',
+      page: () => SoundWidget(),
     ),
     GetPage(
       name: '/general',

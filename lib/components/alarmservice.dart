@@ -123,14 +123,6 @@ Future<void> initializeFromAppIsolateReceivePort() async {
         bool vibrate = map.values.first;
         scheduler.updateDS('vibrate', vibrate);
         break;
-      case 'bellId':
-        String bellId = map.values.first;
-        scheduler.updateDS('bellId', bellId);
-        break;
-      case 'customBellPath':
-        String bellPath = map.values.first;
-        scheduler.updateDS('customBellPath', bellPath);
-        break;
       case 'shutdown':
         shutdown();
         break;
@@ -138,6 +130,9 @@ Future<void> initializeFromAppIsolateReceivePort() async {
         // the map value is either a File or a path to file
         dynamic fileOrPath = map.values.first;
         scheduler.playSound(fileOrPath);
+        break;
+      default:
+        logger.e("Unknown key: $key");
         break;
     }
   }, onDone: () {

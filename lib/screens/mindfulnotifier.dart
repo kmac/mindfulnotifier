@@ -207,8 +207,8 @@ class MindfulNotifierWidgetController extends GetxController {
     Get.toNamed('/reminders');
   }
 
-  void handleBellOnTap() {
-    Get.toNamed('/bell');
+  void handleSoundOnTap() {
+    Get.toNamed('/sound');
   }
 
   void handleGeneralOnTap() {
@@ -391,9 +391,9 @@ class MindfulNotifierWidget extends StatelessWidget {
             Divider(),
             ListTile(
               leading: Icon(Icons.notifications),
-              title: Text('Bell'),
-              subtitle: Text('Configure bell'),
-              onTap: controller.handleBellOnTap,
+              title: Text('Sound'),
+              subtitle: Text('Configure bell and sound options'),
+              onTap: controller.handleSoundOnTap,
             ),
             Divider(),
             ListTile(

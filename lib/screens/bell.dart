@@ -56,13 +56,14 @@ Map<String, Map<String, String>> bellDefinitions = {
   },
 };
 
-class BellWidgetController extends GetxController {
+class SoundWidgetController extends GetxController {
   final _bellId = 'bell1'.obs;
   final _customBellPath = ''.obs;
+  final _audioChannel = 'notification'.obs;
   var _selectedBellId;
 
   // UI event handlers, init code, etc goes here
-  BellWidgetController();
+  SoundWidgetController();
 
   @override
   void onInit() {
@@ -73,12 +74,14 @@ class BellWidgetController extends GetxController {
     _customBellPath.value = mds
         .customBellPath; // tracks the value of bellDefinitions['customBell']['path']
     bellDefinitions['customBell']['path'] = _customBellPath.value;
+    _audioChannel.value = mds.audioOutputChannel;
   }
 
   @override
   void onReady() {
     ever(_bellId, handleBellId);
     ever(_customBellPath, handleCustomBellPath);
+    ever(_audioChannel, handleAudioChannel);
     super.onReady();
   }
 
@@ -87,23 +90,31 @@ class BellWidgetController extends GetxController {
     _selectedBellId = value;
     InMemoryScheduleDataStore mds = Get.find();
     mds.bellId = _selectedBellId;
-    // update the alarm isolate:
-    MindfulNotifierWidgetController mainUiController = Get.find();
-    mainUiController.sendToAlarmService({'bellId': _selectedBellId});
+    _updateAlarmService(mds);
   }
 
   void handleCustomBellPath(String value) async {
     logger.d("Change custom bell: $value");
     InMemoryScheduleDataStore mds = Get.find();
     mds.customBellPath = value;
+    _updateAlarmService(mds);
+  }
+
+  void handleAudioChannel(String value) async {
+    InMemoryScheduleDataStore mds = Get.find();
+    mds.audioOutputChannel = value;
+    _updateAlarmService(mds);
+  }
+
+  void _updateAlarmService(InMemoryScheduleDataStore mds) {
     // update the alarm isolate:
     MindfulNotifierWidgetController mainUiController = Get.find();
-    mainUiController.sendToAlarmService({'customBellPath': value});
+    mainUiController.sendToAlarmService({'update': mds});
   }
 }
 
-class BellWidget extends StatelessWidget {
-  final BellWidgetController controller = Get.put(BellWidgetController());
+class SoundWidget extends StatelessWidget {
+  final SoundWidgetController controller = Get.put(SoundWidgetController());
 
   Future<void> _pickFile(var bellId) async {
     FilePickerResult result =
@@ -160,8 +171,8 @@ class BellWidget extends StatelessWidget {
         ]).show();
   }
 
-  List<RadioListTile> _buildRadioListTiles(context) {
-    List<RadioListTile> tiles = [];
+  List<Widget> _buildRadioListTiles(context) {
+    List<Widget> tiles = [];
     for (String bellId in bellDefinitions.keys) {
       if (bellId != 'customBell') {
         tiles.add(RadioListTile(
@@ -263,7 +274,30 @@ class BellWidget extends StatelessWidget {
         ),
       ),
       body: Obx(() => Column(
-            children: _buildRadioListTiles(context),
+            children: _buildRadioListTiles(context) +
+                <Widget>[
+                  Divider(),
+                  ListTile(
+                      leading: Icon(Icons.notifications),
+                      title: Text('Audio Channel'),
+                      subtitle: Text(
+                          'The audio channel to use for the notification sound (default: notification)'),
+                      trailing: Container(
+                          child: DropdownButton(
+                              value: controller._audioChannel.value,
+                              onChanged: (value) {
+                                controller._audioChannel.value = value;
+                              },
+                              items: [
+                            DropdownMenuItem(
+                                value: 'notification',
+                                child: Text('notification')),
+                            DropdownMenuItem(
+                                value: 'media', child: Text('media')),
+                            DropdownMenuItem(
+                                value: 'alarm', child: Text('alarm')),
+                          ]))),
+                ],
           )),
     );
   }

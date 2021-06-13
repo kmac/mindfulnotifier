@@ -170,7 +170,7 @@ class Scheduler {
   }
 
   void playSound(var fileOrPath) {
-    Notifier().playSound(fileOrPath);
+    Notifier().playSound(fileOrPath, ds);
   }
 
   void initialScheduleComplete() {

@@ -180,9 +180,9 @@ class Notifier {
       styleInfo = null;
     }
 
+    ScheduleDataStore ds = await ScheduleDataStore.getInstance();
     bool sticky = true;
     try {
-      ScheduleDataStore ds = await ScheduleDataStore.getInstance();
       ds.reload();
       sticky = ds.useStickyNotification;
     } catch (e) {
@@ -213,14 +213,40 @@ class Notifier {
     if (!mute) {
       String ringerStatus = await SoundMode.ringerModeStatus;
       if (ringerStatus == "Normal Mode") {
-        audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
+        audioPlayer = getAudioPlayer(ds);
         audioPlayer.playBell();
       }
     }
   }
 
-  void playSound(dynamic fileOrPath) {
-    audioPlayer ??= NotifyAudioPlayer.useNotificationChannel()..init();
+  void playSound(dynamic fileOrPath, ScheduleDataStoreBase ds) {
+    audioPlayer ??= getAudioPlayer(ds);
     audioPlayer.play(fileOrPath);
+  }
+
+  NotifyAudioPlayer getAudioPlayer(ScheduleDataStoreBase ds) {
+    String outputChannel = ds.audioOutputChannel;
+    if (audioPlayer != null) {
+      if (audioPlayer.audioChannelSelection != outputChannel) {
+        logger.d(
+            "getAudioPlayer: switching from ${audioPlayer.audioChannelSelection} to $outputChannel");
+        audioPlayer.dispose();
+        audioPlayer = null;
+      }
+    }
+    if (audioPlayer == null) {
+      switch (outputChannel) {
+        case 'media':
+          audioPlayer = NotifyAudioPlayer.useMediaChannel()..init();
+          break;
+        case 'alarm':
+          audioPlayer = NotifyAudioPlayer.useAlarmChannel()..init();
+          break;
+        default:
+          audioPlayer = NotifyAudioPlayer.useNotificationChannel()..init();
+          break;
+      }
+    }
+    return audioPlayer;
   }
 }

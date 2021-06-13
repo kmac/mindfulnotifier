@@ -110,6 +110,7 @@ abstract class ScheduleDataStoreBase {
   bool get enabled;
   bool get mute;
   bool get vibrate;
+  String get audioOutputChannel;
   bool get useBackgroundService;
   bool get useStickyNotification;
   bool get includeDebugInfo;
@@ -148,6 +149,7 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
   bool enabled;
   bool mute;
   bool vibrate;
+  String audioOutputChannel;
   bool useBackgroundService;
   bool useStickyNotification;
   bool includeDebugInfo;
@@ -174,6 +176,7 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
       : this.enabled = ds.enabled,
         this.mute = ds.mute,
         this.vibrate = ds.vibrate,
+        this.audioOutputChannel = ds.audioOutputChannel,
         this.useBackgroundService = ds.useBackgroundService,
         this.useStickyNotification = ds.useStickyNotification,
         this.includeDebugInfo = ds.includeDebugInfo,
@@ -201,6 +204,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
   static const String enabledKey = 'enabled';
   static const String muteKey = 'mute';
   static const String vibrateKey = 'vibrate';
+  static const String audioOutputChannelKey = 'audioOutputChannel';
   static const String useBackgroundServiceKey = 'useBackgroundService';
   static const String useStickyNotificationKey = 'useStickyNotification';
   static const String includeDebugInfoKey = 'includeDebugInfoKey';
@@ -228,6 +232,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
   static const String customBellPathKey = 'customBellPath';
 
   // defaults
+  static const String defaultAudioOutputChannel = 'notification';
   static const bool defaultUseBackgroundService = false;
   static const String defaultScheduleTypeStr = 'periodic';
   static const int defaultPeriodicHours = 1;
@@ -299,6 +304,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     _mergeVal(enabledKey, mds.enabled);
     _mergeVal(muteKey, mds.mute);
     _mergeVal(vibrateKey, mds.vibrate);
+    _mergeVal(audioOutputChannelKey, mds.audioOutputChannel);
     _mergeVal(useBackgroundServiceKey, mds.useBackgroundService);
     _mergeVal(useStickyNotificationKey, mds.useStickyNotification);
     _mergeVal(includeDebugInfoKey, mds.includeDebugInfo);
@@ -383,6 +389,18 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
       vibrate = false;
     }
     return _prefs.getBool(ScheduleDataStore.vibrateKey);
+  }
+
+  set audioOutputChannel(String value) {
+    setSync(ScheduleDataStore.audioOutputChannelKey, value);
+  }
+
+  @override
+  String get audioOutputChannel {
+    if (!_prefs.containsKey(ScheduleDataStore.audioOutputChannelKey)) {
+      audioOutputChannel = defaultAudioOutputChannel;
+    }
+    return _prefs.getString(ScheduleDataStore.audioOutputChannelKey);
   }
 
   set useBackgroundService(bool value) {

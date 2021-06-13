@@ -22,17 +22,13 @@ class NotifyAudioPlayer {
   var _player = AudioPlayer();
   AudioSession _session;
 
-  String _audioChannelSelection;
-  NotifyAudioPlayer(this._audioChannelSelection);
+  final String audioChannelSelection;
+  NotifyAudioPlayer(this.audioChannelSelection);
   NotifyAudioPlayer.useNotificationChannel() : this('notification');
   NotifyAudioPlayer.useMediaChannel() : this('media');
   NotifyAudioPlayer.useAlarmChannel() : this('alarm');
 
   AudioSessionConfiguration _sessionConfiguration;
-
-  String getAudioChannelSelection() {
-    return _audioChannelSelection;
-  }
 
   Future<void> init() async {
     logger.i("Initializing AudioSession");
@@ -43,7 +39,7 @@ class NotifyAudioPlayer {
       androidAudioAttributes: AndroidAudioAttributes(
         contentType: AndroidAudioContentType.music,
         flags: AndroidAudioFlags.none,
-        usage: audioChannelForNotification[_audioChannelSelection],
+        usage: audioChannelForNotification[audioChannelSelection],
       ),
       androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
       // androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransient,
@@ -86,11 +82,11 @@ class NotifyAudioPlayer {
         logger.d("play: defaulting to default: $defaultBellAsset");
         assetToPlay = defaultBellAsset;
       }
-      logger.i("Playing asset=$assetToPlay on $_audioChannelSelection channel");
+      logger.i("Playing asset=$assetToPlay on $audioChannelSelection channel");
       await _player.setAsset(assetToPlay);
     } else {
       logger.i(
-          "Playing file=${fileToPlay.path} on $_audioChannelSelection channel");
+          "Playing file=${fileToPlay.path} on $audioChannelSelection channel");
       await _player.setFilePath(fileToPlay.path);
     }
     await _player.play(); // waits until finished playing
