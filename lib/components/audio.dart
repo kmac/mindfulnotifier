@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 
-import 'package:mindfulnotifier/screens/bell.dart';
+import 'package:mindfulnotifier/screens/sound.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
 

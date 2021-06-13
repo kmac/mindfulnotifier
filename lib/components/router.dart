@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/screens/mindfulnotifier.dart';
-import 'package:mindfulnotifier/screens/bell.dart';
+import 'package:mindfulnotifier/screens/sound.dart';
 import 'package:mindfulnotifier/screens/general.dart';
 import 'package:mindfulnotifier/screens/schedulesview.dart';
 import 'package:mindfulnotifier/screens/reminderview.dart';
