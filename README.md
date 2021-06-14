@@ -33,6 +33,8 @@ The app is built using [Flutter](https://flutter.dev/).  It currently only runs 
 - Define a time range for daily quiet hours.
 - Choose from a set of default bells, or provide your own.
 - Separate controls for 'mute' and 'vibrate'.
+- Choose android audio output channel for sound: notification (default), media, or alarm
+
 
 ### Permissions
 
