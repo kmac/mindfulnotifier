@@ -1,0 +1,6 @@
+# 1.0.16
+- 'Bell' configuration menu is now called 'Sound'
+- Add ability to select media channel for notification sound (Issue 31):
+    - notification (default, as in previous versions)
+    - media
+    - alarm

@@ -1,3 +1,10 @@
+# 1.0.16
+- 'Bell' configuration menu is now called 'Sound'
+- Add ability to select media channel for notification sound (Issue 31):
+    - notification (default, as in previous versions)
+    - media
+    - alarm
+
 # 1.0.15
 - Issue 26: allow to select from existing tags on add/edit
     - Can also add new tag via manual text

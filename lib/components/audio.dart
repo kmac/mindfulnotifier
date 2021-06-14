@@ -17,7 +17,6 @@ const Map<String, AndroidAudioUsage> audioChannelForNotification = {
 
 class NotifyAudioPlayer {
   static const String defaultBellAsset = 'media/tibetan_bell_ding_b.mp3';
-  final bool disposeOnPlayStop = true;
 
   var _player = AudioPlayer();
   AudioSession _session;
@@ -90,13 +89,7 @@ class NotifyAudioPlayer {
       await _player.setFilePath(fileToPlay.path);
     }
     await _player.play(); // waits until finished playing
-    if (disposeOnPlayStop) {
-      dispose();
-    } else {
-      await _player.stop(); // required to turn off _player.playing
-      _session
-          .setActive(false); // required to allow other players to regain focus
-    }
+    dispose();
   }
 
   Future<void> dispose() async {

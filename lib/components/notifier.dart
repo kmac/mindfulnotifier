@@ -220,7 +220,7 @@ class Notifier {
   }
 
   void playSound(dynamic fileOrPath, ScheduleDataStoreBase ds) {
-    audioPlayer ??= getAudioPlayer(ds);
+    audioPlayer = getAudioPlayer(ds);
     audioPlayer.play(fileOrPath);
   }
 
