@@ -21,7 +21,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #              This number is used only to determine whether one version is more recent than another,
 #              with higher numbers indicating more recent versions
 # versionName: Customer-visible version string
-version: 1.0.16+28
+version: 1.0.17+29
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -41,7 +41,7 @@ dependencies:
   date_format: ^2.0.2
   device_info: ^2.0.1
   rxdart: ^0.26.0
-  flutter_native_timezone: ^1.1.0
+  flutter_native_timezone: ^2.0.0
   shared_preferences: ^2.0.6
   get: ^4.1.4
   logger: ^1.0.0

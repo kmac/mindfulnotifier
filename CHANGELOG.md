@@ -1,3 +1,6 @@
+# 1.0.17
+- Issue #32: Fix crash on earlier android versions caused by flutter_native_timezone
+
 # 1.0.16
 - 'Bell' configuration menu is now called 'Sound'
 - Add ability to select media channel for notification sound (Issue 31):

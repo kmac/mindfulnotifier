@@ -1,0 +1,2 @@
+# 1.0.17
+- Issue #32: Fix crash on earlier android versions caused by flutter_native_timezone
