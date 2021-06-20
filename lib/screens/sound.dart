@@ -273,7 +273,7 @@ class SoundWidget extends StatelessWidget {
           ],
         ),
       ),
-      body: Obx(() => Column(
+      body: Obx(() => ListView(
             children: _buildRadioListTiles(context) +
                 <Widget>[
                   Divider(),
