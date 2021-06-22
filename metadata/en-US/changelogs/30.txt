@@ -1,0 +1,1 @@
+Issue #32: Fix crash when reminder created with empty string

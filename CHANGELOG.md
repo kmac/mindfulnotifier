@@ -1,3 +1,6 @@
+# 1.0.18
+- Issue #32: Fix crash when reminder created with empty string
+
 # 1.0.17
 - Issue #32: Fix crash on earlier android versions caused by flutter_native_timezone
 

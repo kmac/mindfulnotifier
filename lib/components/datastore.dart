@@ -794,9 +794,11 @@ class Reminders {
   }
 
   String _stripFirstQuote(String s) {
-    String firstChar = s.substring(0, 1);
-    if (firstChar == '"' || firstChar == "'") {
-      return s.substring(1);
+    if (s != null && s.length > 0) {
+      String firstChar = s.substring(0, 1);
+      if (firstChar == '"' || firstChar == "'") {
+        return s.substring(1);
+      }
     }
     return s;
   }
