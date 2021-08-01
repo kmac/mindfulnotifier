@@ -1,3 +1,10 @@
+# 1.0.19
+- Issue #31/#36: Revisit sound modes for different channels
+- Summary:
+    - App mute is enabled: always mute
+    - For notification channel: honour the phone silent/vibrate-only setting
+    - For media and alarm channels, allow sound unless DND is enabled
+
 # 1.0.18
 - Issue #32: Fix crash when reminder created with empty string
 
