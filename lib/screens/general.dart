@@ -73,7 +73,6 @@ class GeneralWidgetController extends GetxController {
   }
 
   void handleHideNextReminder(bool value) {
-    // todo; persist, and inform user restart required
     InMemoryScheduleDataStore mds = Get.find();
     mds.hideNextReminder = value;
     Get.find<MindfulNotifierWidgetController>().hideNextReminder.value = value;
@@ -81,7 +80,6 @@ class GeneralWidgetController extends GetxController {
   }
 
   void handleIncludeDebugInfo(bool value) {
-    // todo; persist, and inform user restart required
     InMemoryScheduleDataStore mds = Get.find();
     mds.includeDebugInfo = value;
     Get.find<MindfulNotifierWidgetController>().showControlMessages?.value =

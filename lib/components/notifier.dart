@@ -210,13 +210,29 @@ class Notifier {
         notifId, notifTitle, notifTrunc, platformChannelSpecifics,
         payload: notifText);
 
-    if (!mute) {
-      String ringerStatus = await SoundMode.ringerModeStatus;
-      if (ringerStatus == "Normal Mode") {
-        audioPlayer = getAudioPlayer(ds);
-        audioPlayer.playBell();
+    // Sound modes (Issue #31/#36):
+    // App mute is enabled: always mute
+    // For notification channel: honour the phone silent/vibrate-only setting
+    // For media and alarm channels, allow sound unless DND is enabled
+
+    if (mute) {
+      return;
+    }
+    String ringerStatus = await SoundMode.ringerModeStatus;
+    if (ringerStatus == "Silent Mode") {
+      // Do Not Disturb
+      // We may need to make a check here if possible for Android 11 to see if
+      // our app has been bypassed by user in DND settings
+      return;
+    }
+    if (ds.audioOutputChannel == "notification") {
+      // This channel honours the silent/vibrate phone setting:
+      if (ringerStatus != "Normal Mode") {
+        return;
       }
     }
+    audioPlayer = getAudioPlayer(ds);
+    audioPlayer.playBell();
   }
 
   void playSound(dynamic fileOrPath, ScheduleDataStoreBase ds) {
