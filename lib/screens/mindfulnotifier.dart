@@ -5,7 +5,7 @@ import 'dart:isolate';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:share/share.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -390,7 +390,7 @@ class MindfulNotifierWidget extends StatelessWidget {
           children: <Widget>[
             DrawerHeader(
               decoration: BoxDecoration(
-                color: Theme.of(context).appBarTheme.color,
+                color: Theme.of(context).appBarTheme.backgroundColor,
               ),
               child: Text(
                 'Settings',

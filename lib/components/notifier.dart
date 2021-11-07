@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:device_info/device_info.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -9,6 +9,7 @@ import 'package:mindfulnotifier/components/utils.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:sound_mode/sound_mode.dart';
+import 'package:sound_mode/utils/ringer_mode_statuses.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -190,7 +191,8 @@ class Notifier {
     }
 
     AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(channelId, channelId, channelDescription,
+        AndroidNotificationDetails(channelId, channelId,
+            channelDescription: channelDescription,
             importance: Importance.max,
             priority: Priority.high,
             enableVibration: vibrate,
@@ -218,8 +220,8 @@ class Notifier {
     if (mute) {
       return;
     }
-    String ringerStatus = await SoundMode.ringerModeStatus;
-    if (ringerStatus == "Silent Mode") {
+    RingerModeStatus ringerStatus = await SoundMode.ringerModeStatus;
+    if (ringerStatus == RingerModeStatus.silent) {
       // Do Not Disturb
       // We may need to make a check here if possible for Android 11 to see if
       // our app has been bypassed by user in DND settings
@@ -227,7 +229,7 @@ class Notifier {
     }
     if (ds.audioOutputChannel == "notification") {
       // This channel honours the silent/vibrate phone setting:
-      if (ringerStatus != "Normal Mode") {
+      if (ringerStatus != RingerModeStatus.normal) {
         return;
       }
     }

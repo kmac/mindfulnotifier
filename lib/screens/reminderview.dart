@@ -160,12 +160,17 @@ class ReminderWidget extends StatelessWidget {
                                 margin: EdgeInsets.only(top: 8, bottom: 8),
                                 child: DropdownSearch<String>(
                                   mode: Mode.MENU,
-                                  showSelectedItem: true,
+                                  showSelectedItems: true,
                                   items:
                                       controller.groupedReminders.keys.toList()
                                         ..sort(),
-                                  label: "Filter by tag: ",
-                                  hint: "Select tag:",
+                                  dropdownSearchDecoration: InputDecoration(
+                                    hintText: "Select tag:",
+                                    labelText: "Filter by tag:",
+                                    contentPadding:
+                                        EdgeInsets.fromLTRB(12, 12, 0, 0),
+                                    border: OutlineInputBorder(),
+                                  ),
                                   showClearButton: true,
                                   onChanged: (value) {
                                     controller.selectedTag.value =

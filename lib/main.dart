@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:device_info/device_info.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/utils.dart';
-import 'package:package_info/package_info.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;

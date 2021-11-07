@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:ui';
 
-import 'package:android_alarm_manager/android_alarm_manager.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/logging.dart';
@@ -63,6 +63,8 @@ Future<void> initializeAlarmManager() async {
         logger.e('AndroidAlarmManager.initialize() failed');
       }
       androidAlarmManagerInitialized = true;
+      logger.i(
+          "Successfully initialized AndroidAlarmManager ${getCurrentIsolate()}");
     } catch (e) {
       logger.e('initializeAlarmManager failed',
           'AndroidAlarmManager.initialize() failed', e);
