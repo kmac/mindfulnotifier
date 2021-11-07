@@ -24,6 +24,7 @@ class MindfulNotifierWidgetController extends GetxController {
   static StreamSubscription fromAlarmServiceStreamSubscription;
   static ReceivePort fromAlarmServiceReceivePort;
 
+  bool initFinished = false;
   final String title = appName;
   final _reminderMessage = 'Not Running'.obs;
   final _infoMessage = 'Not Running'.obs;
@@ -39,11 +40,27 @@ class MindfulNotifierWidgetController extends GetxController {
   @override
   void onInit() async {
     super.onInit();
-    await init();
+    logger.i("mindfulnotifier UI onInit() ${getCurrentIsolate()}");
+    initializeFromAlarmServiceReceivePort();
+    // initFromDS(await ScheduleDataStore.getInMemoryInstance());
+
+    // Issue #35: maybe the below is a race condition... if the alarm service responds
+    // after the above onInit finishes, we could see odd things?
+
+    // Now send a sync message which will reinit the data store from the alarm/scheduler isolate
+    initFinished = false;
+    sendToAlarmService({'syncDataStore': 1});
+    initializeNotifications();
+
     // initializeFromBackgroundService();
+  }
+
+  void initFinish() {
+    logger.i("initFinish");
     ever(_enabled, handleEnabled);
     ever(_mute, handleMute);
     ever(_vibrate, handleVibrate);
+    initFinished = true;
   }
 
   @override
@@ -57,20 +74,13 @@ class MindfulNotifierWidgetController extends GetxController {
     super.onClose();
   }
 
-  Future<void> init() async {
-    logger.i("mindfulnotifier UI init() ${getCurrentIsolate()}");
-    initializeFromAlarmServiceReceivePort();
-    initFromDS(await ScheduleDataStore.getInMemoryInstance());
-    // Now send a sync message which will reinit the data store from the alarm/scheduler isolate
-    sendToAlarmService({'syncDataStore': 1});
-    initializeNotifications();
-  }
-
   void initFromDS(InMemoryScheduleDataStore mds) {
-    // logger.d("initFromDS, mds=${mds.reminders}");
+    // Replace the InMemoryScheduleDataStore instance with the newer one from alarm service
     Get.delete<InMemoryScheduleDataStore>();
     Get.put(mds);
-    // set all the UI-visible values
+    logger.d("initFromDS: enabled: ${mds.enabled}");
+
+    // set all the local UI-visible values
     _enabled.value = mds.enabled;
     _mute.value = mds.mute;
     _vibrate.value = mds.vibrate;
@@ -110,11 +120,18 @@ class MindfulNotifierWidgetController extends GetxController {
         case 'controlMessage':
           logger.i("Received control message: $value");
           controlMessage.value = value;
+          if (!initFinished) {
+            sendToAlarmService({'syncDataStore': 1});
+          }
           break;
         case 'syncDataStore':
           logger.i("Received syncDataStore");
           InMemoryScheduleDataStore mds = value;
+          // Receives a complete InMemoryScheduleDataStore update
           initFromDS(mds);
+          if (!initFinished) {
+            initFinish();
+          }
           break;
         default:
           logger.e("Unexpected key: $key");
@@ -177,6 +194,10 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void handleEnabled(enabled) {
+    logger.d("handleEnabled: enabled=$enabled, initFinished: $initFinished");
+    if (!initFinished) {
+      return;
+    }
     if (enabled) {
       if (_reminderMessage.value == 'Not Enabled' ||
           _reminderMessage.value == 'In quiet hours') {
@@ -185,18 +206,23 @@ class MindfulNotifierWidgetController extends GetxController {
       _infoMessage.value = 'Enabled. Waiting for notification.';
       sendToAlarmService({'enable': _infoMessage.value});
     } else {
-      // setMessage('Disabled');
       _infoMessage.value = 'Disabled';
       sendToAlarmService({'disable': _infoMessage.value});
     }
   }
 
   void handleMute(bool mute) {
-    sendToAlarmService({'mute': mute});
+    logger.d("handleMute: mute=$mute, initFinished: $initFinished");
+    if (initFinished) {
+      sendToAlarmService({'mute': mute});
+    }
   }
 
   void handleVibrate(bool vibrate) {
-    sendToAlarmService({'vibrate': vibrate});
+    logger.d("handleVibrate: vibrate=$vibrate, initFinished: $initFinished");
+    if (initFinished) {
+      sendToAlarmService({'vibrate': vibrate});
+    }
   }
 
   void handleScheduleOnTap() {

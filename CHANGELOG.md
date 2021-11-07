@@ -1,3 +1,6 @@
+# 1.0.20
+- Issue #35: Fix service disabled on app open after close
+
 # 1.0.19
 - Issue #31/#36: Revisit sound modes for different channels
 - Summary:

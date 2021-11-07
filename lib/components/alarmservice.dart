@@ -93,12 +93,12 @@ Future<void> initializeFromAppIsolateReceivePort() async {
         break;
       case 'enable':
         String infoMessage = map.values.first;
-        scheduler.updateDS('infoMessage', infoMessage);
+        scheduler.updateDS('infoMessage', infoMessage, sendUpdate: false);
         enable();
         break;
       case 'disable':
         String infoMessage = map.values.first;
-        scheduler.updateDS('infoMessage', infoMessage);
+        scheduler.updateDS('infoMessage', infoMessage, sendUpdate: false);
         disable();
         break;
       case 'restart':

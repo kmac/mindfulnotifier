@@ -1,0 +1,2 @@
+# 1.0.20
+- Issue #35: Fix service disabled on app open after close

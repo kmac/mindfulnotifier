@@ -110,9 +110,12 @@ class Scheduler {
     ds.merge(mds);
   }
 
-  void updateDS(String key, var value) async {
+  void updateDS(String key, var value, {bool sendUpdate = true}) async {
     logger.d("updateDS");
     await ScheduleDataStore.setSync(key, value);
+    if (sendUpdate) {
+      await sendDataStoreUpdate();
+    }
   }
 
   void enable() {
@@ -189,23 +192,20 @@ class Scheduler {
   }
 
   void sendReminderMessage(String msg) async {
-    // _lastUiMessage['reminderMessage'] = msg;
     ds.reminderMessage = msg;
     sendValueToUI('reminderMessage', msg);
   }
 
   void sendInfoMessage(String msg) async {
-    // _lastUiMessage['infoMessage'] = msg;
     ds.infoMessage = msg;
     sendValueToUI('infoMessage', msg);
   }
 
   void sendControlMessage(String msg) async {
-    // _lastUiMessage['controlMessage'] = msg;
     sendValueToUI('controlMessage', msg);
   }
 
-  void sendDataStoreUpdate() async {
+  Future<void> sendDataStoreUpdate() async {
     sendValueToUI(
         'syncDataStore', await ScheduleDataStore.getInMemoryInstance());
   }
