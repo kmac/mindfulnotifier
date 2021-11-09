@@ -237,12 +237,12 @@ class Notifier {
     audioPlayer.playBell();
   }
 
-  void playSound(dynamic fileOrPath, ScheduleDataStoreBase ds) {
+  void playSound(dynamic fileOrPath, ScheduleDataStore ds) {
     audioPlayer = getAudioPlayer(ds);
     audioPlayer.play(fileOrPath);
   }
 
-  NotifyAudioPlayer getAudioPlayer(ScheduleDataStoreBase ds) {
+  NotifyAudioPlayer getAudioPlayer(ScheduleDataStore ds) {
     String outputChannel = ds.audioOutputChannel;
     if (audioPlayer != null) {
       if (audioPlayer.audioChannelSelection != outputChannel) {

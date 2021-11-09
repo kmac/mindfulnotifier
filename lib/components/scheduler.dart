@@ -112,7 +112,7 @@ class Scheduler {
 
   void updateDS(String key, var value, {bool sendUpdate = true}) async {
     logger.d("updateDS");
-    await ScheduleDataStore.setSync(key, value);
+    await ds.setSync(key, value);
     if (sendUpdate) {
       await sendDataStoreUpdate();
     }
