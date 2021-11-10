@@ -41,11 +41,14 @@ class GeneralWidgetController extends GetxController {
     if (buildVersion.sdkInt < 23) {
       includeBatteryOptimizationCheck = false;
     }
+
+    AppDataStore appDS = Get.find<AppDataStore>();
+    theme.value = appDS.theme;
+    _useBackgroundService.value = appDS.useBackgroundService;
+
     InMemoryScheduleDataStore mds = Get.find();
-    theme.value = mds.theme;
     _includeDebugInfo.value = mds.includeDebugInfo;
     _useStickyNotification.value = mds.useStickyNotification;
-    _useBackgroundService.value = mds.useBackgroundService;
     _hideNextReminder.value = mds.hideNextReminder;
   }
 
@@ -61,9 +64,8 @@ class GeneralWidgetController extends GetxController {
 
   void handleUseBackgroundService(bool value) {
     // todo; persist, and inform user restart required
-    InMemoryScheduleDataStore mds = Get.find();
-    mds.useBackgroundService = value;
-    scheduleDirty.value = true;
+    AppDataStore appDS = Get.find<AppDataStore>();
+    appDS.useBackgroundService = value;
   }
 
   void handleUseStickyNotification(bool value) {
@@ -90,9 +92,8 @@ class GeneralWidgetController extends GetxController {
   void handleTheme(String value) {
     logger.d("Change theme: $value");
     Get.changeTheme(allThemes[value] ?? defaultTheme);
-    InMemoryScheduleDataStore mds = Get.find();
-    mds.theme = value;
-    scheduleDirty.value = true;
+    AppDataStore appDS = Get.find<AppDataStore>();
+    appDS.theme = value;
   }
 
   void handleScheduleDirty() {
@@ -248,12 +249,13 @@ class GeneralWidget extends StatelessWidget {
 
           Get.find<MindfulNotifierWidgetController>()
               .triggerSchedulerRestore(mds);
-          controller.theme.value = mds.theme;
+          AppDataStore appDS = Get.find<AppDataStore>();
+          controller.theme.value = appDS.theme;
           utils.showInfoAlert(Get.context, 'Successful Import',
               'The reminders import operation was successful.',
-              alertStyle: utils.getGlobalAlertStyle(mds.theme == 'Dark'),
+              alertStyle: utils.getGlobalAlertStyle(appDS.theme == 'Dark'),
               dialogTextStyle:
-                  utils.getGlobalDialogTextStyle(mds.theme == 'Dark'));
+                  utils.getGlobalDialogTextStyle(appDS.theme == 'Dark'));
         } catch (e) {
           logger.e(
               'Reminder import failed, file=${result.files.first.path}, exception: $e');

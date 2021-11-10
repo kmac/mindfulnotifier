@@ -42,7 +42,6 @@ class MindfulNotifierWidgetController extends GetxController {
     super.onInit();
     logger.i("mindfulnotifier UI onInit() ${getCurrentIsolate()}");
     initializeFromAlarmServiceReceivePort();
-    // initFromDS(await ScheduleDataStore.getInMemoryInstance());
 
     // Issue #35: maybe the below is a race condition... if the alarm service responds
     // after the above onInit finishes, we could see odd things?
@@ -246,8 +245,9 @@ class MindfulNotifierWidget extends StatelessWidget {
   final MindfulNotifierWidgetController controller =
       Get.put(MindfulNotifierWidgetController(), permanent: true);
 
-  final Color mainTextColor =
-      Get.isDarkMode ? Colors.grey[400] : Colors.grey[800];
+  Color getMainTextColor() {
+    return Get.isDarkMode ? Colors.grey[400] : Colors.grey[800];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +291,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                                 child: Text(
                                   '${controller._reminderMessage}',
                                   style: TextStyle(
-                                      color: mainTextColor,
+                                      color: getMainTextColor(),
                                       fontWeight: FontWeight.w900,
                                       fontStyle: FontStyle.italic,
                                       fontFamily: 'Open Sans',
@@ -377,7 +377,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                             : '${controller._infoMessage.value}',
                     // style: TextStyle(
                     //     color: Get.isDarkMode ? mainTextColor : Colors.black38),
-                    style: TextStyle(color: mainTextColor),
+                    style: TextStyle(color: getMainTextColor()),
                     overflow: TextOverflow.ellipsis,
                   ),
                 )),

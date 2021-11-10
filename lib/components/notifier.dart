@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:get/get.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -133,22 +134,12 @@ class Notifier {
     showNotification(notifText, mute: true, vibrate: false);
   }
 
-  void showReminderNotification(String notifText) async {
-    bool mute = false;
-    bool vibrate = false;
-    try {
-      ScheduleDataStore ds = await ScheduleDataStore.getInstance();
-      ds.reload();
-      mute = ds.mute;
-      vibrate = ds.vibrate;
-    } catch (e) {
-      logger.e("Could not get ScheduleDataStore, e=$e");
-    }
+  void showReminderNotification(String notifText, bool mute, bool vibrate) async {
     showNotification(notifText, mute: mute, vibrate: vibrate);
   }
 
   void showNotification(String notifText,
-      {bool mute = false, bool vibrate}) async {
+      {bool mute = false, bool vibrate, bool useStickyNotification}) async {
     // Some reference links:
     // https://developer.android.com/training/notify-user/channels
     // https://itnext.io/android-notification-channel-as-deep-as-possible-1a5b08538c87
@@ -181,14 +172,8 @@ class Notifier {
       styleInfo = null;
     }
 
-    ScheduleDataStore ds = await ScheduleDataStore.getInstance();
-    bool sticky = true;
-    try {
-      ds.reload();
-      sticky = ds.useStickyNotification;
-    } catch (e) {
-      logger.e("Could not get ScheduleDataStore, e=$e");
-    }
+    ScheduleDataStore ds = Get.find<ScheduleDataStore>();
+    bool sticky = ds.useStickyNotification;
 
     AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(channelId, channelId,

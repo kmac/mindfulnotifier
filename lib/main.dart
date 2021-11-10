@@ -25,9 +25,6 @@ void main() async {
   // needed if you intend to initialize in the `main` function
   WidgetsFlutterBinding.ensureInitialized();
 
-  // InMemoryScheduleDataStore ds = await ScheduleDataStore.getInMemoryInstance();
-  // Get.put(ds);
-
   try {
     PackageInfo info = await PackageInfo.fromPlatform();
     Get.put(info);
@@ -48,12 +45,12 @@ void main() async {
   SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
   Get.put(sharedPreferences);
 
+  AppDataStore appDataStore = await AppDataStore.getInstance();
+  Get.put(appDataStore);
+
   ThemeData themeData = defaultTheme;
-  if (sharedPreferences.containsKey('theme')) {
-    String currentTheme = sharedPreferences.getString('theme');
-    if (allThemes.containsKey(currentTheme)) {
-      themeData = allThemes[currentTheme];
-    }
+  if (allThemes.containsKey(appDataStore.theme)) {
+    themeData = allThemes[appDataStore.theme];
   }
 
   runApp(

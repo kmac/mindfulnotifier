@@ -14,7 +14,9 @@ var logger = createLogger('datastore');
 final Random random = Random();
 
 // A list for the initial json string. Each entry has keys: text, enabled, tag, weight
+//
 // Idea: add optional weight to support weighing reminders differently
+//
 const List<Map<String, dynamic>> defaultJsonReminderMap = [
   {
     "text": "Are you aware?",
@@ -106,8 +108,111 @@ const List<Map<String, dynamic>> defaultJsonReminderMap = [
   // },
 ];
 
+Future<void> checkMigrateSharedPreferences(var box,
+    {List<String> excludeKeys, List<String> includeKeys}) async {
+  if (!box.isEmpty) {
+    return;
+  }
+  // Check if we need to convert from SharedPreferences
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  if (prefs.getKeys().length > 0) {
+    logger.i("Migrating SharedPreferences to Hive");
+
+    for (String key in prefs.getKeys()) {
+      bool ignoreKey = false;
+      if (excludeKeys != null && excludeKeys.contains(key)) {
+        ignoreKey = true;
+      } else if (includeKeys != null && !includeKeys.contains(key)) {
+        ignoreKey = true;
+      }
+      if (ignoreKey) {
+        logger.i("Ignoring $key");
+      } else {
+        var value = prefs.get(key);
+        logger.i("Converting $key = $value");
+        box.put(key, value);
+        // TODO uncomment this when ready:
+        // logger.i("Removing key: $key from SharedPreferences");
+        // prefs.remove(key);
+      }
+    }
+  }
+}
+
 // ISSUE sharing data across the UI and the alarm/scheduler isolate:
 //  https://github.com/flutter/flutter/issues/61529
+
+/// Data store for app-level data. This store is accessed only via the
+/// UI isolate.
+///
+class AppDataStore {
+  static const String themeKey = 'theme';
+  static const String useBackgroundServiceKey = 'useBackgroundService';
+
+  static const String defaultTheme = 'Default';
+  static const bool defaultUseBackgroundService = false;
+
+  static SharedPreferences _prefs;
+  static AppDataStore _instance;
+
+  var _box;
+
+  /// Public factory
+  static Future<AppDataStore> getInstance() async {
+    if (_instance == null) {
+      _instance = AppDataStore._create();
+      await _instance._init();
+    }
+    return _instance;
+  }
+
+  /// Private constructor
+  AppDataStore._create() {
+    logger.i("Creating AppDataStore");
+  }
+
+  Future<void> _init() async {
+    logger.i("Initializing AppDataStore (hive)");
+    await Hive.initFlutter();
+
+    _box = await Hive.openBox('appdata');
+    bool testMigrate = false;
+    if (testMigrate) {
+      await _box.clear();
+      testMigrate = false;
+    }
+    await checkMigrateSharedPreferences(_box, includeKeys: [
+      ScheduleDataStoreBase.themeKey,
+      ScheduleDataStoreBase.useBackgroundServiceKey
+    ]);
+  }
+
+  Future<void> setSync(String key, dynamic val) async {
+    await _box.put(key, val);
+  }
+
+  String get theme {
+    if (_box.get(ScheduleDataStoreBase.themeKey) == null) {
+      theme = ScheduleDataStoreBase.defaultTheme;
+    }
+    return _box.get(ScheduleDataStoreBase.themeKey);
+  }
+
+  set theme(String value) {
+    setSync(ScheduleDataStoreBase.themeKey, value);
+  }
+
+  bool get useBackgroundService {
+    if (_box.get(ScheduleDataStoreBase.useBackgroundServiceKey) == null) {
+      useBackgroundService = false;
+    }
+    return _box.get(ScheduleDataStoreBase.useBackgroundServiceKey);
+  }
+
+  set useBackgroundService(bool value) {
+    setSync(ScheduleDataStoreBase.useBackgroundServiceKey, value);
+  }
+}
 
 abstract class ScheduleDataStoreBase {
   static const String enabledKey = 'enabled';
@@ -164,7 +269,6 @@ abstract class ScheduleDataStoreBase {
   bool get mute;
   bool get vibrate;
   String get audioOutputChannel;
-  bool get useBackgroundService;
   bool get useStickyNotification;
   bool get includeDebugInfo;
   bool get hideNextReminder;
@@ -182,7 +286,6 @@ abstract class ScheduleDataStoreBase {
   String get jsonReminders;
   String get infoMessage;
   String get controlMessage;
-  String get theme;
   String get bellId;
   String get customBellPath;
 
@@ -198,12 +301,14 @@ abstract class ScheduleDataStoreBase {
   }
 }
 
+/// In-memory data store. Created from the scheduler/alarm service and passed
+/// into the UI isolate as a read-only store.
+///
 class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
   bool enabled;
   bool mute;
   bool vibrate;
   String audioOutputChannel;
-  bool useBackgroundService;
   bool useStickyNotification;
   bool includeDebugInfo;
   bool hideNextReminder;
@@ -221,7 +326,6 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
   String jsonReminders;
   String infoMessage;
   String controlMessage;
-  String theme;
   String bellId;
   String customBellPath;
 
@@ -230,7 +334,6 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
         this.mute = ds.mute,
         this.vibrate = ds.vibrate,
         this.audioOutputChannel = ds.audioOutputChannel,
-        this.useBackgroundService = ds.useBackgroundService,
         this.useStickyNotification = ds.useStickyNotification,
         this.includeDebugInfo = ds.includeDebugInfo,
         this.hideNextReminder = ds.hideNextReminder,
@@ -248,34 +351,72 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
         this.jsonReminders = ds.jsonReminders,
         this.infoMessage = ds.infoMessage,
         this.controlMessage = ds.controlMessage,
-        this.theme = ds.theme,
         this.bellId = ds.bellId,
         this.customBellPath = ds.customBellPath;
 }
 
-abstract class ScheduleDataStore extends ScheduleDataStoreBase {
+/// Data store for the scheduler/alarm service. This data store is accessed
+/// from the alarm isolate.
+///
+class ScheduleDataStore extends ScheduleDataStoreBase {
   static ScheduleDataStore _instance;
-  // static SharedPrefDataStore _instance;
-  // static HiveScheduleDataStore _instance;
 
   /// Public factory
   static Future<ScheduleDataStore> getInstance() async {
     if (_instance == null) {
-      // SharedPrefDataStore i = SharedPrefDataStore._create();
-      HiveScheduleDataStore i = HiveScheduleDataStore._create();
-      await i._init();
-      _instance = i;
+      _instance = ScheduleDataStore._create();
+      await _instance._init();
     }
     return _instance;
   }
 
-  static Future<InMemoryScheduleDataStore> getInMemoryInstance() async {
-    return InMemoryScheduleDataStore.fromDS(await getInstance());
+  /// Private constructor
+  ScheduleDataStore._create() {
+    logger.i("Creating ScheduleDataStore");
   }
 
-  void reload() async {}
+  InMemoryScheduleDataStore getInMemoryInstance() {
+    return InMemoryScheduleDataStore.fromDS(this);
+  }
 
-  Future<void> setSync(String key, dynamic val) async {}
+  var _box;
+
+  Future<void> _init() async {
+    logger.i("Initializing ScheduleDataStore (hive");
+    await Hive.initFlutter();
+
+    _box = await Hive.openBox('mindfulnotifier');
+    bool testMigrate = false;
+    if (testMigrate) {
+      await _box.clear();
+      testMigrate = false;
+    }
+    await checkMigrateSharedPreferences(_box, excludeKeys: [
+      ScheduleDataStoreBase.themeKey,
+      ScheduleDataStoreBase.useBackgroundServiceKey
+    ]);
+  }
+
+  Future<void> setSync(String key, dynamic val) async {
+    await _box.put(key, val);
+  }
+
+  void _mergeVal(String key, var val) {
+    bool dirty = false;
+    // check list equality differently:
+    if (val is List<dynamic>) {
+      if (!listEquals(_box.get(key), val)) {
+        dirty = true;
+      }
+    } else if (_box.get(key) != val) {
+      dirty = true;
+    }
+    if (dirty) {
+      logger.i("merging $key = $val");
+      // logger.d("merging $key => $val");
+      _box.put(key, val);
+    }
+  }
 
   void merge(InMemoryScheduleDataStore mds) {
     logger.i("merge: $mds");
@@ -284,8 +425,6 @@ abstract class ScheduleDataStore extends ScheduleDataStoreBase {
     _mergeVal(ScheduleDataStoreBase.vibrateKey, mds.vibrate);
     _mergeVal(
         ScheduleDataStoreBase.audioOutputChannelKey, mds.audioOutputChannel);
-    _mergeVal(ScheduleDataStoreBase.useBackgroundServiceKey,
-        mds.useBackgroundService);
     _mergeVal(ScheduleDataStoreBase.useStickyNotificationKey,
         mds.useStickyNotification);
     _mergeVal(ScheduleDataStoreBase.includeDebugInfoKey, mds.includeDebugInfo);
@@ -309,468 +448,10 @@ abstract class ScheduleDataStore extends ScheduleDataStoreBase {
     _mergeVal(ScheduleDataStoreBase.jsonRemindersKey, mds.jsonReminders);
     _mergeVal(ScheduleDataStoreBase.infoMessageKey, mds.infoMessage);
     _mergeVal(ScheduleDataStoreBase.controlMessageKey, mds.controlMessage);
-    _mergeVal(ScheduleDataStoreBase.themeKey, mds.theme);
     _mergeVal(ScheduleDataStoreBase.bellIdKey, mds.bellId);
     _mergeVal(ScheduleDataStoreBase.customBellPathKey, mds.customBellPath);
   }
 
-  void _mergeVal(String key, var val) {
-    logger.e("Unsupported base call to _mergeVal");
-  }
-
-  set enabled(bool value) {
-    setSync(ScheduleDataStoreBase.enabledKey, value);
-  }
-
-  set mute(bool value) {
-    setSync(ScheduleDataStoreBase.muteKey, value);
-  }
-
-  set vibrate(bool value) {
-    setSync(ScheduleDataStoreBase.vibrateKey, value);
-  }
-
-  set audioOutputChannel(String value) {
-    setSync(ScheduleDataStoreBase.audioOutputChannelKey, value);
-  }
-
-  set useBackgroundService(bool value) {
-    setSync(ScheduleDataStoreBase.useBackgroundServiceKey, value);
-  }
-
-  set useStickyNotification(bool value) {
-    setSync(ScheduleDataStoreBase.useStickyNotificationKey, value);
-  }
-
-  set includeDebugInfo(bool value) {
-    setSync(ScheduleDataStoreBase.includeDebugInfoKey, value);
-  }
-
-  set hideNextReminder(bool value) {
-    setSync(ScheduleDataStoreBase.hideNextReminderKey, value);
-  }
-
-  set scheduleTypeStr(String value) {
-    setSync(ScheduleDataStoreBase.scheduleTypeKey, value);
-  }
-
-  set periodicHours(int value) {
-    setSync(ScheduleDataStoreBase.periodicHoursKey, value);
-  }
-
-  set periodicMinutes(int value) {
-    setSync(ScheduleDataStoreBase.periodicMinutesKey, value);
-  }
-
-  set randomMinMinutes(int value) {
-    setSync(ScheduleDataStoreBase.randomMinMinutesKey, value);
-  }
-
-  set randomMaxMinutes(int value) {
-    setSync(ScheduleDataStoreBase.randomMaxMinutesKey, value);
-  }
-
-  set quietHoursStartHour(int value) {
-    setSync(ScheduleDataStoreBase.quietHoursStartHourKey, value);
-  }
-
-  set quietHoursStartMinute(int value) {
-    setSync(ScheduleDataStoreBase.quietHoursStartMinuteKey, value);
-  }
-
-  set quietHoursEndHour(int value) {
-    setSync(ScheduleDataStoreBase.quietHoursEndHourKey, value);
-  }
-
-  set quietHoursEndMinute(int value) {
-    setSync(ScheduleDataStoreBase.quietHoursEndMinuteKey, value);
-  }
-
-  set reminderMessage(String value) {
-    setSync(ScheduleDataStoreBase.reminderMessageKey, value);
-  }
-
-  set infoMessage(String value) {
-    setSync(ScheduleDataStoreBase.infoMessageKey, value);
-  }
-
-  set controlMessage(String value) {
-    setSync(ScheduleDataStoreBase.controlMessageKey, value);
-  }
-
-  set theme(String value) {
-    setSync(ScheduleDataStoreBase.themeKey, value);
-  }
-
-  set bellId(String value) {
-    setSync(ScheduleDataStoreBase.bellIdKey, value);
-  }
-
-  set customBellPath(String value) {
-    setSync(ScheduleDataStoreBase.customBellPathKey, value);
-  }
-
-  set jsonReminders(String jsonString) {
-    // Validate. This will throw an exception if it doesn't parse
-    Reminders.fromJson(jsonString);
-
-    setSync(ScheduleDataStoreBase.jsonRemindersKey, jsonString);
-  }
-
-  String randomReminder({String tag}) {
-    Reminders reminders = Reminders.fromJson(jsonReminders);
-    return reminders.randomReminder(tag: tag);
-  }
-}
-
-class SharedPrefDataStore extends ScheduleDataStore {
-  static SharedPreferences _prefs;
-  static SharedPrefDataStore _instance;
-
-  /// Public factory
-  static Future<SharedPrefDataStore> getInstance() async {
-    if (_instance == null) {
-      _instance = SharedPrefDataStore._create();
-      await _instance._init();
-    }
-    return _instance;
-  }
-
-  /// Private constructor
-  SharedPrefDataStore._create() {
-    logger.i("Creating DataStore");
-  }
-
-  Future<void> _init() async {
-    logger.i("Initializing SharedPreferences");
-    _prefs = await SharedPreferences.getInstance();
-  }
-
-  void reload() async {
-    await _prefs.reload();
-  }
-
-  void _mergeVal(String key, var val) {
-    bool dirty = false;
-    // check list equality differently:
-    if (val is List<dynamic>) {
-      if (!listEquals(_prefs.getStringList(key), val)) {
-        dirty = true;
-      }
-    } else if (_prefs.get(key) != val) {
-      dirty = true;
-    }
-    if (dirty) {
-      logger.i("duh merging $key");
-      // logger.d("merging $key => $val");
-      setSync(key, val);
-    }
-  }
-
-  Future<void> setSync(String key, dynamic val) async {
-    if (val is bool) {
-      await _prefs.setBool(key, val);
-    } else if (val is int) {
-      await _prefs.setInt(key, val);
-    } else if (val is double) {
-      await _prefs.setDouble(key, val);
-    } else if (val is String) {
-      await _prefs.setString(key, val);
-    } else if (val is List) {
-      // For restore:
-      if (val is List<dynamic>) {
-        List<String> newlist = [];
-        for (dynamic newval in val) {
-          newlist.add("$newval");
-        }
-        await _prefs.setStringList(key, newlist);
-      } else {
-        await _prefs.setStringList(key, val);
-      }
-    } else {
-      logger.e(
-          "Unsupported runtimeType: key=$key, value=$val, val.runtimeType=${val.runtimeType}");
-    }
-  }
-
-  @override
-  bool get enabled {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.enabledKey)) {
-      enabled = false;
-    }
-    return _prefs.getBool(ScheduleDataStoreBase.enabledKey);
-  }
-
-  @override
-  bool get mute {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.muteKey)) {
-      mute = false;
-    }
-    return _prefs.getBool(ScheduleDataStoreBase.muteKey);
-  }
-
-  @override
-  bool get vibrate {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.vibrateKey)) {
-      vibrate = false;
-    }
-    return _prefs.getBool(ScheduleDataStoreBase.vibrateKey);
-  }
-
-  @override
-  String get audioOutputChannel {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.audioOutputChannelKey)) {
-      audioOutputChannel = ScheduleDataStoreBase.defaultAudioOutputChannel;
-    }
-    return _prefs.getString(ScheduleDataStoreBase.audioOutputChannelKey);
-  }
-
-  @override
-  bool get useBackgroundService {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.useBackgroundServiceKey)) {
-      useBackgroundService = false;
-    }
-    return _prefs.getBool(ScheduleDataStoreBase.useBackgroundServiceKey);
-  }
-
-  @override
-  bool get useStickyNotification {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.useStickyNotificationKey)) {
-      useStickyNotification = true;
-    }
-    return _prefs.getBool(ScheduleDataStoreBase.useStickyNotificationKey);
-  }
-
-  @override
-  bool get includeDebugInfo {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.includeDebugInfoKey)) {
-      includeDebugInfo = false;
-    }
-    return _prefs.getBool(ScheduleDataStoreBase.includeDebugInfoKey);
-  }
-
-  @override
-  bool get hideNextReminder {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.hideNextReminderKey)) {
-      hideNextReminder = false;
-    }
-    return _prefs.getBool(ScheduleDataStoreBase.hideNextReminderKey);
-  }
-
-  @override
-  String get scheduleTypeStr {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.scheduleTypeKey)) {
-      scheduleTypeStr = ScheduleDataStoreBase.defaultScheduleTypeStr;
-    }
-    return _prefs.getString(ScheduleDataStoreBase.scheduleTypeKey);
-  }
-
-  @override
-  int get periodicHours {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.periodicHoursKey)) {
-      periodicHours = ScheduleDataStoreBase.defaultPeriodicHours;
-    }
-    return _prefs.getInt(ScheduleDataStoreBase.periodicHoursKey);
-  }
-
-  @override
-  int get periodicMinutes {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.periodicMinutesKey)) {
-      periodicMinutes = ScheduleDataStoreBase.defaultPeriodicMinutes;
-    }
-    return _prefs.getInt(ScheduleDataStoreBase.periodicMinutesKey);
-  }
-
-  @override
-  int get randomMinMinutes {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.randomMinMinutesKey)) {
-      randomMinMinutes = ScheduleDataStoreBase.defaultRandomMinMinutes;
-    }
-    return _prefs.getInt(ScheduleDataStoreBase.randomMinMinutesKey);
-  }
-
-  @override
-  int get randomMaxMinutes {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.randomMaxMinutesKey)) {
-      randomMaxMinutes = ScheduleDataStoreBase.defaultRandomMaxMinutes;
-    }
-    return _prefs.getInt(ScheduleDataStoreBase.randomMaxMinutesKey);
-  }
-
-  @override
-  int get quietHoursStartHour {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.quietHoursStartHourKey)) {
-      quietHoursStartHour = ScheduleDataStoreBase.defaultQuietHoursStartHour;
-    }
-    return _prefs.getInt(ScheduleDataStoreBase.quietHoursStartHourKey);
-  }
-
-  @override
-  int get quietHoursStartMinute {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.quietHoursStartMinuteKey)) {
-      quietHoursStartMinute =
-          ScheduleDataStoreBase.defaultQuietHoursStartMinute;
-    }
-    return _prefs.getInt(ScheduleDataStoreBase.quietHoursStartMinuteKey);
-  }
-
-  @override
-  int get quietHoursEndHour {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.quietHoursEndHourKey)) {
-      quietHoursEndHour = ScheduleDataStoreBase.defaultQuietHoursEndHour;
-    }
-    return _prefs.getInt(ScheduleDataStoreBase.quietHoursEndHourKey);
-  }
-
-  @override
-  int get quietHoursEndMinute {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.quietHoursEndMinuteKey)) {
-      quietHoursEndMinute = ScheduleDataStoreBase.defaultQuietHoursEndMinute;
-    }
-    return _prefs.getInt(ScheduleDataStoreBase.quietHoursEndMinuteKey);
-  }
-
-  @override
-  bool get notifyQuietHours {
-    return ScheduleDataStoreBase.defaultNotifyQuietHours;
-  }
-
-  @override
-  String get reminderMessage {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.reminderMessageKey)) {
-      reminderMessage = ScheduleDataStoreBase.defaultReminderMessage;
-    }
-    return _prefs.getString(ScheduleDataStoreBase.reminderMessageKey);
-  }
-
-  @override
-  String get infoMessage {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.infoMessageKey)) {
-      infoMessage = ScheduleDataStoreBase.defaultInfoMessage;
-    }
-    return _prefs.getString(ScheduleDataStoreBase.infoMessageKey);
-  }
-
-  @override
-  String get controlMessage {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.controlMessageKey)) {
-      controlMessage = ScheduleDataStoreBase.defaultControlMessage;
-    }
-    return _prefs.getString(ScheduleDataStoreBase.controlMessageKey);
-  }
-
-  @override
-  String get theme {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.themeKey)) {
-      theme = ScheduleDataStoreBase.defaultTheme;
-    }
-    return _prefs.getString(ScheduleDataStoreBase.themeKey);
-  }
-
-  @override
-  String get bellId {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.bellIdKey)) {
-      bellId = ScheduleDataStoreBase.defaultBellId;
-    }
-    return _prefs.getString(ScheduleDataStoreBase.bellIdKey);
-  }
-
-  @override
-  String get customBellPath {
-    if (!_prefs.containsKey(ScheduleDataStoreBase.customBellPathKey)) {
-      customBellPath = ScheduleDataStoreBase.defaultCustomBellPath;
-    }
-    return _prefs.getString(ScheduleDataStoreBase.customBellPathKey);
-  }
-
-  @override
-  String get jsonReminders {
-    // Check for migration to new format:
-    if (_prefs.containsKey(ScheduleDataStoreBase.remindersKeyDeprecated)) {
-      // old reminders list is still here: convert it to json and remove it
-      List<String> remindersOrig =
-          _prefs.getStringList(ScheduleDataStoreBase.remindersKeyDeprecated);
-      jsonReminders = Reminders.migrateRemindersToJson(remindersOrig);
-      _prefs.remove(ScheduleDataStoreBase.remindersKeyDeprecated);
-      return jsonReminders;
-    }
-    if (!_prefs.containsKey(ScheduleDataStoreBase.jsonRemindersKey)) {
-      // save the string pretty-printed so it will also be exported in this format
-      JsonEncoder encoder = new JsonEncoder.withIndent('  ');
-      jsonReminders = encoder.convert(defaultJsonReminderMap);
-    }
-    return _prefs.getString(ScheduleDataStoreBase.jsonRemindersKey);
-  }
-}
-
-class HiveScheduleDataStore extends ScheduleDataStore {
-  static HiveScheduleDataStore _instance;
-  var _box;
-
-  /// Public factory
-  static Future<HiveScheduleDataStore> getInstance() async {
-    if (_instance == null) {
-      _instance = HiveScheduleDataStore._create();
-      await _instance._init();
-    }
-    return _instance;
-  }
-
-  /// Private constructor
-  HiveScheduleDataStore._create() {
-    logger.i("Creating DataStore");
-  }
-
-  Future<void> _init() async {
-    logger.i("Initializing Hive");
-    await Hive.initFlutter();
-
-    // TODO: why is this getting called twice? From two isolates??
-
-    _box = await Hive.openBox('mindfulnotifier');
-    bool testMigrate = true;
-    if (testMigrate) {
-      await _box.clear();
-      testMigrate = false;
-    }
-    if (_box.isEmpty) {
-      // Check if we need to convert from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      if (prefs.getKeys().length > 0) {
-        logger.i("Converting SharedPreferences");
-        for (String key in prefs.getKeys()) {
-          var value = prefs.get(key);
-          logger.i("Converting $key = $value");
-          _box.put(key, value);
-        }
-      }
-    }
-  }
-
-  @override
-  Future<void> setSync(String key, dynamic val) async {
-    _box.put(key, val);
-  }
-
-  @override
-  void _mergeVal(String key, var val) {
-    bool dirty = false;
-    // check list equality differently:
-    if (val is List<dynamic>) {
-      if (!listEquals(_box.get(key), val)) {
-        dirty = true;
-      }
-    } else if (_box.get(key) != val) {
-      dirty = true;
-    }
-    if (dirty) {
-      logger.i("merging $key = $val");
-      // logger.d("merging $key => $val");
-      _box.put(key, val);
-    }
-  }
-
-  @override
   bool get enabled {
     if (_box.get(ScheduleDataStoreBase.enabledKey) == null) {
       enabled = false;
@@ -778,7 +459,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.enabledKey);
   }
 
-  @override
+  set enabled(bool value) {
+    setSync(ScheduleDataStoreBase.enabledKey, value);
+  }
+
   bool get mute {
     if (_box.get(ScheduleDataStoreBase.muteKey) == null) {
       mute = false;
@@ -786,7 +470,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.muteKey);
   }
 
-  @override
+  set mute(bool value) {
+    setSync(ScheduleDataStoreBase.muteKey, value);
+  }
+
   bool get vibrate {
     if (_box.get(ScheduleDataStoreBase.vibrateKey) == null) {
       vibrate = false;
@@ -794,7 +481,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.vibrateKey);
   }
 
-  @override
+  set vibrate(bool value) {
+    setSync(ScheduleDataStoreBase.vibrateKey, value);
+  }
+
   String get audioOutputChannel {
     if (_box.get(ScheduleDataStoreBase.audioOutputChannelKey) == null) {
       audioOutputChannel = ScheduleDataStoreBase.defaultAudioOutputChannel;
@@ -802,15 +492,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.audioOutputChannelKey);
   }
 
-  @override
-  bool get useBackgroundService {
-    if (_box.get(ScheduleDataStoreBase.useBackgroundServiceKey) == null) {
-      useBackgroundService = false;
-    }
-    return _box.get(ScheduleDataStoreBase.useBackgroundServiceKey);
+  set audioOutputChannel(String value) {
+    setSync(ScheduleDataStoreBase.audioOutputChannelKey, value);
   }
 
-  @override
   bool get useStickyNotification {
     if (_box.get(ScheduleDataStoreBase.useStickyNotificationKey) == null) {
       useStickyNotification = true;
@@ -818,7 +503,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.useStickyNotificationKey);
   }
 
-  @override
+  set useStickyNotification(bool value) {
+    setSync(ScheduleDataStoreBase.useStickyNotificationKey, value);
+  }
+
   bool get includeDebugInfo {
     if (_box.get(ScheduleDataStoreBase.includeDebugInfoKey) == null) {
       includeDebugInfo = false;
@@ -826,7 +514,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.includeDebugInfoKey);
   }
 
-  @override
+  set includeDebugInfo(bool value) {
+    setSync(ScheduleDataStoreBase.includeDebugInfoKey, value);
+  }
+
   bool get hideNextReminder {
     if (_box.get(ScheduleDataStoreBase.hideNextReminderKey) == null) {
       hideNextReminder = false;
@@ -834,7 +525,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.hideNextReminderKey);
   }
 
-  @override
+  set hideNextReminder(bool value) {
+    setSync(ScheduleDataStoreBase.hideNextReminderKey, value);
+  }
+
   String get scheduleTypeStr {
     if (_box.get(ScheduleDataStoreBase.scheduleTypeKey) == null) {
       scheduleTypeStr = ScheduleDataStoreBase.defaultScheduleTypeStr;
@@ -842,7 +536,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.scheduleTypeKey);
   }
 
-  @override
+  set scheduleTypeStr(String value) {
+    setSync(ScheduleDataStoreBase.scheduleTypeKey, value);
+  }
+
   int get periodicHours {
     if (_box.get(ScheduleDataStoreBase.periodicHoursKey) == null) {
       periodicHours = ScheduleDataStoreBase.defaultPeriodicHours;
@@ -850,7 +547,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.periodicHoursKey);
   }
 
-  @override
+  set periodicHours(int value) {
+    setSync(ScheduleDataStoreBase.periodicHoursKey, value);
+  }
+
   int get periodicMinutes {
     if (_box.get(ScheduleDataStoreBase.periodicMinutesKey) == null) {
       periodicMinutes = ScheduleDataStoreBase.defaultPeriodicMinutes;
@@ -858,7 +558,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.periodicMinutesKey);
   }
 
-  @override
+  set periodicMinutes(int value) {
+    setSync(ScheduleDataStoreBase.periodicMinutesKey, value);
+  }
+
   int get randomMinMinutes {
     if (_box.get(ScheduleDataStoreBase.randomMinMinutesKey) == null) {
       randomMinMinutes = ScheduleDataStoreBase.defaultRandomMinMinutes;
@@ -866,7 +569,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.randomMinMinutesKey);
   }
 
-  @override
+  set randomMinMinutes(int value) {
+    setSync(ScheduleDataStoreBase.randomMinMinutesKey, value);
+  }
+
   int get randomMaxMinutes {
     if (_box.get(ScheduleDataStoreBase.randomMaxMinutesKey) == null) {
       randomMaxMinutes = ScheduleDataStoreBase.defaultRandomMaxMinutes;
@@ -874,7 +580,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.randomMaxMinutesKey);
   }
 
-  @override
+  set randomMaxMinutes(int value) {
+    setSync(ScheduleDataStoreBase.randomMaxMinutesKey, value);
+  }
+
   int get quietHoursStartHour {
     if (_box.get(ScheduleDataStoreBase.quietHoursStartHourKey) == null) {
       quietHoursStartHour = ScheduleDataStoreBase.defaultQuietHoursStartHour;
@@ -882,7 +591,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.quietHoursStartHourKey);
   }
 
-  @override
+  set quietHoursStartHour(int value) {
+    setSync(ScheduleDataStoreBase.quietHoursStartHourKey, value);
+  }
+
   int get quietHoursStartMinute {
     if (_box.get(ScheduleDataStoreBase.quietHoursStartMinuteKey) == null) {
       quietHoursStartMinute =
@@ -891,7 +603,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.quietHoursStartMinuteKey);
   }
 
-  @override
+  set quietHoursStartMinute(int value) {
+    setSync(ScheduleDataStoreBase.quietHoursStartMinuteKey, value);
+  }
+
   int get quietHoursEndHour {
     if (_box.get(ScheduleDataStoreBase.quietHoursEndHourKey) == null) {
       quietHoursEndHour = ScheduleDataStoreBase.defaultQuietHoursEndHour;
@@ -899,7 +614,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.quietHoursEndHourKey);
   }
 
-  @override
+  set quietHoursEndHour(int value) {
+    setSync(ScheduleDataStoreBase.quietHoursEndHourKey, value);
+  }
+
   int get quietHoursEndMinute {
     if (_box.get(ScheduleDataStoreBase.quietHoursEndMinuteKey) == null) {
       quietHoursEndMinute = ScheduleDataStoreBase.defaultQuietHoursEndMinute;
@@ -907,12 +625,14 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.quietHoursEndMinuteKey);
   }
 
-  @override
+  set quietHoursEndMinute(int value) {
+    setSync(ScheduleDataStoreBase.quietHoursEndMinuteKey, value);
+  }
+
   bool get notifyQuietHours {
     return ScheduleDataStoreBase.defaultNotifyQuietHours;
   }
 
-  @override
   String get reminderMessage {
     if (_box.get(ScheduleDataStoreBase.reminderMessageKey) == null) {
       reminderMessage = ScheduleDataStoreBase.defaultReminderMessage;
@@ -920,7 +640,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.reminderMessageKey);
   }
 
-  @override
+  set reminderMessage(String value) {
+    setSync(ScheduleDataStoreBase.reminderMessageKey, value);
+  }
+
   String get infoMessage {
     if (_box.get(ScheduleDataStoreBase.infoMessageKey) == null) {
       infoMessage = ScheduleDataStoreBase.defaultInfoMessage;
@@ -928,7 +651,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.infoMessageKey);
   }
 
-  @override
+  set infoMessage(String value) {
+    setSync(ScheduleDataStoreBase.infoMessageKey, value);
+  }
+
   String get controlMessage {
     if (_box.get(ScheduleDataStoreBase.controlMessageKey) == null) {
       controlMessage = ScheduleDataStoreBase.defaultControlMessage;
@@ -936,15 +662,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.controlMessageKey);
   }
 
-  @override
-  String get theme {
-    if (_box.get(ScheduleDataStoreBase.themeKey) == null) {
-      theme = ScheduleDataStoreBase.defaultTheme;
-    }
-    return _box.get(ScheduleDataStoreBase.themeKey);
+  set controlMessage(String value) {
+    setSync(ScheduleDataStoreBase.controlMessageKey, value);
   }
 
-  @override
   String get bellId {
     if (_box.get(ScheduleDataStoreBase.bellIdKey) == null) {
       bellId = ScheduleDataStoreBase.defaultBellId;
@@ -952,7 +673,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.bellIdKey);
   }
 
-  @override
+  set bellId(String value) {
+    setSync(ScheduleDataStoreBase.bellIdKey, value);
+  }
+
   String get customBellPath {
     if (_box.get(ScheduleDataStoreBase.customBellPathKey) == null) {
       customBellPath = ScheduleDataStoreBase.defaultCustomBellPath;
@@ -960,7 +684,10 @@ class HiveScheduleDataStore extends ScheduleDataStore {
     return _box.get(ScheduleDataStoreBase.customBellPathKey);
   }
 
-  @override
+  set customBellPath(String value) {
+    setSync(ScheduleDataStoreBase.customBellPathKey, value);
+  }
+
   String get jsonReminders {
     // Check for migration to new format:
     if (_box.get(ScheduleDataStoreBase.remindersKeyDeprecated) != null) {
@@ -977,6 +704,18 @@ class HiveScheduleDataStore extends ScheduleDataStore {
       jsonReminders = encoder.convert(defaultJsonReminderMap);
     }
     return _box.get(ScheduleDataStoreBase.jsonRemindersKey);
+  }
+
+  set jsonReminders(String jsonString) {
+    // Validate. This will throw an exception if it doesn't parse
+    Reminders.fromJson(jsonString);
+
+    setSync(ScheduleDataStoreBase.jsonRemindersKey, jsonString);
+  }
+
+  String randomReminder({String tag}) {
+    Reminders reminders = Reminders.fromJson(jsonReminders);
+    return reminders.randomReminder(tag: tag);
   }
 }
 

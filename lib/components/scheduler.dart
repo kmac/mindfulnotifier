@@ -206,8 +206,7 @@ class Scheduler {
   }
 
   Future<void> sendDataStoreUpdate() async {
-    sendValueToUI(
-        'syncDataStore', await ScheduleDataStore.getInMemoryInstance());
+    sendValueToUI('syncDataStore', ds.getInMemoryInstance());
   }
 
   DelegatedScheduler _buildSchedulerDelegate(Scheduler scheduler) {
@@ -257,7 +256,7 @@ class Scheduler {
         return;
       }
       String reminder = ds.randomReminder();
-      Notifier().showReminderNotification(reminder);
+      Notifier().showReminderNotification(reminder, ds.mute, ds.vibrate);
       sendReminderMessage(reminder);
     } finally {
       delegate.scheduleNext();
