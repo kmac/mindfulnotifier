@@ -152,7 +152,6 @@ class AppDataStore {
   static const String defaultTheme = 'Default';
   static const bool defaultUseBackgroundService = false;
 
-  static SharedPreferences _prefs;
   static AppDataStore _instance;
 
   var _box;
@@ -418,7 +417,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     }
   }
 
-  void merge(InMemoryScheduleDataStore mds) {
+  void mergeIntoPermanentDS(InMemoryScheduleDataStore mds) {
     logger.i("merge: $mds");
     _mergeVal(ScheduleDataStoreBase.enabledKey, mds.enabled);
     _mergeVal(ScheduleDataStoreBase.muteKey, mds.mute);

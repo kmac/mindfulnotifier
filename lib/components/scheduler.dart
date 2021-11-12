@@ -107,7 +107,7 @@ class Scheduler {
 
   void update(InMemoryScheduleDataStore mds) {
     logger.d("update, InMemoryScheduleDataStore=$mds");
-    ds.merge(mds);
+    ds.mergeIntoPermanentDS(mds);
   }
 
   void updateDS(String key, var value, {bool sendUpdate = true}) async {
@@ -155,19 +155,21 @@ class Scheduler {
   //   return false;
   // }
 
-  void disable() async {
+  void disable({bool sendUpdate = true}) async {
     logger.i("disable");
     delegate?.cancel();
     Notifier().shutdown();
     running = false;
     ds.enabled = false;
     ds.reminderMessage = "Disabled";
-    sendDataStoreUpdate();
+    if (sendUpdate) {
+      sendDataStoreUpdate();
+    }
   }
 
   void restart() {
     logger.i("restart");
-    disable();
+    disable(sendUpdate: false);
     sleep(Duration(seconds: 1));
     enable();
   }

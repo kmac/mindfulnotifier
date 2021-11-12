@@ -26,3 +26,4 @@ const String toAlarmServiceSendPortName = 'toAlarmServiceIsolate';
 // 'Get' tags
 const String tagApplicationDocumentsDirectory = 'ApplicationDocumentsDirectory';
 const String tagExternalStorageDirectory = 'ExternalStorageDirectory';
+const String tagAlarmServiceAlreadyRunning = 'AlarmServiceAlreadyRunning';

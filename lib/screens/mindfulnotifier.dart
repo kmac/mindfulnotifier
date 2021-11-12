@@ -25,9 +25,10 @@ class MindfulNotifierWidgetController extends GetxController {
   static ReceivePort fromAlarmServiceReceivePort;
 
   bool initFinished = false;
+  bool alarmServiceAlreadyRunning = false;
   final String title = appName;
-  final _reminderMessage = 'Not Running'.obs;
-  final _infoMessage = 'Not Running'.obs;
+  final _reminderMessage = '. . .'.obs;
+  final _infoMessage = '. . .'.obs;
   final _enabled = false.obs;
   final _mute = false.obs;
   final _vibrate = false.obs;
@@ -37,34 +38,48 @@ class MindfulNotifierWidgetController extends GetxController {
   TimeOfDay quietStart = TimeOfDay(hour: 22, minute: 0);
   TimeOfDay quietEnd = TimeOfDay(hour: 10, minute: 0);
 
+  // onInit(): It is called immediately after the widget is allocated memory.
+  // onReady(): It is called immediately after the widget is rendered on screen.
+
   @override
   void onInit() async {
-    super.onInit();
-    logger.i("mindfulnotifier UI onInit() ${getCurrentIsolate()}");
+    // onInit: is called immediately after the widget is allocated memory.
+    alarmServiceAlreadyRunning =
+        Get.find(tag: constants.tagAlarmServiceAlreadyRunning);
+    logger.i("mindfulnotifier UI onInit() alarmServiceAlreadyRunning: "
+        "$alarmServiceAlreadyRunning, ${getCurrentIsolate()}");
+
     initializeFromAlarmServiceReceivePort();
 
     // Issue #35: maybe the below is a race condition... if the alarm service responds
     // after the above onInit finishes, we could see odd things?
 
-    // Now send a sync message which will reinit the data store from the alarm/scheduler isolate
     initFinished = false;
+    // Now send a sync message which will reinit the data store from the alarm/scheduler isolate
     sendToAlarmService({'syncDataStore': 1});
-    initializeNotifications();
 
-    // initializeFromBackgroundService();
+    super.onInit();
   }
 
-  void initFinish() {
+  @override
+  void onReady() {
+    // onReady: is called immediately after the widget is rendered on screen.
+    initializeNotifications();
+    // initializeFromBackgroundService();
+    super.onReady();
+  }
+
+  void initFinish(InMemoryScheduleDataStore mds) {
     logger.i("initFinish");
     ever(_enabled, handleEnabled);
     ever(_mute, handleMute);
     ever(_vibrate, handleVibrate);
     initFinished = true;
-  }
-
-  @override
-  void onReady() {
-    super.onReady();
+    if (!alarmServiceAlreadyRunning && mds.enabled) {
+      logger.i("initFinish: re-enabling");
+      // handleEnabled(true);
+      triggerSchedulerRestart(reason: "Restarting alarm service");
+    }
   }
 
   @override
@@ -74,10 +89,12 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void initFromDS(InMemoryScheduleDataStore mds) {
-    // Replace the InMemoryScheduleDataStore instance with the newer one from alarm service
-    Get.delete<InMemoryScheduleDataStore>();
-    Get.put(mds);
     logger.d("initFromDS: enabled: ${mds.enabled}");
+
+    // Replace the main/app InMemoryScheduleDataStore instance with the
+    // newer one from alarm service
+    Get.delete<InMemoryScheduleDataStore>();
+    Get.put(mds, permanent: true);
 
     // set all the local UI-visible values
     _enabled.value = mds.enabled;
@@ -97,46 +114,9 @@ class MindfulNotifierWidgetController extends GetxController {
       logger.d("new fromAlarmServiceReceivePort");
       fromAlarmServiceReceivePort = ReceivePort();
     }
-    // Register for events from the alarm isolate. These messages will
-    // always coincide with an alarm firing.
-    fromAlarmServiceStreamSubscription =
-        fromAlarmServiceReceivePort.listen((map) {
-      //
-      // WE ARE IN THE APP ISOLATE
-      //
-      logger.i(
-          "fromAlarmServiceReceivePort received: $map ${getCurrentIsolate()}");
-
-      String key = map.keys.first;
-      dynamic value = map.values.first;
-      switch (key) {
-        case 'reminderMessage':
-          _reminderMessage.value = value;
-          break;
-        case 'infoMessage':
-          _infoMessage.value = value;
-          break;
-        case 'controlMessage':
-          logger.i("Received control message: $value");
-          controlMessage.value = value;
-          if (!initFinished) {
-            sendToAlarmService({'syncDataStore': 1});
-          }
-          break;
-        case 'syncDataStore':
-          logger.i("Received syncDataStore");
-          InMemoryScheduleDataStore mds = value;
-          // Receives a complete InMemoryScheduleDataStore update
-          initFromDS(mds);
-          if (!initFinished) {
-            initFinish();
-          }
-          break;
-        default:
-          logger.e("Unexpected key: $key");
-          break;
-      }
-    }, onDone: () {
+    // Register for events from the alarm isolate
+    fromAlarmServiceStreamSubscription = fromAlarmServiceReceivePort
+        .listen(handleAlarmServiceMessage, onDone: () {
       logger.w("fromAlarmServiceReceivePort is closed");
     });
 
@@ -146,9 +126,47 @@ class MindfulNotifierWidgetController extends GetxController {
       fromAlarmServiceReceivePort.sendPort,
       constants.toAppSendPortName,
     );
-    logger.d(
-        "registerPortWithName: ${constants.toAppSendPortName}, result=$result ${getCurrentIsolate()}");
+    logger.d("registerPortWithName: ${constants.toAppSendPortName}, "
+        "result=$result ${getCurrentIsolate()}");
     assert(result);
+  }
+
+  void handleAlarmServiceMessage(var msg) {
+    //
+    // WE ARE IN THE MAIN APP ISOLATE, receiving from alarm service
+    //
+    logger
+        .i("fromAlarmServiceReceivePort received: $msg ${getCurrentIsolate()}");
+
+    String key = msg.keys.first;
+    dynamic value = msg.values.first;
+    switch (key) {
+      case 'reminderMessage':
+        _reminderMessage.value = value;
+        break;
+      case 'infoMessage':
+        _infoMessage.value = value;
+        break;
+      case 'controlMessage':
+        logger.i("Received control message: $value");
+        controlMessage.value = value;
+        if (!initFinished) {
+          sendToAlarmService({'syncDataStore': 1});
+        }
+        break;
+      case 'syncDataStore':
+        logger.i("Received syncDataStore");
+        // Receives a complete InMemoryScheduleDataStore update
+        InMemoryScheduleDataStore mds = value;
+        initFromDS(mds);
+        if (!initFinished) {
+          initFinish(mds);
+        }
+        break;
+      default:
+        logger.e("Unexpected key: $key");
+        break;
+    }
   }
 
   void triggerSchedulerShutdown() {
@@ -162,19 +180,22 @@ class MindfulNotifierWidgetController extends GetxController {
     sendToAlarmService({'restore': mds});
   }
 
-  void triggerSchedulerRestart(InMemoryScheduleDataStore mds) {
+  void triggerSchedulerRestart(
+      {InMemoryScheduleDataStore mds,
+      String reason = "Configuration changed, restarting the notifier."}) {
     if (_enabled.value) {
       logger.i("sending restart to scheduler");
       // Send to the alarm isolate
       sendToAlarmService({'restart': mds});
       // alert user
-      Get.snackbar(
-          "Restarting", "Configuration changed, restarting the notifier.",
+      Get.snackbar("Restarting", reason,
           snackPosition: SnackPosition.BOTTOM, instantInit: false);
     } else {
-      // we need to update the datastore
-      logger.i("sending update to scheduler");
-      sendToAlarmService({'update': mds});
+      if (mds != null) {
+        // we need to update the datastore
+        logger.i("sending update to scheduler");
+        sendToAlarmService({'update': mds});
+      }
     }
   }
 
@@ -185,6 +206,14 @@ class MindfulNotifierWidgetController extends GetxController {
     IsolateNameServer.removePortNameMapping(constants.toAppSendPortName);
   }
 
+  /// Updates the permanent data store via the alarm service
+  void updatePermanentDataStore(InMemoryScheduleDataStore mds) {
+    logger.d("updatePermanentDataStore");
+    toAlarmServiceSendPort ??= IsolateNameServer.lookupPortByName(
+        constants.toAlarmServiceSendPortName);
+    toAlarmServiceSendPort?.send({'update': mds});
+  }
+
   void sendToAlarmService(Map<String, dynamic> msg) {
     logger.d("sendToAlarmService: $msg");
     toAlarmServiceSendPort ??= IsolateNameServer.lookupPortByName(
@@ -193,7 +222,8 @@ class MindfulNotifierWidgetController extends GetxController {
   }
 
   void handleEnabled(enabled) {
-    logger.d("handleEnabled: enabled=$enabled, initFinished: $initFinished");
+    logger.d("handleEnabled: enabled=$enabled, initFinished: $initFinished, "
+        "alarmServiceAlreadyRunning: $alarmServiceAlreadyRunning");
     if (!initFinished) {
       return;
     }

@@ -31,23 +31,27 @@ class ReminderWidgetController extends GetxController {
 
   @override
   void onInit() {
-    super.onInit();
+    // onInit: is called immediately after the widget is allocated memory.
     _updateReminders();
+
+    super.onInit();
   }
 
   @override
   void onReady() {
+    // onReady: is called immediately after the widget is rendered on screen.
     ever(selectedIndex, handleSelectedIndex);
     ever(selectedTag, handleSelectedTag);
     // ever(filteredReminderList, handleReminderList);
     ever(filteredReminderListDirty, handleReminderListDirty);
+
     super.onReady();
   }
 
-  void _updateReminders({InMemoryScheduleDataStore mds}) {
+  void _updateReminders() {
     // TODO mds is not up to date here after import? Not sure - this may be fine now
-    mds ??= Get.find();
     logger.d("_updateReminders");
+    InMemoryScheduleDataStore mds = Get.find();
     reminders.value = Reminders.fromJson(mds.jsonReminders);
 
     // NOTE: the index for filteredReminderList.value is different from the allReminders index!
@@ -70,12 +74,12 @@ class ReminderWidgetController extends GetxController {
     // write to memory store
     InMemoryScheduleDataStore mds = Get.find();
     mds.jsonReminders = reminders.value.toJson();
-    _updateReminders(mds: mds);
+    _updateReminders();
     filteredReminderListDirty.value = false;
 
-    // update alarm service with new memory store:
+    // update alarm service with new memory store
     Get.find<MindfulNotifierWidgetController>()
-        .sendToAlarmService({'update': mds});
+        .updatePermanentDataStore(mds);
   }
 }
 

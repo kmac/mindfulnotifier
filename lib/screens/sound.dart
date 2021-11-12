@@ -67,7 +67,7 @@ class SoundWidgetController extends GetxController {
 
   @override
   void onInit() {
-    super.onInit();
+    // onInit: is called immediately after the widget is allocated memory.
     InMemoryScheduleDataStore mds = Get.find();
     _bellId.value = mds.bellId;
     _selectedBellId = _bellId.value;
@@ -75,13 +75,17 @@ class SoundWidgetController extends GetxController {
         .customBellPath; // tracks the value of bellDefinitions['customBell']['path']
     bellDefinitions['customBell']['path'] = _customBellPath.value;
     _audioChannel.value = mds.audioOutputChannel;
+
+    super.onInit();
   }
 
   @override
   void onReady() {
+    // onReady: is called immediately after the widget is rendered on screen.
     ever(_bellId, handleBellId);
     ever(_customBellPath, handleCustomBellPath);
     ever(_audioChannel, handleAudioChannel);
+
     super.onReady();
   }
 
@@ -107,9 +111,9 @@ class SoundWidgetController extends GetxController {
   }
 
   void _updateAlarmService(InMemoryScheduleDataStore mds) {
-    // update the alarm isolate:
-    MindfulNotifierWidgetController mainUiController = Get.find();
-    mainUiController.sendToAlarmService({'update': mds});
+    // update alarm service with new memory store
+    Get.find<MindfulNotifierWidgetController>()
+        .updatePermanentDataStore(mds);
   }
 }
 

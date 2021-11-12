@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -13,13 +11,7 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/theme/themes.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> initServices() async {
-  print("main:initServices: starting services");
-  await initializeAlarmService(bootstrap: true);
-  print("main:initServices: finished");
-}
 
 void main() async {
   // needed if you intend to initialize in the `main` function
@@ -40,11 +32,6 @@ void main() async {
   AndroidBuildVersion buildVersion = await getAndroidBuildVersion();
   Get.put(buildVersion, permanent: true);
 
-  await initServices();
-
-  SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-  Get.put(sharedPreferences);
-
   AppDataStore appDataStore = await AppDataStore.getInstance();
   Get.put(appDataStore);
 
@@ -52,6 +39,9 @@ void main() async {
   if (allThemes.containsKey(appDataStore.theme)) {
     themeData = allThemes[appDataStore.theme];
   }
+
+  Get.put(await initializeAlarmService(bootstrap: true),
+      permanent: true, tag: constants.tagAlarmServiceAlreadyRunning);
 
   runApp(
     GetMaterialApp(

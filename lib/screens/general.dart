@@ -36,7 +36,7 @@ class GeneralWidgetController extends GetxController {
 
   @override
   void onInit() {
-    super.onInit();
+    // onInit: is called immediately after the widget is allocated memory.
     AndroidBuildVersion buildVersion = Get.find();
     if (buildVersion.sdkInt < 23) {
       includeBatteryOptimizationCheck = false;
@@ -46,14 +46,17 @@ class GeneralWidgetController extends GetxController {
     theme.value = appDS.theme;
     _useBackgroundService.value = appDS.useBackgroundService;
 
-    InMemoryScheduleDataStore mds = Get.find();
+    InMemoryScheduleDataStore mds = Get.find<InMemoryScheduleDataStore>();
     _includeDebugInfo.value = mds.includeDebugInfo;
     _useStickyNotification.value = mds.useStickyNotification;
     _hideNextReminder.value = mds.hideNextReminder;
+
+    super.onInit();
   }
 
   @override
   void onReady() {
+    // onReady: is called immediately after the widget is rendered on screen.
     ever(_useBackgroundService, handleUseBackgroundService);
     ever(_useStickyNotification, handleUseStickyNotification);
     ever(_includeDebugInfo, handleIncludeDebugInfo);
@@ -99,8 +102,11 @@ class GeneralWidgetController extends GetxController {
   void handleScheduleDirty() {
     logger.d("handleScheduleDirty");
     InMemoryScheduleDataStore mds = Get.find();
+
+    // update alarm service with new memory store
     Get.find<MindfulNotifierWidgetController>()
-        .sendToAlarmService({'update': mds});
+        .updatePermanentDataStore(mds);
+
     scheduleDirty.value = false;
   }
 }

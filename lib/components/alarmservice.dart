@@ -16,33 +16,51 @@ const bool useHeartbeat = false;
 const Duration heartbeatInterval = Duration(minutes: 30);
 const int controlAlarmId = 5;
 
-bool androidAlarmManagerInitialized = false;
+bool alarmServiceAlreadyRunning = false;
 
 ReceivePort fromAppIsolateReceivePort;
 StreamSubscription fromAppIsolateStreamSubscription;
 
-Future<void> initializeAlarmService({bool bootstrap: false}) async {
+Future<bool> initializeAlarmService({bool bootstrap: false}) async {
   // check IsolateNameServer to see if our alarm isolate is already running
   if (IsolateNameServer.lookupPortByName(
           constants.toAlarmServiceSendPortName) !=
       null) {
-    logger.i(
-        "initializeAlarmService bootstrap:$bootstrap, already initialized: ${constants.toAlarmServiceSendPortName} ${getCurrentIsolate()}");
-    return;
+    logger.i("initializeAlarmService bootstrap:$bootstrap, "
+        "already initialized: ${constants.toAlarmServiceSendPortName} "
+        "${getCurrentIsolate()}");
+    alarmServiceAlreadyRunning = true;
+    return alarmServiceAlreadyRunning;
   }
-  logger
-      .i("initializeAlarmService bootstrap:$bootstrap ${getCurrentIsolate()}");
 
-  await initializeAlarmManager();
+  // TODO the underlying issue is that we can't query android alarm manager
+  // to see if we have outstanding alarms.
+  // We could store next alarm time in hive db and compare
+  // with current time to see if we should have an alarm scheduled
+
+  try {
+    logger.i("initializeAlarmService initializing alarm manager, "
+        "bootstrap:$bootstrap ${getCurrentIsolate()}");
+    logger.i("Initializing AndroidAlarmManager ${getCurrentIsolate()}");
+    bool initResult = await AndroidAlarmManager.initialize();
+    if (!initResult) {
+      logger.e('AndroidAlarmManager.initialize() failed');
+    }
+    logger.i(
+        "Successfully initialized AndroidAlarmManager ${getCurrentIsolate()}");
+  } catch (e) {
+    logger.e('initializeAlarmManager failed',
+        'AndroidAlarmManager.initialize() failed', e);
+  }
 
   if (bootstrap) {
     // !!!
-    // THIS IS ON THE 'MAIN' ISOLATE
-    // Nothing else in this file should be on the main isolate.
+    // CALLER IS ON THE 'MAIN' ISOLATE
+    // Nothing else in this file should be running on the main isolate.
     // !!!
 
     // Send ourselves a bootstrap message. The 'bootstrapCallback' will be
-    // invoked on the alarm manager isolate
+    // invoked on the alarm manager isolate.
     if (!await AndroidAlarmManager.oneShot(
         Duration(seconds: 1), controlAlarmId, bootstrapCallback,
         exact: true, wakeup: true, rescheduleOnReboot: false)) {
@@ -52,24 +70,7 @@ Future<void> initializeAlarmService({bool bootstrap: false}) async {
       throw AssertionError(errmsg);
     }
   }
-}
-
-Future<void> initializeAlarmManager() async {
-  if (!androidAlarmManagerInitialized) {
-    try {
-      logger.i("Initializing AndroidAlarmManager ${getCurrentIsolate()}");
-      bool initResult = await AndroidAlarmManager.initialize();
-      if (!initResult) {
-        logger.e('AndroidAlarmManager.initialize() failed');
-      }
-      androidAlarmManagerInitialized = true;
-      logger.i(
-          "Successfully initialized AndroidAlarmManager ${getCurrentIsolate()}");
-    } catch (e) {
-      logger.e('initializeAlarmManager failed',
-          'AndroidAlarmManager.initialize() failed', e);
-    }
-  }
+  return alarmServiceAlreadyRunning;
 }
 
 Future<void> initializeFromAppIsolateReceivePort() async {
@@ -105,14 +106,15 @@ Future<void> initializeFromAppIsolateReceivePort() async {
         break;
       case 'restart':
         InMemoryScheduleDataStore mds = map.values.first;
-        scheduler.update(mds);
+        if (mds != null) {
+          scheduler.update(mds);
+        }
         scheduler.restart();
         break;
       case 'restore':
         InMemoryScheduleDataStore mds = map.values.first;
         scheduler.update(mds);
-        scheduler.updateDS('infoMessage', "Restored");
-        // scheduler.disable();
+        scheduler.updateDS('infoMessage', "Restored", sendUpdate: true);
         break;
       case 'syncDataStore':
         scheduler.sendDataStoreUpdate();
@@ -155,8 +157,8 @@ Future<void> initializeFromAppIsolateReceivePort() async {
   //     constants.toSchedulerSendPortName,
   //   );
   // }
-  logger.d(
-      "registerPortWithName: ${constants.toAlarmServiceSendPortName}, result=$result ${getCurrentIsolate()}");
+  logger.d("registerPortWithName: ${constants.toAlarmServiceSendPortName}, "
+      "result=$result ${getCurrentIsolate()}");
   assert(result);
 }
 
@@ -187,7 +189,8 @@ void bootstrapCallback() async {
   // scheduler.sendControlMessage(
   //     "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${enabled ? 'T' : 'F'}");
   scheduler.sendControlMessage(
-      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:${scheduler.running ? 'T' : 'F'}");
+      "${useHeartbeat ? 'HB' : 'CO'}:${formatHHMM(DateTime.now())}:"
+      "${scheduler.running ? 'T' : 'F'}");
 }
 
 void heartbeatCallback() async {

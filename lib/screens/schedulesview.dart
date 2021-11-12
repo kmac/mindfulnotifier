@@ -17,7 +17,6 @@ var logger = createLogger('schedulesview');
 enum ScheduleType { periodic, random }
 
 class SchedulesWidgetController extends GetxController {
-  InMemoryScheduleDataStore mds;
   final scheduleType = ScheduleType.periodic.obs;
   final periodicHours = 1.obs;
   final periodicMinutes = 0.obs;
@@ -40,24 +39,10 @@ class SchedulesWidgetController extends GetxController {
 
   @override
   void onInit() {
-    super.onInit();
-    init();
-  }
+    // onInit: is called immediately after the widget is allocated memory.
+    logger.d("onInit");
 
-  @override
-  void onReady() {
-    ever(scheduleType, handleScheduleType);
-    ever(periodicHours, handlePeriodicHours);
-    ever(periodicMinutes, handlePeriodicMinutes);
-    ever(quietHoursStartPicked, handleQuietHoursStartPicked);
-    ever(quietHoursEndPicked, handleQuietHoursEndPicked);
-    super.onReady();
-  }
-
-  void init() async {
-    logger.d("init");
-
-    mds = Get.find();
+    InMemoryScheduleDataStore mds = Get.find();
 
     if (mds.scheduleTypeStr == 'periodic') {
       scheduleType.value = ScheduleType.periodic;
@@ -83,9 +68,24 @@ class SchedulesWidgetController extends GetxController {
         2020, 01, 1, mds.quietHoursStartHour, mds.quietHoursStartMinute));
     quietHoursEndTimeController.text = formatHHMM(
         DateTime(2020, 01, 1, mds.quietHoursEndHour, mds.quietHoursEndMinute));
+
+    super.onInit();
+  }
+
+  @override
+  void onReady() {
+    // onReady: is called immediately after the widget is rendered on screen.
+    ever(scheduleType, handleScheduleType);
+    ever(periodicHours, handlePeriodicHours);
+    ever(periodicMinutes, handlePeriodicMinutes);
+    ever(quietHoursStartPicked, handleQuietHoursStartPicked);
+    ever(quietHoursEndPicked, handleQuietHoursEndPicked);
+
+    super.onReady();
   }
 
   void handleScheduleType(ScheduleType t) {
+    InMemoryScheduleDataStore mds = Get.find();
     if (t == ScheduleType.periodic) {
       if (mds.scheduleTypeStr != 'periodic') {
         mds.scheduleTypeStr = 'periodic';
@@ -100,6 +100,7 @@ class SchedulesWidgetController extends GetxController {
   }
 
   void handlePeriodicHours(int hours) {
+    InMemoryScheduleDataStore mds = Get.find();
     if (mds.periodicHours != hours) {
       mds.periodicHours = hours;
       if (hours > 0) {
@@ -112,6 +113,7 @@ class SchedulesWidgetController extends GetxController {
   }
 
   void handlePeriodicMinutes(int minutes) {
+    InMemoryScheduleDataStore mds = Get.find();
     if (mds.periodicMinutes != minutes) {
       mds.periodicMinutes = minutes;
       scheduleDirty.value = true;
@@ -131,8 +133,9 @@ class SchedulesWidgetController extends GetxController {
   }
 
   void handleRandomValSubmit() {
-    logger.d(
-        "handleRandomValSubmit min: $trackRandomMinMinutes max: $trackRandomMaxMinutes");
+    logger.d("handleRandomValSubmit min: $trackRandomMinMinutes "
+        "max: $trackRandomMaxMinutes");
+    InMemoryScheduleDataStore mds = Get.find();
     if (trackRandomMinMinutes > trackRandomMaxMinutes) {
       trackRandomMaxMinutes = trackRandomMinMinutes;
     }
@@ -155,11 +158,14 @@ class SchedulesWidgetController extends GetxController {
 
   void handleScheduleDirty() {
     logger.d("handleScheduleDirty");
-    Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart(mds);
+    InMemoryScheduleDataStore mds = Get.find();
+    Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart(
+        mds: mds, reason: "Configuration changed, restarting the notifier.");
     scheduleDirty.value = false;
   }
 
   void handleQuietHoursStartPicked(TimeOfDay time) {
+    InMemoryScheduleDataStore mds = Get.find();
     quietHoursStartTimeController.text =
         formatHHMM(DateTime(2020, 01, 1, time.hour, time.minute));
     if (mds.quietHoursStartHour != time.hour ||
@@ -171,6 +177,7 @@ class SchedulesWidgetController extends GetxController {
   }
 
   void handleQuietHoursEndPicked(TimeOfDay time) {
+    InMemoryScheduleDataStore mds = Get.find();
     quietHoursEndTimeController.text =
         formatHHMM(DateTime(2020, 01, 1, time.hour, time.minute));
     if (mds.quietHoursEndHour != time.hour ||
@@ -361,9 +368,10 @@ class SchedulesWidget extends StatelessWidget {
   }
 
   Future<Null> _selectQuietHoursStartTime(BuildContext context) async {
+    InMemoryScheduleDataStore mds = Get.find();
     var selectedTime = TimeOfDay(
-        hour: controller.mds.quietHoursStartHour,
-        minute: controller.mds.quietHoursStartMinute);
+        hour: mds.quietHoursStartHour,
+        minute: mds.quietHoursStartMinute);
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
@@ -375,9 +383,10 @@ class SchedulesWidget extends StatelessWidget {
   }
 
   Future<Null> _selectQuietHoursEndTime(BuildContext context) async {
+    InMemoryScheduleDataStore mds = Get.find();
     var selectedTime = TimeOfDay(
-        hour: controller.mds.quietHoursEndHour,
-        minute: controller.mds.quietHoursEndMinute);
+        hour: mds.quietHoursEndHour,
+        minute: mds.quietHoursEndMinute);
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
