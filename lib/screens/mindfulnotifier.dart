@@ -55,7 +55,8 @@ class MindfulNotifierWidgetController extends GetxController {
     // after the above onInit finishes, we could see odd things?
 
     initFinished = false;
-    // Now send a sync message which will reinit the data store from the alarm/scheduler isolate
+    // Now send a sync message which will reinit the data store
+    // from the alarm/scheduler isolate
     sendToAlarmService({'syncDataStore': 1});
 
     super.onInit();
@@ -77,8 +78,7 @@ class MindfulNotifierWidgetController extends GetxController {
     initFinished = true;
     if (!alarmServiceAlreadyRunning && mds.enabled) {
       logger.i("initFinish: re-enabling");
-      // handleEnabled(true);
-      triggerSchedulerRestart(reason: "Restarting alarm service");
+      triggerSchedulerRestart();
     }
   }
 
@@ -94,7 +94,7 @@ class MindfulNotifierWidgetController extends GetxController {
     // Replace the main/app InMemoryScheduleDataStore instance with the
     // newer one from alarm service
     Get.delete<InMemoryScheduleDataStore>();
-    Get.put(mds, permanent: true);
+    Get.put(mds);
 
     // set all the local UI-visible values
     _enabled.value = mds.enabled;
@@ -152,10 +152,11 @@ class MindfulNotifierWidgetController extends GetxController {
         controlMessage.value = value;
         if (!initFinished) {
           sendToAlarmService({'syncDataStore': 1});
+          // Note: response comes in and handled in next case
         }
         break;
       case 'syncDataStore':
-        logger.i("Received syncDataStore");
+        logger.i("Received syncDataStore from alarm service");
         // Receives a complete InMemoryScheduleDataStore update
         InMemoryScheduleDataStore mds = value;
         initFromDS(mds);
@@ -180,16 +181,17 @@ class MindfulNotifierWidgetController extends GetxController {
     sendToAlarmService({'restore': mds});
   }
 
-  void triggerSchedulerRestart(
-      {InMemoryScheduleDataStore mds,
-      String reason = "Configuration changed, restarting the notifier."}) {
+  void triggerSchedulerRestart({InMemoryScheduleDataStore mds, String reason}) {
     if (_enabled.value) {
+      //
       logger.i("sending restart to scheduler");
       // Send to the alarm isolate
       sendToAlarmService({'restart': mds});
       // alert user
-      Get.snackbar("Restarting", reason,
-          snackPosition: SnackPosition.BOTTOM, instantInit: false);
+      if (reason != null) {
+        Get.snackbar("Restarting", reason,
+            snackPosition: SnackPosition.BOTTOM, instantInit: false);
+      }
     } else {
       if (mds != null) {
         // we need to update the datastore
@@ -228,7 +230,8 @@ class MindfulNotifierWidgetController extends GetxController {
       return;
     }
     if (enabled) {
-      if (_reminderMessage.value == 'Not Enabled' ||
+      if (_reminderMessage.value ==
+              ScheduleDataStoreBase.defaultReminderMessage ||
           _reminderMessage.value == 'In quiet hours') {
         _reminderMessage.value = 'Enabled. Waiting for notification...';
       }

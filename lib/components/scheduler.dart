@@ -7,7 +7,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
@@ -26,14 +25,13 @@ const bool rescheduleAfterQuietHours = true;
 const int scheduleAlarmID = 10;
 bool initialNotificationTriggered = false;
 
-/// Newest changes:
-/// scheduler owns the data
-/// is reinitialized upon every alarm
-/// reschedules next alarm upon every alarm
-/// always refreshes from the datastore
-///  - no need to reinitialize when UI changes config
-
 // Design notes:
+/// - scheduler owns the data
+///   - is reinitialized upon every alarm
+/// - reschedules next alarm upon every alarm
+/// - always refreshes from the datastore
+///   - no need to reinitialize when UI changes config
+
 // - the UI only makes config changes and enable/disable
 // - everything else is controlled by the scheduler
 
@@ -88,10 +86,6 @@ class Scheduler {
       // throws during testing
     }
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    Get.delete<SharedPreferences>();
-    Get.put(prefs, permanent: true);
-
     ds = await ScheduleDataStore.getInstance();
     Get.delete<ScheduleDataStore>();
     Get.put(ds, permanent: true);
@@ -118,7 +112,7 @@ class Scheduler {
     }
   }
 
-  void enable() {
+  void enable({bool restart = false}) {
     logger.i("enable");
     ds.enabled = true;
 
@@ -129,7 +123,7 @@ class Scheduler {
     // 1) reboot
     // 2) first enabled by user
     // 3) re-enable after config changes by user
-    delegate.scheduleNext();
+    delegate.scheduleNext(restart: restart);
     // sendInfoMessage(
     //     'Next reminder at ${formatHHMM(delegate.queryNext())}');
     String enabledReminderText = '${constants.appName} is enabled';
@@ -155,13 +149,16 @@ class Scheduler {
   //   return false;
   // }
 
-  void disable({bool sendUpdate = true}) async {
+  void disable({bool sendUpdate = true, bool restart = false}) async {
     logger.i("disable");
     delegate?.cancel();
     Notifier().shutdown();
     running = false;
     ds.enabled = false;
-    ds.reminderMessage = "Disabled";
+    ds.reminderMessage = ScheduleDataStoreBase.defaultReminderMessage;
+    if (!restart) {
+      ds.nextAlarm = '';
+    }
     if (sendUpdate) {
       sendDataStoreUpdate();
     }
@@ -169,9 +166,9 @@ class Scheduler {
 
   void restart() {
     logger.i("restart");
-    disable(sendUpdate: false);
-    sleep(Duration(seconds: 1));
-    enable();
+    disable(sendUpdate: false, restart: true);
+    sleep(Duration(milliseconds: 500));
+    enable(restart: true);
   }
 
   void playSound(var fileOrPath) {
@@ -288,11 +285,25 @@ abstract class DelegatedScheduler {
 
   DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet});
 
-  void scheduleNext() async {
+  void scheduleNext({bool restart = false}) async {
     logger.d(
         "Scheduling next notification, type=$scheduleType ${getCurrentIsolate()}");
 
-    _nextDate = getNextFireTime();
+    _nextDate = null;
+    if (restart) {
+      // use nextAlarm if possible; otherwise it gets left null
+      String nextAlarmStr = scheduler.ds.nextAlarm;
+      if (nextAlarmStr != null && nextAlarmStr != '') {
+        DateTime nextAlarm = DateTime.parse(scheduler.ds.nextAlarm);
+        if (nextAlarm.isAfter(DateTime.now().add(Duration(seconds: 10)))) {
+          logger.i("Re-scheduling based on nextAlarm $nextAlarmStr");
+          _nextDate = nextAlarm;
+        }
+      }
+    }
+    if (_nextDate == null) {
+      _nextDate = getNextFireTime();
+    }
 
     if (rescheduleAfterQuietHours && quietHours.isInQuietHours(_nextDate)) {
       _nextDate = getNextFireTime(
@@ -307,6 +318,9 @@ abstract class DelegatedScheduler {
 
     TimerService timerService = await getAlarmManagerTimerService();
     timerService.oneShotAt(_nextDate, scheduleAlarmID, scheduleCallback);
+    scheduler.updateDS(
+        ScheduleDataStoreBase.nextAlarmKey, _nextDate.toIso8601String(),
+        sendUpdate: true);
 
     if (!scheduled) {
       initialScheduleComplete();

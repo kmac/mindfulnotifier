@@ -41,7 +41,7 @@ void main() async {
   }
 
   Get.put(await initializeAlarmService(bootstrap: true),
-      permanent: true, tag: constants.tagAlarmServiceAlreadyRunning);
+      tag: constants.tagAlarmServiceAlreadyRunning);
 
   runApp(
     GetMaterialApp(

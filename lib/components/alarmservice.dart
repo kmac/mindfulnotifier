@@ -33,9 +33,9 @@ Future<bool> initializeAlarmService({bool bootstrap: false}) async {
     return alarmServiceAlreadyRunning;
   }
 
-  // TODO the underlying issue is that we can't query android alarm manager
+  // The underlying issue is that we can't query android alarm manager
   // to see if we have outstanding alarms.
-  // We could store next alarm time in hive db and compare
+  // We store the next alarm time in hive db and compare
   // with current time to see if we should have an alarm scheduled
 
   try {

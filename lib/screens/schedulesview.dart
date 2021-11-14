@@ -159,6 +159,10 @@ class SchedulesWidgetController extends GetxController {
   void handleScheduleDirty() {
     logger.d("handleScheduleDirty");
     InMemoryScheduleDataStore mds = Get.find();
+
+    // Set nextAlarm to '' in order to reset the scheduler on restart
+    mds.nextAlarm = '';
+
     Get.find<MindfulNotifierWidgetController>().triggerSchedulerRestart(
         mds: mds, reason: "Configuration changed, restarting the notifier.");
     scheduleDirty.value = false;
@@ -370,8 +374,7 @@ class SchedulesWidget extends StatelessWidget {
   Future<Null> _selectQuietHoursStartTime(BuildContext context) async {
     InMemoryScheduleDataStore mds = Get.find();
     var selectedTime = TimeOfDay(
-        hour: mds.quietHoursStartHour,
-        minute: mds.quietHoursStartMinute);
+        hour: mds.quietHoursStartHour, minute: mds.quietHoursStartMinute);
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
@@ -384,9 +387,8 @@ class SchedulesWidget extends StatelessWidget {
 
   Future<Null> _selectQuietHoursEndTime(BuildContext context) async {
     InMemoryScheduleDataStore mds = Get.find();
-    var selectedTime = TimeOfDay(
-        hour: mds.quietHoursEndHour,
-        minute: mds.quietHoursEndMinute);
+    var selectedTime =
+        TimeOfDay(hour: mds.quietHoursEndHour, minute: mds.quietHoursEndMinute);
     final TimeOfDay picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,

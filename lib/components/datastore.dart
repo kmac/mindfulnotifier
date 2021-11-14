@@ -13,6 +13,9 @@ var logger = createLogger('datastore');
 
 final Random random = Random();
 
+bool testMigrateApp = false;
+bool testMigrateSched = false;
+
 // A list for the initial json string. Each entry has keys: text, enabled, tag, weight
 //
 // Idea: add optional weight to support weighing reminders differently
@@ -94,18 +97,6 @@ const List<Map<String, dynamic>> defaultJsonReminderMap = [
     "enabled": true,
     "tag": "${Reminder.defaultTagName}"
   },
-  // {
-  //   "text":
-  //       "Two is very two, two is very too. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long.",
-  //   "enabled": true,
-  //   "tag": "${Reminder.defaultTagName}"
-  // },
-  // {
-  //   "text":
-  //       "This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long. This is very long.",
-  //   "enabled": true,
-  //   "tag": "${Reminder.defaultTagName}"
-  // },
 ];
 
 Future<void> checkMigrateSharedPreferences(var box,
@@ -116,7 +107,7 @@ Future<void> checkMigrateSharedPreferences(var box,
   // Check if we need to convert from SharedPreferences
   SharedPreferences prefs = await SharedPreferences.getInstance();
   if (prefs.getKeys().length > 0) {
-    logger.i("Migrating SharedPreferences to Hive");
+    logger.i("Migrating SharedPreferences to Hive box ${box.name}");
 
     for (String key in prefs.getKeys()) {
       bool ignoreKey = false;
@@ -126,12 +117,11 @@ Future<void> checkMigrateSharedPreferences(var box,
         ignoreKey = true;
       }
       if (ignoreKey) {
-        logger.i("Ignoring $key");
+        logger.i("${box.name}: Ignoring $key");
       } else {
         var value = prefs.get(key);
-        logger.i("Converting $key = $value");
+        logger.i("${box.name}: Converting $key = $value");
         box.put(key, value);
-        // TODO uncomment this when ready:
         // logger.i("Removing key: $key from SharedPreferences");
         // prefs.remove(key);
       }
@@ -154,7 +144,7 @@ class AppDataStore {
 
   static AppDataStore _instance;
 
-  var _box;
+  Box _box;
 
   /// Public factory
   static Future<AppDataStore> getInstance() async {
@@ -175,10 +165,9 @@ class AppDataStore {
     await Hive.initFlutter();
 
     _box = await Hive.openBox('appdata');
-    bool testMigrate = false;
-    if (testMigrate) {
+    if (testMigrateApp) {
       await _box.clear();
-      testMigrate = false;
+      testMigrateApp = false;
     }
     await checkMigrateSharedPreferences(_box, includeKeys: [
       ScheduleDataStoreBase.themeKey,
@@ -233,6 +222,7 @@ abstract class ScheduleDataStoreBase {
   static const String quietHoursEndMinuteKey = 'quietHoursEndMinute';
   static const String notifyQuietHoursKey = 'notifyQuietHours';
   static const String reminderMessageKey = 'reminderMessage';
+  static const String nextAlarmKey = 'nextAlarm';
 
   // replaced by jsonReminders :
   static const String remindersKeyDeprecated = 'reminders';
@@ -258,7 +248,7 @@ abstract class ScheduleDataStoreBase {
   static const int defaultQuietHoursEndMinute = 0;
   static const bool defaultNotifyQuietHours = false;
   static const String defaultReminderMessage = 'Not Enabled';
-  static const String defaultInfoMessage = 'Uninitialized';
+  static const String defaultInfoMessage = 'Disabled';
   static const String defaultControlMessage = '';
   static const String defaultTheme = 'Default';
   static const String defaultBellId = 'bell1';
@@ -287,6 +277,7 @@ abstract class ScheduleDataStoreBase {
   String get controlMessage;
   String get bellId;
   String get customBellPath;
+  String get nextAlarm;
 
   // this is only here to support old reminders format
   bool reminderExists(String reminderText, {List jsonReminderList}) {
@@ -297,6 +288,11 @@ abstract class ScheduleDataStoreBase {
       }
     }
     return false;
+  }
+
+  String randomReminder({String tag}) {
+    Reminders reminders = Reminders.fromJson(jsonReminders);
+    return reminders.randomReminder(tag: tag);
   }
 }
 
@@ -327,6 +323,7 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
   String controlMessage;
   String bellId;
   String customBellPath;
+  String nextAlarm;
 
   InMemoryScheduleDataStore.fromDS(ScheduleDataStore ds)
       : this.enabled = ds.enabled,
@@ -351,7 +348,8 @@ class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
         this.infoMessage = ds.infoMessage,
         this.controlMessage = ds.controlMessage,
         this.bellId = ds.bellId,
-        this.customBellPath = ds.customBellPath;
+        this.customBellPath = ds.customBellPath,
+        this.nextAlarm = ds.nextAlarm;
 }
 
 /// Data store for the scheduler/alarm service. This data store is accessed
@@ -378,17 +376,16 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     return InMemoryScheduleDataStore.fromDS(this);
   }
 
-  var _box;
+  Box _box;
 
   Future<void> _init() async {
     logger.i("Initializing ScheduleDataStore (hive");
     await Hive.initFlutter();
 
-    _box = await Hive.openBox('mindfulnotifier');
-    bool testMigrate = false;
-    if (testMigrate) {
+    _box = await Hive.openBox('scheduledata');
+    if (testMigrateSched) {
       await _box.clear();
-      testMigrate = false;
+      testMigrateSched = false;
     }
     await checkMigrateSharedPreferences(_box, excludeKeys: [
       ScheduleDataStoreBase.themeKey,
@@ -449,6 +446,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     _mergeVal(ScheduleDataStoreBase.controlMessageKey, mds.controlMessage);
     _mergeVal(ScheduleDataStoreBase.bellIdKey, mds.bellId);
     _mergeVal(ScheduleDataStoreBase.customBellPathKey, mds.customBellPath);
+    _mergeVal(ScheduleDataStoreBase.nextAlarmKey, mds.nextAlarm);
   }
 
   bool get enabled {
@@ -687,6 +685,17 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.customBellPathKey, value);
   }
 
+  String get nextAlarm {
+    if (_box.get(ScheduleDataStoreBase.nextAlarmKey) == null) {
+      nextAlarm = '';
+    }
+    return _box.get(ScheduleDataStoreBase.nextAlarmKey);
+  }
+
+  set nextAlarm(String value) {
+    setSync(ScheduleDataStoreBase.nextAlarmKey, value);
+  }
+
   String get jsonReminders {
     // Check for migration to new format:
     if (_box.get(ScheduleDataStoreBase.remindersKeyDeprecated) != null) {
@@ -710,11 +719,6 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     Reminders.fromJson(jsonString);
 
     setSync(ScheduleDataStoreBase.jsonRemindersKey, jsonString);
-  }
-
-  String randomReminder({String tag}) {
-    Reminders reminders = Reminders.fromJson(jsonReminders);
-    return reminders.randomReminder(tag: tag);
   }
 }
 
