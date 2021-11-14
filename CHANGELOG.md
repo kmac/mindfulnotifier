@@ -1,5 +1,13 @@
 # 1.0.20
-- Issue #35: Fix service disabled on app open after close
+- Issue #35: fix service disabled on app open after close
+    - Migrate from SharedPreferences to Hive for internal data
+    - add nextAlarm field in db to track state for restart
+- Update to android targetSdkVersion 30 (required for Play Store)
+- Update internal libraries and dependencies
+- Remove some test reminders that were mistakenly included in the
+  last release. This affects new installs only - if you recently
+  installed please manually delete any reminders that don't make
+  sense to you!
 
 # 1.0.19
 - Issue #31/#36: Revisit sound modes for different channels
