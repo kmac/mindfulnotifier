@@ -1,3 +1,14 @@
+# 1.0.21
+- Fix UI re-init issue with recreating the initial notification
+  when app is revisited after being killed (either on restart
+  or when user uses the back button to exit instead of the
+  home button)
+    - If user presses the back button the app is killed (but
+      the alarm service is still running, and notifications
+      still occur).
+    - This fixes the notification being re-raised/changed
+      when the app is again started by the user
+
 # 1.0.20
 - Issue #35: fix service disabled on app open after close
     - Migrate from SharedPreferences to Hive for internal data

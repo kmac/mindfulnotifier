@@ -122,17 +122,18 @@ class Scheduler {
     // This is the notification we only want to show on:
     // 1) reboot
     // 2) first enabled by user
-    // 3) re-enable after config changes by user
+    // 3) app is restarted after GUI is killed or exited
+    // 4) re-enable after config changes by user
     delegate.scheduleNext(restart: restart);
-    // sendInfoMessage(
-    //     'Next reminder at ${formatHHMM(delegate.queryNext())}');
-    String enabledReminderText = '${constants.appName} is enabled';
-    if (!ds.hideNextReminder) {
-      enabledReminderText +=
-          '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}';
-    }
-    Notifier().showInfoNotification(enabledReminderText);
+    // if (ds.reminderMessage == ScheduleDataStoreBase.defaultReminderMessage) {
+    //   String enabledReminderText = '${constants.appName} is enabled';
+    //   if (!ds.hideNextReminder) {
+    //     enabledReminderText +=
+    //         '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}';
+    //   }
+    // }
     ds.reminderMessage = ds.randomReminder();
+    Notifier().showInfoNotification(ds.reminderMessage);
     sendDataStoreUpdate();
   }
 

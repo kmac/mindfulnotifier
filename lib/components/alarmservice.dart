@@ -33,10 +33,9 @@ Future<bool> initializeAlarmService({bool bootstrap: false}) async {
     return alarmServiceAlreadyRunning;
   }
 
-  // The underlying issue is that we can't query android alarm manager
-  // to see if we have outstanding alarms.
-  // We store the next alarm time in hive db and compare
-  // with current time to see if we should have an alarm scheduled
+  // We can't query android alarm manager to see if we have outstanding alarms.
+  // We store the next alarm time in hive db and compare with current time to
+  // see if we should have an alarm scheduled
 
   try {
     logger.i("initializeAlarmService initializing alarm manager, "
@@ -81,7 +80,31 @@ Future<void> initializeFromAppIsolateReceivePort() async {
   // Register for events from the UI isolate. These messages will
   // be triggered from the UI side
   fromAppIsolateStreamSubscription =
-      fromAppIsolateReceivePort.listen((map) async {
+      fromAppIsolateReceivePort.listen(handleAppMessage, onDone: () {
+    logger.w("fromAppIsolateReceivePort is closed ${getCurrentIsolate()}");
+  });
+
+  // Register our SendPort for the app to be able to send to our ReceivePort
+  IsolateNameServer.removePortNameMapping(constants.toAlarmServiceSendPortName);
+  bool result = IsolateNameServer.registerPortWithName(
+    fromAppIsolateReceivePort.sendPort,
+    constants.toAlarmServiceSendPortName,
+
+  );
+  // if (!result) {
+  //   IsolateNameServer.removePortNameMapping(
+  //       constants.toSchedulerSendPortName);
+  //   result = IsolateNameServer.registerPortWithName(
+  //     fromAppIsolateReceivePort.sendPort,
+  //     constants.toSchedulerSendPortName,
+  //   );
+  // }
+  logger.d("registerPortWithName: ${constants.toAlarmServiceSendPortName}, "
+      "result=$result ${getCurrentIsolate()}");
+  assert(result);
+}
+
+void handleAppMessage(dynamic map) async {
     //
     // WE ARE IN THE ALARM ISOLATE
     //
@@ -139,27 +162,6 @@ Future<void> initializeFromAppIsolateReceivePort() async {
         logger.e("Unknown key: $key");
         break;
     }
-  }, onDone: () {
-    logger.w("fromAppIsolateReceivePort is closed ${getCurrentIsolate()}");
-  });
-
-  // Register our SendPort for the app to be able to send to our ReceivePort
-  IsolateNameServer.removePortNameMapping(constants.toAlarmServiceSendPortName);
-  bool result = IsolateNameServer.registerPortWithName(
-    fromAppIsolateReceivePort.sendPort,
-    constants.toAlarmServiceSendPortName,
-  );
-  // if (!result) {
-  //   IsolateNameServer.removePortNameMapping(
-  //       constants.toSchedulerSendPortName);
-  //   result = IsolateNameServer.registerPortWithName(
-  //     fromAppIsolateReceivePort.sendPort,
-  //     constants.toSchedulerSendPortName,
-  //   );
-  // }
-  logger.d("registerPortWithName: ${constants.toAlarmServiceSendPortName}, "
-      "result=$result ${getCurrentIsolate()}");
-  assert(result);
 }
 
 void shutdownReceivePort() async {
@@ -196,8 +198,6 @@ void bootstrapCallback() async {
 void heartbeatCallback() async {
   logger.i("heartbeatCallback ${getCurrentIsolate()}");
   // WE ARE IN THE ALARM MANAGER ISOLATE
-  // This is only available in the alarm manager isolate
-
   getAlarmManagerTimerService();
 
   // Create and initialize the Scheduler singleton
@@ -250,6 +250,7 @@ void shutdown() {
   shutdownReceivePort();
 }
 
+/// This is only available in the alarm manager isolate
 Future<AlarmManagerTimerService> getAlarmManagerTimerService() async {
   await initializeAlarmService();
   return AlarmManagerTimerService();
