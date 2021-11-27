@@ -230,15 +230,10 @@ class MindfulNotifierWidgetController extends GetxController {
       return;
     }
     if (enabled) {
-      if (_reminderMessage.value ==
-              ScheduleDataStoreBase.defaultReminderMessage ||
-          _reminderMessage.value == 'In quiet hours') {
-        _reminderMessage.value = 'Enabled. Waiting for notification...';
-      }
-      _infoMessage.value = 'Enabled. Waiting for notification.';
+      _infoMessage.value = constants.infoMessageWaiting;
       sendToAlarmService({'enable': _infoMessage.value});
     } else {
-      _infoMessage.value = 'Disabled';
+      _infoMessage.value = constants.infoMessageDisabled;
       sendToAlarmService({'disable': _infoMessage.value});
     }
   }

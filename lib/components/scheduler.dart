@@ -23,7 +23,6 @@ enum ScheduleType { PERIODIC, RANDOM }
 
 const bool rescheduleAfterQuietHours = true;
 const int scheduleAlarmID = 10;
-bool initialNotificationTriggered = false;
 
 // Design notes:
 /// - scheduler owns the data
@@ -112,7 +111,7 @@ class Scheduler {
     }
   }
 
-  void enable({bool restart = false}) {
+  Future<void> enable({bool restart = false}) async {
     logger.i("enable");
     ds.enabled = true;
 
@@ -125,51 +124,37 @@ class Scheduler {
     // 3) app is restarted after GUI is killed or exited
     // 4) re-enable after config changes by user
     delegate.scheduleNext(restart: restart);
-    // if (ds.reminderMessage == ScheduleDataStoreBase.defaultReminderMessage) {
-    //   String enabledReminderText = '${constants.appName} is enabled';
-    //   if (!ds.hideNextReminder) {
-    //     enabledReminderText +=
-    //         '\n\nNext reminder at ${formatHHMM(delegate.queryNext())}';
-    //   }
-    // }
-    ds.reminderMessage = ds.randomReminder();
-    Notifier().showInfoNotification(ds.reminderMessage);
-    sendDataStoreUpdate();
+    if (ds.reminderMessage == constants.reminderMessageDisabled ||
+        ds.reminderMessage == constants.reminderMessageQuietHours ||
+        ds.reminderMessage == constants.reminderMessageWaiting) {
+      ds.reminderMessage = ds.randomReminder();
+    }
+    if (!await Notifier().isNotificationActive()) {
+      Notifier().showInfoNotification(ds.reminderMessage);
+    }
+    await sendDataStoreUpdate();
   }
 
-  // bool enableIfNecessary() {
-  //   if (ds.enabled) {
-  //     if (initialNotificationTriggered) {
-  //       logger.i("initialNotificationTriggered: not re-enabling on init");
-  //     } else {
-  //       logger.i("re-enabling on init");
-  //       enable(kickSchedule: true);
-  //     }
-  //     return true;
-  //   }
-  //   return false;
-  // }
-
-  void disable({bool sendUpdate = true, bool restart = false}) async {
+  Future<void> disable({bool sendUpdate = true, bool restart = false}) async {
     logger.i("disable");
     delegate?.cancel();
-    Notifier().shutdown();
     running = false;
     ds.enabled = false;
-    ds.reminderMessage = ScheduleDataStoreBase.defaultReminderMessage;
     if (!restart) {
+      Notifier().shutdown();
+      ds.reminderMessage = ScheduleDataStoreBase.defaultReminderMessage;
       ds.nextAlarm = '';
     }
     if (sendUpdate) {
-      sendDataStoreUpdate();
+      await sendDataStoreUpdate();
     }
   }
 
-  void restart() {
+  Future<void> restart() async {
     logger.i("restart");
-    disable(sendUpdate: false, restart: true);
-    sleep(Duration(milliseconds: 500));
-    enable(restart: true);
+    await disable(sendUpdate: false, restart: true);
+    sleep(Duration(milliseconds: 250));
+    await enable(restart: true);
   }
 
   void playSound(var fileOrPath) {
@@ -251,8 +236,10 @@ class Scheduler {
     try {
       if (isQuiet) {
         // Note: this could happen if enabled in quiet hours:
-        logger.i("In quiet hours (missed alarm)... ignoring notification");
-        sendInfoMessage("In quiet hours ${formatHHMM(now)} NA");
+        logger.i(
+            "${constants.reminderMessageQuietHours} (missed alarm)... ignoring notification");
+        sendInfoMessage(
+            "${constants.reminderMessageQuietHours} ${formatHHMM(now)} NA");
         return;
       }
       String reminder = ds.randomReminder();
@@ -311,7 +298,7 @@ abstract class DelegatedScheduler {
           fromTime: quietHours.getNextQuietEnd(), adjustFromQuiet: true);
       logger.i("Scheduling next reminder, past quiet hours: $_nextDate");
       scheduler.sendInfoMessage(
-          "In quiet hours, next reminder at ${formatHHMMSS(_nextDate)}");
+          "${constants.reminderMessageQuietHours}, next reminder at ${formatHHMMSS(_nextDate)}");
     } else {
       logger.i("Scheduling next reminder at $_nextDate");
       scheduler.sendInfoMessage("Next reminder at ${formatHHMMSS(_nextDate)}");

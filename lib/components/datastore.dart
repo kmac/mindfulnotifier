@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:equatable/equatable.dart';
 
+import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/logging.dart';
 
 var logger = createLogger('datastore');
@@ -247,8 +248,8 @@ abstract class ScheduleDataStoreBase {
   static const int defaultQuietHoursEndHour = 9;
   static const int defaultQuietHoursEndMinute = 0;
   static const bool defaultNotifyQuietHours = false;
-  static const String defaultReminderMessage = 'Not Enabled';
-  static const String defaultInfoMessage = 'Disabled';
+  static const String defaultReminderMessage = constants.reminderMessageDisabled;
+  static const String defaultInfoMessage = constants.infoMessageDisabled;
   static const String defaultControlMessage = '';
   static const String defaultTheme = 'Default';
   static const String defaultBellId = 'bell1';

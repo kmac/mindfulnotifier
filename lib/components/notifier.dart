@@ -138,6 +138,16 @@ class Notifier {
     showNotification(notifText, mute: mute, vibrate: vibrate);
   }
 
+  Future<bool> isNotificationActive() async {
+    final List<ActiveNotification> activeNotifications =
+        await flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>()
+            ?.getActiveNotifications();
+    logger.d("isNotificationActive: $activeNotifications");
+    return activeNotifications.length > 0;
+  }
+
   void showNotification(String notifText,
       {bool mute = false, bool vibrate, bool useStickyNotification}) async {
     // Some reference links:

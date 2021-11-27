@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mindfulnotifier/components/alarmservice.dart';
+import 'package:mindfulnotifier/components/constants.dart' as constants;
 import 'package:mindfulnotifier/components/logging.dart';
 import 'package:mindfulnotifier/components/notifier.dart';
 import 'package:mindfulnotifier/components/scheduler.dart';
@@ -162,7 +163,7 @@ class QuietHours {
   void quietStart() async {
     logger.i("Quiet hours start");
     Scheduler scheduler = await Scheduler.getScheduler();
-    scheduler.sendReminderMessage('In quiet hours.');
+    scheduler.sendReminderMessage(constants.reminderMessageQuietHours);
     if (notifyQuietHours) {
       Notifier().showQuietHoursNotification(true);
     }

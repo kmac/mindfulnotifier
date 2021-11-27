@@ -1,3 +1,7 @@
+# 1.0.22
+- Fix issue where new notification is generated instead
+  of showing existing notification (after app is restarted).
+
 # 1.0.21
 - Fix UI re-init issue with recreating the initial notification
   when app is revisited after being killed (either on restart

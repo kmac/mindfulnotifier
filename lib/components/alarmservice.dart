@@ -26,7 +26,7 @@ Future<bool> initializeAlarmService({bool bootstrap: false}) async {
   if (IsolateNameServer.lookupPortByName(
           constants.toAlarmServiceSendPortName) !=
       null) {
-    logger.i("initializeAlarmService bootstrap:$bootstrap, "
+    logger.d("initializeAlarmService bootstrap:$bootstrap, "
         "already initialized: ${constants.toAlarmServiceSendPortName} "
         "${getCurrentIsolate()}");
     alarmServiceAlreadyRunning = true;
@@ -252,7 +252,9 @@ void shutdown() {
 
 /// This is only available in the alarm manager isolate
 Future<AlarmManagerTimerService> getAlarmManagerTimerService() async {
-  await initializeAlarmService();
+  if (!alarmServiceAlreadyRunning) {
+    await initializeAlarmService();
+  }
   return AlarmManagerTimerService();
 }
 

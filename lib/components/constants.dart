@@ -27,3 +27,10 @@ const String toAlarmServiceSendPortName = 'toAlarmServiceIsolate';
 const String tagApplicationDocumentsDirectory = 'ApplicationDocumentsDirectory';
 const String tagExternalStorageDirectory = 'ExternalStorageDirectory';
 const String tagAlarmServiceAlreadyRunning = 'AlarmServiceAlreadyRunning';
+
+// Messages
+const String reminderMessageQuietHours = 'In quiet hours';
+const String reminderMessageDisabled = 'Not Enabled';
+const String reminderMessageWaiting = 'Enabled. Waiting for notification...';
+const String infoMessageDisabled = 'Disabled';
+const String infoMessageWaiting = 'Enabled. Waiting for notification.';
