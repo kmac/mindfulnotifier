@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:minimize_app/minimize_app.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:mindfulnotifier/components/constants.dart' as constants;
@@ -277,191 +278,209 @@ class MindfulNotifierWidget extends StatelessWidget {
     return Get.isDarkMode ? Colors.grey[400] : Colors.grey[800];
   }
 
+  Future<bool> handleOnWillPop() async {
+    if (controller._enabled.value) {
+      MinimizeApp.minimizeApp();
+      return false;
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(controller.title),
-      ),
-      body: Center(
-        child: Column(
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            Expanded(
-              flex: 15,
-              child: Obx(() => Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4.0),
-                  ),
-                  color: Theme.of(context).canvasColor,
-                  margin:
-                      EdgeInsets.only(top: 15, left: 15, right: 15, bottom: 0),
-                  elevation: 1,
-                  child: Container(
-                      // margin: EdgeInsets.only(
-                      //     top: 15, left: 15, right: 15, bottom: 15),
-                      alignment: Alignment.center,
-                      child: InkWell(
-                          onLongPress: () async {
-                            await Share.share(controller._reminderMessage.value,
-                                subject: appName);
-                          },
-                          // decoration: BoxDecoration(color: Colors.grey[100]),
-                          child: Scrollbar(
-                            isAlwaysShown: false,
-                            child: SingleChildScrollView(
-                                padding: EdgeInsets.only(
-                                    top: 15, left: 15, right: 15, bottom: 15),
-                                child: Text(
-                                  '${controller._reminderMessage}',
-                                  style: TextStyle(
-                                      color: getMainTextColor(),
-                                      fontWeight: FontWeight.w900,
-                                      fontStyle: FontStyle.italic,
-                                      fontFamily: 'Open Sans',
-                                      fontSize: controller._reminderMessage
+    return WillPopScope(
+        onWillPop: () => handleOnWillPop(),
+        // Widget tree
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(controller.title),
+          ),
+          body: Center(
+            child: Column(
+              // Invoke "debug painting" (press "p" in the console, choose the
+              // "Toggle Debug Paint" action from the Flutter Inspector in Android
+              // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
+              // to see the wireframe for each widget.
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                Expanded(
+                  flex: 15,
+                  child: Obx(() => Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4.0),
+                      ),
+                      color: Theme.of(context).canvasColor,
+                      margin: EdgeInsets.only(
+                          top: 15, left: 15, right: 15, bottom: 0),
+                      elevation: 1,
+                      child: Container(
+                          // margin: EdgeInsets.only(
+                          //     top: 15, left: 15, right: 15, bottom: 15),
+                          alignment: Alignment.center,
+                          child: InkWell(
+                              onLongPress: () async {
+                                await Share.share(
+                                    controller._reminderMessage.value,
+                                    subject: appName);
+                              },
+                              // decoration: BoxDecoration(color: Colors.grey[100]),
+                              child: Scrollbar(
+                                isAlwaysShown: false,
+                                child: SingleChildScrollView(
+                                    padding: EdgeInsets.only(
+                                        top: 15,
+                                        left: 15,
+                                        right: 15,
+                                        bottom: 15),
+                                    child: Text(
+                                      '${controller._reminderMessage}',
+                                      style: TextStyle(
+                                          color: getMainTextColor(),
+                                          fontWeight: FontWeight.w900,
+                                          fontStyle: FontStyle.italic,
+                                          fontFamily: 'Open Sans',
+                                          fontSize: controller._reminderMessage
+                                                      .value.length <
+                                                  Reminder.truncLength
+                                              ? 30
+                                              : 22),
+                                      textAlign: controller._reminderMessage
                                                   .value.length <
-                                              Reminder.truncLength
-                                          ? 30
-                                          : 22),
-                                  textAlign:
-                                      controller._reminderMessage.value.length <
                                               Reminder.truncLength
                                           ? TextAlign.center
                                           : TextAlign.left,
-                                  softWrap: true,
-                                )),
-                          ))))),
-            ),
-            Expanded(
-              flex: 3,
-              child: Obx(() => Card(
-                  // shape: RoundedRectangleBorder(
-                  //   borderRadius: BorderRadius.circular(15.0),
-                  // ),
-                  color: Theme.of(context).cardColor,
-                  margin: // EdgeInsets.only(top: 5, left: 5, right: 5, bottom: 5),
-                      EdgeInsets.only(top: 10, left: 15, right: 15, bottom: 15),
-                  elevation: 5,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Text(
-                              controller._enabled.value ? 'Enabled' : 'Enable'),
-                          Switch(
-                            value: controller._enabled.value,
-                            onChanged: (newvalue) =>
-                                controller._enabled.value = newvalue,
-                          ),
-                        ],
-                      ),
-                      ToggleButtons(
-                        isSelected: [
-                          controller._mute.value,
-                          controller._vibrate.value
-                        ],
-                        onPressed: (index) {
-                          switch (index) {
-                            case 0:
-                              controller._mute.value = !controller._mute.value;
-                              break;
-                            case 1:
-                              controller._vibrate.value =
-                                  !controller._vibrate.value;
-                              break;
-                          }
-                        },
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.0),
-                            child:
-                                Text(controller._mute.value ? 'Muted' : 'Mute'),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Text('Vibrate'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ))),
-            ),
-            Expanded(
-                flex: 1,
-                child: Obx(
-                  () => Text(
-                    controller.hideNextReminder.value
-                        ? ''
-                        : controller.controlMessage.value != '' &&
-                                controller.showControlMessages.value
-                            ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
-                            : '${controller._infoMessage.value}',
-                    // style: TextStyle(
-                    //     color: Get.isDarkMode ? mainTextColor : Colors.black38),
-                    style: TextStyle(color: getMainTextColor()),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                )),
-          ],
-        ),
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).appBarTheme.backgroundColor,
-              ),
-              child: Text(
-                'Settings',
-                style: TextStyle(
-                  // color: Colors.white,
-                  fontSize: 24,
-                  // color: Theme.of(context).,
+                                      softWrap: true,
+                                    )),
+                              ))))),
                 ),
-              ),
+                Expanded(
+                  flex: 3,
+                  child: Obx(() => Card(
+                      // shape: RoundedRectangleBorder(
+                      //   borderRadius: BorderRadius.circular(15.0),
+                      // ),
+                      color: Theme.of(context).cardColor,
+                      margin: // EdgeInsets.only(top: 5, left: 5, right: 5, bottom: 5),
+                          EdgeInsets.only(
+                              top: 10, left: 15, right: 15, bottom: 15),
+                      elevation: 5,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: <Widget>[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Text(controller._enabled.value
+                                  ? 'Enabled'
+                                  : 'Enable'),
+                              Switch(
+                                value: controller._enabled.value,
+                                onChanged: (newvalue) =>
+                                    controller._enabled.value = newvalue,
+                              ),
+                            ],
+                          ),
+                          ToggleButtons(
+                            isSelected: [
+                              controller._mute.value,
+                              controller._vibrate.value
+                            ],
+                            onPressed: (index) {
+                              switch (index) {
+                                case 0:
+                                  controller._mute.value =
+                                      !controller._mute.value;
+                                  break;
+                                case 1:
+                                  controller._vibrate.value =
+                                      !controller._vibrate.value;
+                                  break;
+                              }
+                            },
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Text(
+                                    controller._mute.value ? 'Muted' : 'Mute'),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Text('Vibrate'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ))),
+                ),
+                Expanded(
+                    flex: 1,
+                    child: Obx(
+                      () => Text(
+                        controller.hideNextReminder.value
+                            ? ''
+                            : controller.controlMessage.value != '' &&
+                                    controller.showControlMessages.value
+                                ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
+                                : '${controller._infoMessage.value}',
+                        // style: TextStyle(
+                        //     color: Get.isDarkMode ? mainTextColor : Colors.black38),
+                        style: TextStyle(color: getMainTextColor()),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
+              ],
             ),
-            ListTile(
-              leading: Icon(Icons.schedule),
-              title: Text('Schedule'),
-              subtitle: Text('Configure reminder frequency'),
-              onTap: controller.handleScheduleOnTap,
+          ),
+          drawer: Drawer(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: <Widget>[
+                DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).appBarTheme.backgroundColor,
+                  ),
+                  child: Text(
+                    'Settings',
+                    style: TextStyle(
+                      // color: Colors.white,
+                      fontSize: 24,
+                      // color: Theme.of(context).,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: Icon(Icons.schedule),
+                  title: Text('Schedule'),
+                  subtitle: Text('Configure reminder frequency'),
+                  onTap: controller.handleScheduleOnTap,
+                ),
+                Divider(),
+                ListTile(
+                  leading: Icon(Icons.list),
+                  title: Text('Reminders'),
+                  subtitle: Text('Configure reminder contents'),
+                  onTap: controller.handleRemindersOnTap,
+                ),
+                Divider(),
+                ListTile(
+                  leading: Icon(Icons.notifications),
+                  title: Text('Sound'),
+                  subtitle: Text('Configure bell and sound options'),
+                  onTap: controller.handleSoundOnTap,
+                ),
+                Divider(),
+                ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('Preferences'),
+                  subtitle: Text('Configure application settings: theme, etc.'),
+                  onTap: controller.handleGeneralOnTap,
+                ),
+                Divider(),
+                AppAboutListTile(context),
+              ],
             ),
-            Divider(),
-            ListTile(
-              leading: Icon(Icons.list),
-              title: Text('Reminders'),
-              subtitle: Text('Configure reminder contents'),
-              onTap: controller.handleRemindersOnTap,
-            ),
-            Divider(),
-            ListTile(
-              leading: Icon(Icons.notifications),
-              title: Text('Sound'),
-              subtitle: Text('Configure bell and sound options'),
-              onTap: controller.handleSoundOnTap,
-            ),
-            Divider(),
-            ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Preferences'),
-              subtitle: Text('Configure application settings: theme, etc.'),
-              onTap: controller.handleGeneralOnTap,
-            ),
-            Divider(),
-            AppAboutListTile(context),
-          ],
-        ),
-      ),
-      /* ) */
-    );
+          ),
+          /* ) */
+        ));
   }
 }

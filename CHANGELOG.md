@@ -1,3 +1,7 @@
+# 1.0.23
+- Back button now minimizes the app instead of closing it.
+  This is like the home button is pressed instead of back.
+
 # 1.0.22
 - Fix issue where new notification is generated instead
   of showing existing notification (after app is restarted).

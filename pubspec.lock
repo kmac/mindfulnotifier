@@ -338,6 +338,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.0.1"
+  minimize_app:
+    dependency: "direct main"
+    description:
+      name: minimize_app
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.1"
   package_info_plus:
     dependency: "direct main"
     description:
