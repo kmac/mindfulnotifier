@@ -60,14 +60,9 @@ Future<bool> initializeAlarmService({bool bootstrap: false}) async {
 
     // Send ourselves a bootstrap message. The 'bootstrapCallback' will be
     // invoked on the alarm manager isolate.
-    if (!await AndroidAlarmManager.oneShot(
-        Duration(seconds: 1), controlAlarmId, bootstrapCallback,
-        exact: true, wakeup: true, rescheduleOnReboot: false)) {
-      var errmsg =
-          "Scheduling oneShot control alarm failed on timer id: $controlAlarmId";
-      logger.e(errmsg);
-      throw AssertionError(errmsg);
-    }
+    AndroidAlarmManager.oneShot(
+        Duration(milliseconds: 200), controlAlarmId, bootstrapCallback,
+        exact: true, wakeup: true, rescheduleOnReboot: false);
   }
   return alarmServiceAlreadyRunning;
 }
@@ -89,7 +84,6 @@ Future<void> initializeFromAppIsolateReceivePort() async {
   bool result = IsolateNameServer.registerPortWithName(
     fromAppIsolateReceivePort.sendPort,
     constants.toAlarmServiceSendPortName,
-
   );
   // if (!result) {
   //   IsolateNameServer.removePortNameMapping(
@@ -105,63 +99,63 @@ Future<void> initializeFromAppIsolateReceivePort() async {
 }
 
 void handleAppMessage(dynamic map) async {
-    //
-    // WE ARE IN THE ALARM ISOLATE
-    //
-    logger.i("fromAppIsolateReceivePort received: $map ${getCurrentIsolate()}");
-    String key = map.keys.first;
-    // String value = map.values.first;
-    Scheduler scheduler = await Scheduler.getScheduler();
-    switch (key) {
-      case 'update':
-        InMemoryScheduleDataStore mds = map.values.first;
+  //
+  // WE ARE IN THE ALARM ISOLATE
+  //
+  logger.i("fromAppIsolateReceivePort received: $map ${getCurrentIsolate()}");
+  String key = map.keys.first;
+  // String value = map.values.first;
+  Scheduler scheduler = await Scheduler.getScheduler();
+  switch (key) {
+    case 'update':
+      InMemoryScheduleDataStore mds = map.values.first;
+      scheduler.update(mds);
+      break;
+    case 'enable':
+      String infoMessage = map.values.first;
+      scheduler.updateDS('infoMessage', infoMessage, sendUpdate: false);
+      enable();
+      break;
+    case 'disable':
+      String infoMessage = map.values.first;
+      scheduler.updateDS('infoMessage', infoMessage, sendUpdate: false);
+      disable();
+      break;
+    case 'restart':
+      InMemoryScheduleDataStore mds = map.values.first;
+      if (mds != null) {
         scheduler.update(mds);
-        break;
-      case 'enable':
-        String infoMessage = map.values.first;
-        scheduler.updateDS('infoMessage', infoMessage, sendUpdate: false);
-        enable();
-        break;
-      case 'disable':
-        String infoMessage = map.values.first;
-        scheduler.updateDS('infoMessage', infoMessage, sendUpdate: false);
-        disable();
-        break;
-      case 'restart':
-        InMemoryScheduleDataStore mds = map.values.first;
-        if (mds != null) {
-          scheduler.update(mds);
-        }
-        scheduler.restart();
-        break;
-      case 'restore':
-        InMemoryScheduleDataStore mds = map.values.first;
-        scheduler.update(mds);
-        scheduler.updateDS('infoMessage', "Restored", sendUpdate: true);
-        break;
-      case 'syncDataStore':
-        scheduler.sendDataStoreUpdate();
-        break;
-      case 'mute':
-        bool mute = map.values.first;
-        scheduler.updateDS('mute', mute);
-        break;
-      case 'vibrate':
-        bool vibrate = map.values.first;
-        scheduler.updateDS('vibrate', vibrate);
-        break;
-      case 'shutdown':
-        shutdown();
-        break;
-      case 'playSound':
-        // the map value is either a File or a path to file
-        dynamic fileOrPath = map.values.first;
-        scheduler.playSound(fileOrPath);
-        break;
-      default:
-        logger.e("Unknown key: $key");
-        break;
-    }
+      }
+      scheduler.restart();
+      break;
+    case 'restore':
+      InMemoryScheduleDataStore mds = map.values.first;
+      scheduler.update(mds);
+      scheduler.updateDS('infoMessage', "Restored", sendUpdate: true);
+      break;
+    case 'syncDataStore':
+      scheduler.sendDataStoreUpdate();
+      break;
+    case 'mute':
+      bool mute = map.values.first;
+      scheduler.updateDS('mute', mute);
+      break;
+    case 'vibrate':
+      bool vibrate = map.values.first;
+      scheduler.updateDS('vibrate', vibrate);
+      break;
+    case 'shutdown':
+      shutdown();
+      break;
+    case 'playSound':
+      // the map value is either a File or a path to file
+      dynamic fileOrPath = map.values.first;
+      scheduler.playSound(fileOrPath);
+      break;
+    default:
+      logger.e("Unknown key: $key");
+      break;
+  }
 }
 
 void shutdownReceivePort() async {

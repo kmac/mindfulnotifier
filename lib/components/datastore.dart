@@ -170,10 +170,12 @@ class AppDataStore {
       await _box.clear();
       testMigrateApp = false;
     }
-    await checkMigrateSharedPreferences(_box, includeKeys: [
-      ScheduleDataStoreBase.themeKey,
-      ScheduleDataStoreBase.useBackgroundServiceKey
-    ]);
+    if (_box.isEmpty) {
+      await checkMigrateSharedPreferences(_box, includeKeys: [
+        ScheduleDataStoreBase.themeKey,
+        ScheduleDataStoreBase.useBackgroundServiceKey
+      ]);
+    }
   }
 
   Future<void> setSync(String key, dynamic val) async {
@@ -380,7 +382,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
   Box _box;
 
   Future<void> _init() async {
-    logger.i("Initializing ScheduleDataStore (hive");
+    logger.i("Initializing ScheduleDataStore (hive)");
     await Hive.initFlutter();
 
     _box = await Hive.openBox('scheduledata');
@@ -388,10 +390,12 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
       await _box.clear();
       testMigrateSched = false;
     }
-    await checkMigrateSharedPreferences(_box, excludeKeys: [
-      ScheduleDataStoreBase.themeKey,
-      ScheduleDataStoreBase.useBackgroundServiceKey
-    ]);
+    if (_box.isEmpty) {
+      await checkMigrateSharedPreferences(_box, excludeKeys: [
+        ScheduleDataStoreBase.themeKey,
+        ScheduleDataStoreBase.useBackgroundServiceKey
+      ]);
+    }
   }
 
   Future<void> setSync(String key, dynamic val) async {

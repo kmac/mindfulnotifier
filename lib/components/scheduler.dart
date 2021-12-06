@@ -331,7 +331,8 @@ class PeriodicScheduler extends DelegatedScheduler {
       this.durationHours, this.durationMinutes)
       : super(ScheduleType.PERIODIC, scheduler, quietHours);
 
-  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet = false}) {
+  DateTime getNextFireTimeOrig(
+      {DateTime fromTime, bool adjustFromQuiet = false}) {
     fromTime ??= DateTime.now();
 
     // Algorithm:
@@ -387,6 +388,56 @@ class PeriodicScheduler extends DelegatedScheduler {
             nextDateRaw.day, newHour, newMinute, 0, 0, 0);
         break;
     }
+    return nextDate;
+  }
+
+  DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet = false}) {
+    fromTime ??= DateTime.now();
+    if (!adjustFromQuiet) {
+      // Add some padding for alarm scheduling.
+      // This is to ensure we will schedule into the future:
+      fromTime = fromTime.add(alarmPadding);
+    }
+
+    // Algorithm:
+    // - add hours and minutes.
+    // - align to next interval
+    // Number of msec from now = intervalMsecs - (nextDateRawEpochMsec MOD intervalMsecs)
+
+    // nextFireTimeMsec = (timenowMsec + intervalMsec) MOD intervalMsec
+    // nextFireTimeMsec = timenowMsec+intervalMsec + timenowMsec ~/ intervalMsec - (timenowMsec % intervalMsec)
+
+    //       now           interval             now+interval
+    //        |  ----------------------------->  |
+    //                                  |
+    // -----------------------------------------------------------------------
+    //                              alignment
+    //
+    /* 
+    How to calculate 'alignment'?
+    - subract out the hours component
+    - how many 'interval minutes' fit in an hour?
+        - is it even?  then align to top of hour
+        - if it doesn't fit evenly, then just pick next interval (don't align)
+    */
+
+    // Add interval hours:
+    DateTime nextDateRaw = fromTime.add(Duration(hours: durationHours));
+
+    // Add interval minutes:
+    Duration intervalMins = Duration(minutes: durationMinutes);
+    nextDateRaw = nextDateRaw.add(intervalMins);
+
+    // Now bring it back to the start of the interval:
+    Duration minutesOver = Duration(
+        milliseconds:
+            nextDateRaw.millisecondsSinceEpoch % intervalMins.inMilliseconds);
+    DateTime nextDate = nextDateRaw.subtract(minutesOver);
+
+    // Now truncate to the minute:
+    nextDate = DateTime(nextDate.year, nextDate.month, nextDate.day,
+        nextDate.hour, nextDate.minute, 0, 0, 0);
+
     return nextDate;
   }
 }

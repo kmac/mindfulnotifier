@@ -78,8 +78,7 @@ class ReminderWidgetController extends GetxController {
     filteredReminderListDirty.value = false;
 
     // update alarm service with new memory store
-    Get.find<MindfulNotifierWidgetController>()
-        .updatePermanentDataStore(mds);
+    Get.find<MindfulNotifierWidgetController>().updatePermanentDataStore(mds);
   }
 }
 
@@ -225,7 +224,7 @@ class ReminderWidget extends StatelessWidget {
                                                 style: OutlinedButton.styleFrom(
                                                   textStyle: TextStyle(
                                                       fontStyle:
-                                                          FontStyle.italic),
+                                                          FontStyle.normal),
                                                   visualDensity:
                                                       VisualDensity.compact,
                                                 ))

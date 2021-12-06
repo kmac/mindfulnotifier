@@ -103,11 +103,6 @@ class SchedulesWidgetController extends GetxController {
     InMemoryScheduleDataStore mds = Get.find();
     if (mds.periodicHours != hours) {
       mds.periodicHours = hours;
-      if (hours > 0) {
-        periodicMinutes.value = 0;
-      } else if (periodicMinutes.value < 15) {
-        periodicMinutes.value = 15;
-      }
       scheduleDirty.value = true;
     }
   }
@@ -324,10 +319,7 @@ class SchedulesWidget extends StatelessWidget {
                         _buildDropDown(
                             context,
                             controller.periodicMinutes.value,
-                            // controller.periodicMinutes.value == 0 &&
-                            controller.periodicHours.value > 0
-                                ? [0]
-                                : [0, 15, 30],
+                            new List<int>.generate(60, (i) => i),
                             (value) => controller.periodicMinutes.value = value,
                             true),
                       ],

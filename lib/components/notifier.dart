@@ -50,7 +50,7 @@ class ReceivedNotification {
   final String payload;
 }
 
-void initializeNotifications() async {
+Future<void> initializeNotifications() async {
   tz.initializeTimeZones();
   final String currentTimeZone = await FlutterNativeTimezone.getLocalTimezone();
   tz.setLocalLocation(tz.getLocation(currentTimeZone));

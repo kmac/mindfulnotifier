@@ -50,15 +50,7 @@ class MindfulNotifierWidgetController extends GetxController {
     logger.i("mindfulnotifier UI onInit() alarmServiceAlreadyRunning: "
         "$alarmServiceAlreadyRunning, ${getCurrentIsolate()}");
 
-    initializeFromAlarmServiceReceivePort();
-
-    // Issue #35: maybe the below is a race condition... if the alarm service responds
-    // after the above onInit finishes, we could see odd things?
-
     initFinished = false;
-    // Now send a sync message which will reinit the data store
-    // from the alarm/scheduler isolate
-    sendToAlarmService({'syncDataStore': 1});
 
     super.onInit();
   }
@@ -66,8 +58,10 @@ class MindfulNotifierWidgetController extends GetxController {
   @override
   void onReady() {
     // onReady: is called immediately after the widget is rendered on screen.
+    initializeFromAlarmServiceReceivePort();
     initializeNotifications();
     // initializeFromBackgroundService();
+
     super.onReady();
   }
 
@@ -108,7 +102,7 @@ class MindfulNotifierWidgetController extends GetxController {
     hideNextReminder.value = mds.hideNextReminder;
   }
 
-  void initializeFromAlarmServiceReceivePort() {
+  Future<void> initializeFromAlarmServiceReceivePort() async {
     logger.i("initializeFromAlarmServiceReceivePort ${getCurrentIsolate()}");
 
     if (fromAlarmServiceReceivePort == null) {
@@ -130,6 +124,10 @@ class MindfulNotifierWidgetController extends GetxController {
     logger.d("registerPortWithName: ${constants.toAppSendPortName}, "
         "result=$result ${getCurrentIsolate()}");
     assert(result);
+
+    // Now send a sync message which will reinit the data store
+    // from the alarm/scheduler isolate
+    sendToAlarmService({'syncDataStore': 1});
   }
 
   void handleAlarmServiceMessage(var msg) {
@@ -337,7 +335,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                                       style: TextStyle(
                                           color: getMainTextColor(),
                                           fontWeight: FontWeight.w900,
-                                          fontStyle: FontStyle.italic,
+                                          fontStyle: FontStyle.normal,
                                           fontFamily: 'Open Sans',
                                           fontSize: controller._reminderMessage
                                                       .value.length <
