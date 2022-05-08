@@ -942,9 +942,10 @@ class Reminders {
     return result;
   }
 
-  List<Reminder> getFilteredReminderList({String tag, bool sorted = true}) {
+  List<Reminder> getFilteredReminderList(
+      {String tag, bool sortByEnabled = true}) {
     if (tag == null || tag == '') {
-      if (sorted) {
+      if (sortByEnabled) {
         return _sortByEnabled(allReminders);
       }
       return allReminders;
@@ -954,7 +955,7 @@ class Reminders {
       logger.e("tag '$tag' not in reminderGroups");
       return [];
     }
-    if (sorted) {
+    if (sortByEnabled) {
       return _sortByEnabled(groupedReminders[tag]);
     }
     return groupedReminders[tag];

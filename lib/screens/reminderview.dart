@@ -53,7 +53,7 @@ class ReminderWidgetController extends GetxController {
 
     // NOTE: the index for filteredReminderList.value is different from the allReminders index!
     filteredReminderList.value = reminders.value
-        .getFilteredReminderList(tag: selectedTag.value, sorted: true);
+        .getFilteredReminderList(tag: selectedTag.value, sortByEnabled: false);
     groupedReminders.clear();
     groupedReminders.addAll(reminders.value.buildGroupedReminders());
   }
