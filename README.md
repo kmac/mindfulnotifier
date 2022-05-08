@@ -105,6 +105,16 @@ file. You should then restart the app, and re-enable the reminder service.
 > file will not be restored.
 
 
+## Support Statement
+
+This software is posted in the spirit of open-source software. I have created this app to fulfill my personal requirements, and I am sharing
+it in case others may find it useful as well.  That said, my time is limited, and my approach to support is very much that I am happy if it
+works for me. I will try to help if you are having issues, but I just don't have the time to add every desired new feature or troubleshoot
+issues on hardware environments that I don't have access to.
+
+I will consider pull requests for new features, and will always welcome bug fixes!
+
+
 ## License
 
 This project is licensed under the terms of the GNU General Public License v3.0.
