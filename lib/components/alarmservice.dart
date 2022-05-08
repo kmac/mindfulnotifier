@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'dart:async';
 import 'dart:isolate';
 import 'dart:ui';
@@ -21,7 +23,7 @@ bool alarmServiceAlreadyRunning = false;
 ReceivePort fromAppIsolateReceivePort;
 StreamSubscription fromAppIsolateStreamSubscription;
 
-Future<bool> initializeAlarmService({bool bootstrap: false}) async {
+Future<bool> initializeAlarmService({bool bootstrap = false}) async {
   // check IsolateNameServer to see if our alarm isolate is already running
   if (IsolateNameServer.lookupPortByName(
           constants.toAlarmServiceSendPortName) !=
@@ -253,6 +255,7 @@ Future<AlarmManagerTimerService> getAlarmManagerTimerService() async {
 }
 
 class AlarmManagerTimerService extends TimerService {
+  @override
   Future<void> oneShotAt(DateTime time, int id, Function callback,
       {bool rescheduleOnReboot = true}) async {
     await AndroidAlarmManager.oneShotAt(time, id, callback,
@@ -262,6 +265,7 @@ class AlarmManagerTimerService extends TimerService {
         rescheduleOnReboot: rescheduleOnReboot);
   }
 
+  @override
   Future<void> cancel(int id) async {
     await AndroidAlarmManager.cancel(id);
   }

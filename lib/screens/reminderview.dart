@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/datastore.dart';
@@ -102,7 +104,7 @@ class ReminderWidget extends StatelessWidget {
             ],
           ),
         ),
-        bottomNavigationBar: new BottomNavigationBar(
+        bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           onTap: (index) {
             switch (index) {
@@ -125,21 +127,21 @@ class ReminderWidget extends StatelessWidget {
             }
           },
           items: [
-            new BottomNavigationBarItem(
-              icon: new Icon(Icons.add),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.add),
               label: "Add",
             ),
-            new BottomNavigationBarItem(
-              icon: new Icon(Icons.edit),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.edit),
               label: "Edit",
             ),
-            new BottomNavigationBarItem(
-              // icon: new Icon(Icons.play_disabled),
-              icon: new Icon(Icons.timer_off),
+            BottomNavigationBarItem(
+              // icon: Icon(Icons.play_disabled),
+              icon: Icon(Icons.timer_off),
               label: "Toggle",
             ),
-            new BottomNavigationBarItem(
-              icon: new Icon(Icons.delete),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.delete),
               label: "Delete",
             ),
           ],
@@ -338,8 +340,8 @@ class ReminderWidget extends StatelessWidget {
 
   void _showAddDialog(BuildContext context) {
     final editedEnabled = true.obs;
-    TextEditingController editingControllerText = new TextEditingController();
-    TextEditingController editingControllerTag = new TextEditingController(
+    TextEditingController editingControllerText = TextEditingController();
+    TextEditingController editingControllerTag = TextEditingController(
         text: controller.selectedTag.value != ''
             ? controller.selectedTag.value
             : Reminder.defaultCustomTagName);
@@ -384,8 +386,8 @@ class ReminderWidget extends StatelessWidget {
         controller.filteredReminderList[filterIndex].text);
 
     TextEditingController editingControllerText =
-        new TextEditingController(text: editedText.value);
-    TextEditingController editingControllerTag = new TextEditingController(
+        TextEditingController(text: editedText.value);
+    TextEditingController editingControllerTag = TextEditingController(
         text: controller.filteredReminderList[filterIndex].tag);
     Alert(
         context: context,

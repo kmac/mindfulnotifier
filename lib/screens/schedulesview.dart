@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -268,31 +270,31 @@ class SchedulesWidget extends StatelessWidget {
     ];
     if (controller.scheduleType.value == ScheduleType.periodic) {
       widgets.add(
-        new Column(
+        Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Padding(
                 // padding: EdgeInsets.all(24.0),
                 padding: EdgeInsets.fromLTRB(30, 0, 30, 20),
                 child: Text(
-                    'Choose the reminder period. ' +
-                        'Reminders are aligned to the top of hour, ' +
-                        'unless the period is shorter than one hour, in which' +
-                        ' case the granularity is 15 minutes.',
+                    'Choose the reminder period. '
+                    'Reminders are aligned to the top of hour, '
+                    'unless the period is shorter than one hour, in which'
+                    ' case the granularity is 15 minutes.',
                     style: TextStyle(
                       fontWeight: FontWeight.w300, /*fontSize: 12*/
                     ),
                     softWrap: true)),
-            new Container(
+            Container(
                 decoration: Get.isDarkMode
                     ? BoxDecoration(color: Theme.of(context).backgroundColor)
                     : BoxDecoration(color: Colors.grey[200]),
                 padding: EdgeInsets.all(8),
                 width: 200,
-                child: new Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    new Column(
+                    Column(
                       children: [
                         Text(
                           'Hours',
@@ -307,7 +309,7 @@ class SchedulesWidget extends StatelessWidget {
                       ],
                     ),
                     Text(' : '),
-                    new Column(
+                    Column(
                       children: [
                         Text(
                           'Minutes',
@@ -316,7 +318,7 @@ class SchedulesWidget extends StatelessWidget {
                         _buildDropDown(
                             context,
                             controller.periodicMinutes.value,
-                            new List<int>.generate(60, (i) => i),
+                            List<int>.generate(60, (i) => i),
                             (value) => controller.periodicMinutes.value = value,
                             true),
                       ],
@@ -329,13 +331,7 @@ class SchedulesWidget extends StatelessWidget {
     } else {
       // Random
       widgets.add(
-          // child: new Row(
-          //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          //     children: <Widget>[
-          new Container(
-        // decoration: BoxDecoration(color: Colors.grey[200]),
-        // padding: EdgeInsets.all(8),
-        child: Column(children: <Widget>[
+        Column(children: <Widget>[
           Padding(
               // padding: EdgeInsets.all(24.0),
               padding: EdgeInsets.fromLTRB(30, 0, 30, 20),
@@ -355,12 +351,12 @@ class SchedulesWidget extends StatelessWidget {
                     context, 'Maximum', controller.randomMaxMinutesController),
               ]),
         ]),
-      ));
+      );
     }
     return widgets;
   }
 
-  Future<Null> _selectQuietHoursStartTime(BuildContext context) async {
+  Future<void> _selectQuietHoursStartTime(BuildContext context) async {
     InMemoryScheduleDataStore mds = Get.find();
     var selectedTime = TimeOfDay(
         hour: mds.quietHoursStartHour, minute: mds.quietHoursStartMinute);
@@ -374,7 +370,7 @@ class SchedulesWidget extends StatelessWidget {
     }
   }
 
-  Future<Null> _selectQuietHoursEndTime(BuildContext context) async {
+  Future<void> _selectQuietHoursEndTime(BuildContext context) async {
     InMemoryScheduleDataStore mds = Get.find();
     var selectedTime =
         TimeOfDay(hour: mds.quietHoursEndHour, minute: mds.quietHoursEndMinute);
@@ -416,7 +412,7 @@ class SchedulesWidget extends StatelessWidget {
   List<Widget> _buildQuietHoursView(BuildContext context) {
     List<Widget> widgets = [
       Text('Quiet Hours', style: Theme.of(context).textTheme.headline5),
-      new Row(
+      Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: <Widget>[
           InkWell(

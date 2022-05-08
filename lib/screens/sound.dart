@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -58,7 +60,7 @@ class SoundWidgetController extends GetxController {
   final _bellId = 'bell1'.obs;
   final _customBellPath = ''.obs;
   final _audioChannel = 'notification'.obs;
-  var _selectedBellId;
+  String _selectedBellId;
 
   // UI event handlers, init code, etc goes here
   SoundWidgetController();
@@ -283,13 +285,12 @@ class SoundWidget extends StatelessWidget {
                       title: Text('Audio Channel'),
                       subtitle: Text(
                           'The audio channel to use for the notification sound (default: notification)'),
-                      trailing: Container(
-                          child: DropdownButton(
-                              value: controller._audioChannel.value,
-                              onChanged: (value) {
-                                controller._audioChannel.value = value;
-                              },
-                              items: [
+                      trailing: DropdownButton(
+                          value: controller._audioChannel.value,
+                          onChanged: (value) {
+                            controller._audioChannel.value = value;
+                          },
+                          items: [
                             DropdownMenuItem(
                                 value: 'notification',
                                 child: Text('notification')),
@@ -297,7 +298,7 @@ class SoundWidget extends StatelessWidget {
                                 value: 'media', child: Text('media')),
                             DropdownMenuItem(
                                 value: 'alarm', child: Text('alarm')),
-                          ]))),
+                          ])),
                 ],
           )),
     );

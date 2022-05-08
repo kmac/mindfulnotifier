@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
@@ -21,7 +23,7 @@ import 'package:mindfulnotifier/components/utils.dart';
 
 var logger = createLogger('scheduler');
 
-enum ScheduleType { PERIODIC, RANDOM }
+enum ScheduleType { periodic, random }
 
 const bool rescheduleAfterQuietHours = true;
 const int scheduleAlarmID = 10;
@@ -204,20 +206,19 @@ class Scheduler {
 
   DelegatedScheduler _buildSchedulerDelegate(Scheduler scheduler) {
     logger.i('Building scheduler delegate: ${ds.scheduleTypeStr}');
-    var scheduleType;
+    ScheduleType scheduleType;
     if (ds.scheduleTypeStr == 'periodic') {
-      scheduleType = ScheduleType.PERIODIC;
+      scheduleType = ScheduleType.periodic;
     } else {
-      scheduleType = ScheduleType.RANDOM;
+      scheduleType = ScheduleType.random;
     }
-    QuietHours quietHours = new QuietHours(
-        new TimeOfDay(
+    QuietHours quietHours = QuietHours(
+        TimeOfDay(
             hour: ds.quietHoursStartHour, minute: ds.quietHoursStartMinute),
-        new TimeOfDay(
-            hour: ds.quietHoursEndHour, minute: ds.quietHoursEndMinute),
+        TimeOfDay(hour: ds.quietHoursEndHour, minute: ds.quietHoursEndMinute),
         ds.notifyQuietHours);
-    var delegate;
-    if (scheduleType == ScheduleType.PERIODIC) {
+    DelegatedScheduler delegate;
+    if (scheduleType == ScheduleType.periodic) {
       delegate = PeriodicScheduler(
           scheduler, quietHours, ds.periodicHours, ds.periodicMinutes);
     } else {
@@ -297,9 +298,7 @@ abstract class DelegatedScheduler {
         }
       }
     }
-    if (_nextDate == null) {
-      _nextDate = getNextFireTime();
-    }
+    _nextDate ??= getNextFireTime();
 
     if (rescheduleAfterQuietHours && quietHours.isInQuietHours(_nextDate)) {
       _nextDate = getNextFireTime(
@@ -337,7 +336,7 @@ class PeriodicScheduler extends DelegatedScheduler {
 
   PeriodicScheduler(Scheduler scheduler, QuietHours quietHours,
       this.durationHours, this.durationMinutes)
-      : super(ScheduleType.PERIODIC, scheduler, quietHours);
+      : super(ScheduleType.periodic, scheduler, quietHours);
 
   DateTime getNextFireTimeOrig(
       {DateTime fromTime, bool adjustFromQuiet = false}) {
@@ -399,6 +398,7 @@ class PeriodicScheduler extends DelegatedScheduler {
     return nextDate;
   }
 
+  @override
   DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet = false}) {
     fromTime ??= DateTime.now();
     if (!adjustFromQuiet) {
@@ -456,13 +456,15 @@ class RandomScheduler extends DelegatedScheduler {
 
   RandomScheduler(Scheduler scheduler, QuietHours quietHours, this._minMinutes,
       this._maxMinutes)
-      : super(ScheduleType.RANDOM, scheduler, quietHours);
+      : super(ScheduleType.random, scheduler, quietHours);
 
+  @override
   void initialScheduleComplete() {
     scheduler.initialScheduleComplete();
     scheduled = true;
   }
 
+  @override
   DateTime getNextFireTime({DateTime fromTime, bool adjustFromQuiet = false}) {
     fromTime ??= DateTime.now();
     int nextMinutes;

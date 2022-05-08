@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_constructors_in_immutables
+
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -21,81 +23,77 @@ bool testMigrateSched = false;
 // Idea: add optional weight to support weighing reminders differently
 //
 const List<Map<String, dynamic>> defaultJsonReminderMap = [
-  {
-    "text": "Are you aware?",
-    "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
-  },
+  {"text": "Are you aware?", "enabled": true, "tag": Reminder.defaultTagName},
   {
     "text": "Breathe deeply. This is the present moment.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text": "Take a moment to pause, and come back to the present.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text": "Bring awareness into this moment.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text": "Let go of greed, aversion, and delusion.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text": "Respond, not react.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text": "All of this is impermanent.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text":
         "Accept the feeling of what is happening in this moment. Don't struggle against it. Instead, notice it. Take it in.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text":
         "RAIN: Recognize / Allow / Invesigate with interest and care / Nurture with self-compassion",
     "enabled": false,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text":
         "Note any feeling tones in the moment: Pleasant / Unpleasant / Neutral.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text": "What is the attitude in the mind right now?",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text":
         "May you be happy. May you be healthy. May you be free from harm. May you be peaceful.",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text":
         "\"Whatever it is that has the nature to arise will also pass away; therefore, there is nothing to want.\" -- Joseph Goldstein",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
   {
     "text":
         "\"Sitting quietly, Doing nothing, Spring comes, and the grass grows, by itself.\" -- Bashō",
     "enabled": true,
-    "tag": "${Reminder.defaultTagName}"
+    "tag": Reminder.defaultTagName
   },
 ];
 
@@ -106,7 +104,7 @@ Future<void> checkMigrateSharedPreferences(var box,
   }
   // Check if we need to convert from SharedPreferences
   SharedPreferences prefs = await SharedPreferences.getInstance();
-  if (prefs.getKeys().length > 0) {
+  if (prefs.getKeys().isNotEmpty) {
     logger.i("Migrating SharedPreferences to Hive box ${box.name}");
 
     for (String key in prefs.getKeys()) {
@@ -303,56 +301,80 @@ abstract class ScheduleDataStoreBase {
 /// into the UI isolate as a read-only store.
 ///
 class InMemoryScheduleDataStore extends ScheduleDataStoreBase {
+  @override
   bool enabled;
+  @override
   bool mute;
+  @override
   bool vibrate;
+  @override
   String audioOutputChannel;
+  @override
   bool useStickyNotification;
+  @override
   bool includeDebugInfo;
+  @override
   bool hideNextReminder;
+  @override
   String scheduleTypeStr;
+  @override
   int periodicHours;
+  @override
   int periodicMinutes;
+  @override
   int randomMinMinutes;
+  @override
   int randomMaxMinutes;
+  @override
   int quietHoursStartHour;
+  @override
   int quietHoursStartMinute;
+  @override
   int quietHoursEndHour;
+  @override
   int quietHoursEndMinute;
+  @override
   bool notifyQuietHours;
+  @override
   String reminderMessage;
+  @override
   String jsonReminders;
+  @override
   String infoMessage;
+  @override
   String controlMessage;
+  @override
   String bellId;
+  @override
   String customBellPath;
+  @override
   String nextAlarm;
 
   InMemoryScheduleDataStore.fromDS(ScheduleDataStore ds)
-      : this.enabled = ds.enabled,
-        this.mute = ds.mute,
-        this.vibrate = ds.vibrate,
-        this.audioOutputChannel = ds.audioOutputChannel,
-        this.useStickyNotification = ds.useStickyNotification,
-        this.includeDebugInfo = ds.includeDebugInfo,
-        this.hideNextReminder = ds.hideNextReminder,
-        this.scheduleTypeStr = ds.scheduleTypeStr,
-        this.periodicHours = ds.periodicHours,
-        this.periodicMinutes = ds.periodicMinutes,
-        this.randomMinMinutes = ds.randomMinMinutes,
-        this.randomMaxMinutes = ds.randomMaxMinutes,
-        this.quietHoursStartHour = ds.quietHoursStartHour,
-        this.quietHoursStartMinute = ds.quietHoursStartMinute,
-        this.quietHoursEndHour = ds.quietHoursEndHour,
-        this.quietHoursEndMinute = ds.quietHoursEndMinute,
-        this.notifyQuietHours = ds.notifyQuietHours,
-        this.reminderMessage = ds.reminderMessage,
-        this.jsonReminders = ds.jsonReminders,
-        this.infoMessage = ds.infoMessage,
-        this.controlMessage = ds.controlMessage,
-        this.bellId = ds.bellId,
-        this.customBellPath = ds.customBellPath,
-        this.nextAlarm = ds.nextAlarm;
+      : enabled = ds.enabled,
+        mute = ds.mute,
+        vibrate = ds.vibrate,
+        audioOutputChannel = ds.audioOutputChannel,
+        useStickyNotification = ds.useStickyNotification,
+        includeDebugInfo = ds.includeDebugInfo,
+        hideNextReminder = ds.hideNextReminder,
+        scheduleTypeStr = ds.scheduleTypeStr,
+        periodicHours = ds.periodicHours,
+        periodicMinutes = ds.periodicMinutes,
+        randomMinMinutes = ds.randomMinMinutes,
+        randomMaxMinutes = ds.randomMaxMinutes,
+        quietHoursStartHour = ds.quietHoursStartHour,
+        quietHoursStartMinute = ds.quietHoursStartMinute,
+        quietHoursEndHour = ds.quietHoursEndHour,
+        quietHoursEndMinute = ds.quietHoursEndMinute,
+        notifyQuietHours = ds.notifyQuietHours,
+        reminderMessage = ds.reminderMessage,
+        jsonReminders = ds.jsonReminders,
+        infoMessage = ds.infoMessage,
+        controlMessage = ds.controlMessage,
+        bellId = ds.bellId,
+        customBellPath = ds.customBellPath,
+        nextAlarm = ds.nextAlarm;
 }
 
 /// Data store for the scheduler/alarm service. This data store is accessed
@@ -454,6 +476,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     _mergeVal(ScheduleDataStoreBase.nextAlarmKey, mds.nextAlarm);
   }
 
+  @override
   bool get enabled {
     if (_box.get(ScheduleDataStoreBase.enabledKey) == null) {
       enabled = false;
@@ -465,6 +488,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.enabledKey, value);
   }
 
+  @override
   bool get mute {
     if (_box.get(ScheduleDataStoreBase.muteKey) == null) {
       mute = false;
@@ -476,6 +500,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.muteKey, value);
   }
 
+  @override
   bool get vibrate {
     if (_box.get(ScheduleDataStoreBase.vibrateKey) == null) {
       vibrate = false;
@@ -487,6 +512,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.vibrateKey, value);
   }
 
+  @override
   String get audioOutputChannel {
     if (_box.get(ScheduleDataStoreBase.audioOutputChannelKey) == null) {
       audioOutputChannel = ScheduleDataStoreBase.defaultAudioOutputChannel;
@@ -498,6 +524,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.audioOutputChannelKey, value);
   }
 
+  @override
   bool get useStickyNotification {
     if (_box.get(ScheduleDataStoreBase.useStickyNotificationKey) == null) {
       useStickyNotification = true;
@@ -509,6 +536,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.useStickyNotificationKey, value);
   }
 
+  @override
   bool get includeDebugInfo {
     if (_box.get(ScheduleDataStoreBase.includeDebugInfoKey) == null) {
       includeDebugInfo = false;
@@ -520,6 +548,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.includeDebugInfoKey, value);
   }
 
+  @override
   bool get hideNextReminder {
     if (_box.get(ScheduleDataStoreBase.hideNextReminderKey) == null) {
       hideNextReminder = false;
@@ -531,6 +560,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.hideNextReminderKey, value);
   }
 
+  @override
   String get scheduleTypeStr {
     if (_box.get(ScheduleDataStoreBase.scheduleTypeKey) == null) {
       scheduleTypeStr = ScheduleDataStoreBase.defaultScheduleTypeStr;
@@ -542,6 +572,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.scheduleTypeKey, value);
   }
 
+  @override
   int get periodicHours {
     if (_box.get(ScheduleDataStoreBase.periodicHoursKey) == null) {
       periodicHours = ScheduleDataStoreBase.defaultPeriodicHours;
@@ -553,6 +584,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.periodicHoursKey, value);
   }
 
+  @override
   int get periodicMinutes {
     if (_box.get(ScheduleDataStoreBase.periodicMinutesKey) == null) {
       periodicMinutes = ScheduleDataStoreBase.defaultPeriodicMinutes;
@@ -564,6 +596,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.periodicMinutesKey, value);
   }
 
+  @override
   int get randomMinMinutes {
     if (_box.get(ScheduleDataStoreBase.randomMinMinutesKey) == null) {
       randomMinMinutes = ScheduleDataStoreBase.defaultRandomMinMinutes;
@@ -575,6 +608,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.randomMinMinutesKey, value);
   }
 
+  @override
   int get randomMaxMinutes {
     if (_box.get(ScheduleDataStoreBase.randomMaxMinutesKey) == null) {
       randomMaxMinutes = ScheduleDataStoreBase.defaultRandomMaxMinutes;
@@ -586,6 +620,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.randomMaxMinutesKey, value);
   }
 
+  @override
   int get quietHoursStartHour {
     if (_box.get(ScheduleDataStoreBase.quietHoursStartHourKey) == null) {
       quietHoursStartHour = ScheduleDataStoreBase.defaultQuietHoursStartHour;
@@ -597,6 +632,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.quietHoursStartHourKey, value);
   }
 
+  @override
   int get quietHoursStartMinute {
     if (_box.get(ScheduleDataStoreBase.quietHoursStartMinuteKey) == null) {
       quietHoursStartMinute =
@@ -609,6 +645,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.quietHoursStartMinuteKey, value);
   }
 
+  @override
   int get quietHoursEndHour {
     if (_box.get(ScheduleDataStoreBase.quietHoursEndHourKey) == null) {
       quietHoursEndHour = ScheduleDataStoreBase.defaultQuietHoursEndHour;
@@ -620,6 +657,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.quietHoursEndHourKey, value);
   }
 
+  @override
   int get quietHoursEndMinute {
     if (_box.get(ScheduleDataStoreBase.quietHoursEndMinuteKey) == null) {
       quietHoursEndMinute = ScheduleDataStoreBase.defaultQuietHoursEndMinute;
@@ -631,10 +669,12 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.quietHoursEndMinuteKey, value);
   }
 
+  @override
   bool get notifyQuietHours {
     return ScheduleDataStoreBase.defaultNotifyQuietHours;
   }
 
+  @override
   String get reminderMessage {
     if (_box.get(ScheduleDataStoreBase.reminderMessageKey) == null) {
       reminderMessage = ScheduleDataStoreBase.defaultReminderMessage;
@@ -646,6 +686,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.reminderMessageKey, value);
   }
 
+  @override
   String get infoMessage {
     if (_box.get(ScheduleDataStoreBase.infoMessageKey) == null) {
       infoMessage = ScheduleDataStoreBase.defaultInfoMessage;
@@ -657,6 +698,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.infoMessageKey, value);
   }
 
+  @override
   String get controlMessage {
     if (_box.get(ScheduleDataStoreBase.controlMessageKey) == null) {
       controlMessage = ScheduleDataStoreBase.defaultControlMessage;
@@ -668,6 +710,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.controlMessageKey, value);
   }
 
+  @override
   String get bellId {
     if (_box.get(ScheduleDataStoreBase.bellIdKey) == null) {
       bellId = ScheduleDataStoreBase.defaultBellId;
@@ -679,6 +722,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.bellIdKey, value);
   }
 
+  @override
   String get customBellPath {
     if (_box.get(ScheduleDataStoreBase.customBellPathKey) == null) {
       customBellPath = ScheduleDataStoreBase.defaultCustomBellPath;
@@ -690,6 +734,7 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.customBellPathKey, value);
   }
 
+  @override
   String get nextAlarm {
     if (_box.get(ScheduleDataStoreBase.nextAlarmKey) == null) {
       nextAlarm = '';
@@ -701,20 +746,22 @@ class ScheduleDataStore extends ScheduleDataStoreBase {
     setSync(ScheduleDataStoreBase.nextAlarmKey, value);
   }
 
+  @override
   String get jsonReminders {
     // Check for migration to new format:
     if (_box.get(ScheduleDataStoreBase.remindersKeyDeprecated) != null) {
       // old reminders list is still here: convert it to json and remove it
       List<String> remindersOrig =
           _box.get(ScheduleDataStoreBase.remindersKeyDeprecated);
-      jsonReminders = Reminders.migrateRemindersToJson(remindersOrig);
+      String jr = Reminders.migrateRemindersToJson(remindersOrig);
       _box.delete(ScheduleDataStoreBase.remindersKeyDeprecated);
-      return jsonReminders;
+      jsonReminders = jr; // invoke the set
+      return jr;
     }
     if (_box.get(ScheduleDataStoreBase.jsonRemindersKey) == null) {
       // save the string pretty-printed so it will also be exported in this format
-      JsonEncoder encoder = new JsonEncoder.withIndent('  ');
-      jsonReminders = encoder.convert(defaultJsonReminderMap);
+      JsonEncoder encoder = JsonEncoder.withIndent('  ');
+      jsonReminders = encoder.convert(defaultJsonReminderMap); // invoke the set
     }
     return _box.get(ScheduleDataStoreBase.jsonRemindersKey);
   }
@@ -754,7 +801,7 @@ class Reminder extends Equatable {
   List<Object> get props => [text];
 
   static String truncateLines(String input, [int maxLines = truncLines]) {
-    LineSplitter ls = new LineSplitter();
+    LineSplitter ls = LineSplitter();
     List<String> lines = ls.convert(input);
     if (lines.length < maxLines) {
       return input;
@@ -810,11 +857,9 @@ class Reminders {
     for (Reminder reminder in allReminders) {
       conversionList.add(reminder.toJsonMapEntry());
     }
-    String jsonReminders;
     // save the string pretty-printed so it will also be exported in this format
-    JsonEncoder encoder = new JsonEncoder.withIndent('  ');
-    jsonReminders = encoder.convert(conversionList);
-    return jsonReminders;
+    JsonEncoder encoder = JsonEncoder.withIndent('  ');
+    return encoder.convert(conversionList);
   }
 
   static String migrateRemindersToJson(List<String> reminderList) {
@@ -822,7 +867,7 @@ class Reminders {
     logger.i("Migrating reminders to json");
     List<Map> conversionList = [];
     for (String rawReminder in reminderList) {
-      Map<String, dynamic> mapForJson = Map();
+      Map<String, dynamic> mapForJson = <String, dynamic>{};
       mapForJson['text'] = rawReminder;
       mapForJson['enabled'] = true;
       mapForJson['tag'] = Reminder.defaultTagName;
@@ -830,7 +875,7 @@ class Reminders {
     }
     String jsonReminders;
     // save the string pretty-printed so it will also be exported in this format
-    JsonEncoder encoder = new JsonEncoder.withIndent('  ');
+    JsonEncoder encoder = JsonEncoder.withIndent('  ');
     jsonReminders = encoder.convert(conversionList);
     logger.i("Finished reminder migration to json: $jsonReminders");
     return jsonReminders;
@@ -838,7 +883,8 @@ class Reminders {
 
   Map<String, List<Reminder>> buildGroupedReminders() {
     // A map of reminders grouped by tag
-    final Map<String, List<Reminder>> groupedReminders = Map();
+    final Map<String, List<Reminder>> groupedReminders =
+        <String, List<Reminder>>{};
 
     // Build groupedReminders from json data
     for (Reminder reminder in allReminders) {
@@ -853,7 +899,7 @@ class Reminders {
   }
 
   String _stripFirstQuote(String s) {
-    if (s != null && s.length > 0) {
+    if (s != null && s.isNotEmpty) {
       String firstChar = s.substring(0, 1);
       if (firstChar == '"' || firstChar == "'") {
         return s.substring(1);

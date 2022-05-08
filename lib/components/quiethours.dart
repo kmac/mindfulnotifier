@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
 import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;

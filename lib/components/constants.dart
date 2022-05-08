@@ -5,7 +5,9 @@ String get appName {
   try {
     PackageInfo info = Get.find();
     return info.appName;
-  } catch (e) {}
+  } catch (e) {
+    // ignored
+  }
   return "Mindful Notifier";
 }
 
@@ -13,7 +15,9 @@ String get appVersion {
   try {
     PackageInfo info = Get.find();
     return "${info.version}:${info.buildNumber}";
-  } catch (e) {}
+  } catch (e) {
+    // ignored
+  }
   return "undefined";
 }
 

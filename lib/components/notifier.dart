@@ -134,7 +134,8 @@ class Notifier {
     showNotification(notifText, mute: true, vibrate: false);
   }
 
-  void showReminderNotification(String notifText, bool mute, bool vibrate) async {
+  void showReminderNotification(
+      String notifText, bool mute, bool vibrate) async {
     showNotification(notifText, mute: mute, vibrate: vibrate);
   }
 
@@ -145,7 +146,7 @@ class Notifier {
                 AndroidFlutterLocalNotificationsPlugin>()
             ?.getActiveNotifications();
     logger.d("isNotificationActive: $activeNotifications");
-    return activeNotifications.length > 0;
+    return activeNotifications.isNotEmpty;
   }
 
   void showNotification(String notifText,
@@ -172,8 +173,8 @@ class Notifier {
       channelId += '-vibration';
       channelDescription += '/with vibration';
     }
-    logger.i(
-        "[$now] showNotification [channelId=$channelId]: title=$notifTitle " +
+    logger
+        .i("[$now] showNotification [channelId=$channelId]: title=$notifTitle "
             "text=$notifText mute=$mute vibrate=$vibrate");
 
     var styleInfo = BigTextStyleInformation(notifTrunc);

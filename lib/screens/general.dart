@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -126,7 +128,7 @@ class GeneralWidget extends StatelessWidget {
       if (await utils.showYesNoAlert(
           Get.context,
           'Export success',
-          "The exported reminders are saved at ${exportFile.path} but will be removed when the app is uninstalled.\n\n" +
+          "The exported reminders are saved at ${exportFile.path} but will be removed when the app is uninstalled.\n\n"
               "You should copy it to another place either via 'Share' or by using a file manager.",
           yesButtonText: 'Share',
           noButtonText: 'Close')) {
@@ -207,7 +209,7 @@ class GeneralWidget extends StatelessWidget {
       Map<String, bool> alertResult = await showImportAlert(
           Get.context,
           "Proceed with import?",
-          "WARNING: 'Replace' will overwrite all existing reminders.\n\n" +
+          "WARNING: 'Replace' will overwrite all existing reminders.\n\n"
               "Do you want to import using file $importFileName?");
       if (alertResult['answer']) {
         try {
@@ -276,16 +278,16 @@ class GeneralWidget extends StatelessWidget {
         utils.showInfoAlert(
             context,
             '✔ Ignoring Battery Optimization',
-            'Battery optimization is already ignored. ' +
+            'Battery optimization is already ignored. '
                 'The app should run properly in the background.');
       } else {
         Alert(
             context: context,
             title: '⊘ Issue: Battery Optimization',
-            desc: "Battery optimization is active, therefore " +
-                "the app may be killed in the background. " +
-                "The next screen will take you to the " +
-                "battery optimization settings.\nFind the '${constants.appName}' " +
+            desc: "Battery optimization is active, therefore "
+                "the app may be killed in the background. "
+                "The next screen will take you to the "
+                "battery optimization settings.\nFind the '${constants.appName}' "
                 "app and turn off battery optimizations.",
             type: AlertType.warning,
             style: utils.getGlobalAlertStyle(Get.isDarkMode),
@@ -335,9 +337,7 @@ class GeneralWidget extends StatelessWidget {
                       ListTile(
                           leading: Icon(Icons.app_settings_alt),
                           title: Text('Theme'),
-                          trailing: Container(
-                              // padding: EdgeInsets.all(2.0),
-                              child: DropdownButton(
+                          trailing: DropdownButton(
                             value: controller.theme.value,
                             onChanged: (value) {
                               controller.theme.value = value;
@@ -349,51 +349,48 @@ class GeneralWidget extends StatelessWidget {
                                 child: Text(value),
                               );
                             }).toList(),
-                          ))),
-                      Divider(),
-                      ListTile(
-                          leading: Icon(Icons.backup),
-                          title: Text('Export Reminders'),
-                          subtitle: Text('Export reminders to file'),
-                          trailing: Container(
-                            // padding: EdgeInsets.all(2.0),
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              child: Text("Export..."),
-                              onPressed: () {
-                                _exportReminders();
-                              },
-                            ),
                           )),
                       Divider(),
                       ListTile(
-                          leading: Icon(Icons.restore_page),
-                          title: Text('Import Reminders'),
-                          subtitle: Text(
-                              'Import reminders from file, with option to either ' +
-                                  ' replace or merge existing reminder list.'),
-                          trailing: Container(
-                            // padding: EdgeInsets.all(2.0),
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              child: Text("Import..."),
-                              onPressed: () {
-                                _importReminders();
-                              },
-                            ),
-                          )),
+                        leading: Icon(Icons.backup),
+                        title: Text('Export Reminders'),
+                        subtitle: Text('Export reminders to file'),
+                        trailing: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          child: Text("Export..."),
+                          onPressed: () {
+                            _exportReminders();
+                          },
+                        ),
+                      ),
+                      Divider(),
+                      ListTile(
+                        leading: Icon(Icons.restore_page),
+                        title: Text('Import Reminders'),
+                        subtitle: Text(
+                            'Import reminders from file, with option to either '
+                            ' replace or merge existing reminder list.'),
+                        trailing: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          child: Text("Import..."),
+                          onPressed: () {
+                            _importReminders();
+                          },
+                        ),
+                      ),
                       if (controller.includeBatteryOptimizationCheck) Divider(),
                       if (controller.includeBatteryOptimizationCheck)
                         ListTile(
                           leading: Icon(Icons.wysiwyg),
                           title: Text('Check battery optimization settings'),
-                          subtitle: Text('If battery optimization is enabled for this app it ' +
-                              'can be shutdown when running in the background. ' +
-                              'This button checks the battery optimization setting, ' +
+                          subtitle: Text(
+                              'If battery optimization is enabled for this app it '
+                              'can be shutdown when running in the background. '
+                              'This button checks the battery optimization setting, '
                               'and leads you to the proper settings to disable if required.'),
                           trailing: OutlinedButton(
                             child: Text('Check'),

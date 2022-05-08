@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'dart:async';
 import 'dart:ui';
 import 'dart:isolate';
@@ -418,7 +420,7 @@ class MindfulNotifierWidget extends StatelessWidget {
                             : controller.controlMessage.value != '' &&
                                     controller.showControlMessages.value
                                 ? '${controller._infoMessage.value} [${controller.controlMessage.value}]'
-                                : '${controller._infoMessage.value}',
+                                : controller._infoMessage.value,
                         // style: TextStyle(
                         //     color: Get.isDarkMode ? mainTextColor : Colors.black38),
                         style: TextStyle(color: getMainTextColor()),

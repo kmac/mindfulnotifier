@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -101,8 +103,9 @@ handleMarkdownOnTap(String text, String href, String title) async {
 }
 
 class AppAboutListTile extends AboutListTile {
-  AppAboutListTile(BuildContext context)
+  AppAboutListTile(BuildContext context, {Key key})
       : super(
+            key: key,
             icon: Icon(Icons.info),
             applicationVersion: appVersion,
             applicationLegalese:
@@ -118,8 +121,7 @@ class AppAboutListTile extends AboutListTile {
                 ),
               ),
               Divider(),
-              Container(
-                  child: MarkdownBody(
+              MarkdownBody(
                 selectable: true,
                 shrinkWrap: true,
                 onTapLink: (text, href, title) => handleMarkdownOnTap,
@@ -130,6 +132,6 @@ class AppAboutListTile extends AboutListTile {
                 //         blockquoteAlign: WrapAlignment.end,
                 //         unorderedListAlign: WrapAlignment.center,
                 //         listIndent: 2),
-              )),
+              ),
             ]);
 }
