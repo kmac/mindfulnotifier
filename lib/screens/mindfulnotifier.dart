@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 import 'dart:isolate';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:minimize_app/minimize_app.dart';

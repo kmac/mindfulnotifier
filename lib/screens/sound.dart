@@ -1,8 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:get/get.dart';
@@ -112,8 +110,7 @@ class SoundWidgetController extends GetxController {
 
   void _updateAlarmService(InMemoryScheduleDataStore mds) {
     // update alarm service with new memory store
-    Get.find<MindfulNotifierWidgetController>()
-        .updatePermanentDataStore(mds);
+    Get.find<MindfulNotifierWidgetController>().updatePermanentDataStore(mds);
   }
 }
 

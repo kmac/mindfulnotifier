@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -250,7 +249,8 @@ abstract class ScheduleDataStoreBase {
   static const int defaultQuietHoursEndHour = 9;
   static const int defaultQuietHoursEndMinute = 0;
   static const bool defaultNotifyQuietHours = false;
-  static const String defaultReminderMessage = constants.reminderMessageDisabled;
+  static const String defaultReminderMessage =
+      constants.reminderMessageDisabled;
   static const String defaultInfoMessage = constants.infoMessageDisabled;
   static const String defaultControlMessage = '';
   static const String defaultTheme = 'Default';

@@ -32,7 +32,8 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 30
+    // compileSdkVersion 31
+    compileSdkVersion flutter.compileSdkVersion
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -45,7 +46,8 @@ android {
     defaultConfig {
         applicationId "com.kmac5dev.mindfulnotifier"
         minSdkVersion 21
-        targetSdkVersion 30
+        // targetSdkVersion 31
+        targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

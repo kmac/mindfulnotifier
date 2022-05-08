@@ -7,6 +7,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider_android/path_provider_android.dart';
+import 'package:shared_preferences_android/shared_preferences_android.dart';
 
 import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/components/constants.dart' as constants;
@@ -78,6 +80,11 @@ class Scheduler {
   Future<void> init() async {
     logger.i("Initializing scheduler ${getCurrentIsolate()}");
 
+    // TEMPORARY: fix eof SharedPreferences and PathProvider
+    // https://github.com/flutter/flutter/issues/99155#issuecomment-1052023743:
+    // This will be replaced with 'DartPluginRegistrant.ensureInitialized()'
+    SharedPreferencesAndroid.registerWith();
+    PathProviderAndroid.registerWith();
     try {
       PackageInfo info = await PackageInfo.fromPlatform();
       Get.put(info);
@@ -85,7 +92,7 @@ class Scheduler {
       // throws during testing
     }
 
-    ds = await ScheduleDataStore.getInstance();
+    ds ??= await ScheduleDataStore.getInstance();
     Get.delete<ScheduleDataStore>();
     Get.put(ds, permanent: true);
 
@@ -191,6 +198,7 @@ class Scheduler {
   }
 
   Future<void> sendDataStoreUpdate() async {
+    ds ??= await ScheduleDataStore.getInstance();
     sendValueToUI('syncDataStore', ds.getInMemoryInstance());
   }
 

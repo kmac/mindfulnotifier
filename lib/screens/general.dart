@@ -2,12 +2,10 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:battery_optimization/battery_optimization.dart';
+import 'package:optimization_battery/optimization_battery.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:share_plus/share_plus.dart';
@@ -104,8 +102,7 @@ class GeneralWidgetController extends GetxController {
     InMemoryScheduleDataStore mds = Get.find();
 
     // update alarm service with new memory store
-    Get.find<MindfulNotifierWidgetController>()
-        .updatePermanentDataStore(mds);
+    Get.find<MindfulNotifierWidgetController>().updatePermanentDataStore(mds);
 
     scheduleDirty.value = false;
   }
@@ -273,7 +270,7 @@ class GeneralWidget extends StatelessWidget {
   }
 
   void _checkBatteryOptimization(var context) {
-    BatteryOptimization.isIgnoringBatteryOptimizations().then((onValue) {
+    OptimizationBattery.isIgnoringBatteryOptimizations().then((onValue) {
       if (onValue) {
         // Ignoring Battery Optimization
         utils.showInfoAlert(
@@ -295,7 +292,7 @@ class GeneralWidget extends StatelessWidget {
             buttons: [
               DialogButton(
                 onPressed: () {
-                  BatteryOptimization.openBatteryOptimizationSettings();
+                  OptimizationBattery.openBatteryOptimizationSettings();
                   Navigator.pop(context);
                 },
                 child: Text(

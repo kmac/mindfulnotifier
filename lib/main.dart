@@ -1,5 +1,4 @@
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mindfulnotifier/components/utils.dart';
@@ -11,7 +10,6 @@ import 'package:mindfulnotifier/components/datastore.dart';
 import 'package:mindfulnotifier/components/router.dart' as router;
 import 'package:mindfulnotifier/components/alarmservice.dart';
 import 'package:mindfulnotifier/theme/themes.dart';
-
 
 void main() async {
   // needed if you intend to initialize in the `main` function

@@ -21,7 +21,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #              This number is used only to determine whether one version is more recent than another,
 #              with higher numbers indicating more recent versions
 # versionName: Customer-visible version string
-version: 1.0.23+43
+version: 1.0.23+44
 
 environment:
   # sdk: ">=2.12.0 <3.0.0"
@@ -37,41 +37,45 @@ dependencies:
 
   # https://pub.dev/packages/<package>
 
-  android_alarm_manager_plus: ^2.0.3
-  flutter_local_notifications: ^9.0.2
-  date_format: ^2.0.4
-  device_info_plus: ^3.1.1
-  rxdart: ^0.27.2
+  android_alarm_manager_plus: ^2.0.5
+  flutter_local_notifications: ^9.5.2
+  date_format: ^2.0.6
+  device_info_plus: ^3.2.3
+  rxdart: ^0.27.3
   flutter_native_timezone: ^2.0.0
-  shared_preferences: ^2.0.8
-  get: ^4.3.8
+  shared_preferences: ^2.0.13
+  # TEMPORARY: workaround for SharedPreferences in isolates (see scheduler.dart):
+  shared_preferences_android: ^2.0.11
+  get: ^4.6.1
   logger: ^1.1.0
   equatable: ^2.0.3
 
-  hive: ^2.0.4
+  hive: ^2.1.0
   hive_flutter: ^1.1.0
 
   # For audio:
-  just_audio: ^0.9.16
+  just_audio: ^0.9.21
   audio_session: ^0.1.6+1
   # audio_service: ^0.15.3
-  sound_mode: ^2.0.1
+  sound_mode: ^2.0.2
 
-
-  file_picker: ^4.2.1
-  package_info_plus: ^1.3.0
-  path_provider: ^2.0.6
-  share_plus: ^3.0.4
-  dropdown_search: ^2.0.0
+  file_picker: ^4.5.1
+  package_info_plus: ^1.4.2
+  path_provider: ^2.0.9
+  # TEMPORARY: workaround for PathProvider in isolates (see scheduler.dart):
+  path_provider_android: ^2.0.13
+  share_plus: ^4.0.4
+  dropdown_search: ^3.0.1
 
   # flutter_background_service: ^0.0.1+19
   rflutter_alert: ^2.0.4
-  flutter_markdown: ^0.6.8
-  url_launcher: ^6.0.12
-  battery_optimization: ^0.1.0
+  flutter_markdown: ^0.6.10
+  url_launcher: ^6.1.0
+  optimization_battery: ^0.0.5
   minimize_app: ^0.1.1
 
 dev_dependencies:
+  flutter_lints: ^1.0.4
   flutter_test:
     sdk: flutter
 
