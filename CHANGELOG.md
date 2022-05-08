@@ -1,3 +1,7 @@
+# 1.0.24
+- Updated all dependencies and caught up with flutter changes
+- Removed sort-by-enabled in reminders view
+
 # 1.0.23
 - Back button now minimizes the app instead of closing it.
   This is like the home button is pressed instead of back.
