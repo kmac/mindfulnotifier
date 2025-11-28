@@ -2,6 +2,9 @@
 
 A mindfulness bell with configurable text notifications, schedules, and sound.
 
+**ARCHIVED: This repository is archived, there is a rewrite available at https://github.com/kmac/mindfulnotifier2**
+
+
 ## About this app
 
 This app is a simple mindfulness-based timer which displays a notification/reminder at user-defined intervals. It is another take on a
