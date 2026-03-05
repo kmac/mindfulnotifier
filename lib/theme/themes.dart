@@ -21,6 +21,12 @@ Map<String, ThemeData> allThemes = {
   'Default': defaultTheme,
   'Light': ThemeData.light(),
   'Dark': ThemeData.dark(),
+  'Black (OLED)': ThemeData(
+    primarySwatch: Colors.black,
+    appBarTheme: AppBarTheme(
+      color: Colors.black,
+    ),
+  ),
   'Blue': ThemeData(
     primarySwatch: Colors.blue,
     appBarTheme: AppBarTheme(
